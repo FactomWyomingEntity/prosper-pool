@@ -5,6 +5,7 @@ The pool will use an adjusted form of the stratum protocol. The pool will use ra
 Stratum can be found:
 - https://slushpool.com/help/stratum-protocol#compatibility
 - https://en.bitcoin.it/wiki/Stratum_mining_protocol
+- https://slushpool.com/help/topic/stratum-protocol/
 
 
 # Methods
