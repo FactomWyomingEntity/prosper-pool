@@ -6,6 +6,8 @@ Stratum can be found:
 - https://slushpool.com/help/stratum-protocol#compatibility
 - https://en.bitcoin.it/wiki/Stratum_mining_protocol
 - https://slushpool.com/help/topic/stratum-protocol/
+- https://github.com/aeternity/protocol/blob/master/STRATUM.md#mining-configure
+- https://github.com/ctubio/php-proxy-stratum/wiki/Stratum-Mining-Protocol
 
 
 # Methods
