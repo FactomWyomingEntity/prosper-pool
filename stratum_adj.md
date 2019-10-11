@@ -42,6 +42,17 @@ response
 }
 ```
 
+## mining.notify
+
+// TODO: Double check what we actually need to send
+```json
+{
+  "method" : "mining.notify",
+  "id": 0,
+  "params": ["JOB_ID", "OPRHASH", "CLEANJOBS"]
+}
+```
+
 ## mining.authorize
 
 request

@@ -2,6 +2,7 @@ package stratum
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -22,6 +23,33 @@ func NewMinerMap() *MinerMap {
 	// Seed the nonce
 	m.nextNonce = uint32(time.Now().UnixNano())
 	return m
+}
+
+type NotifyError struct {
+	Session string
+	Error   error
+}
+
+func (m MinerMap) Len() int {
+	m.RLock()
+	defer m.RUnlock()
+	return len(m.miners)
+}
+
+func (m MinerMap) Notify(msg json.RawMessage) []NotifyError {
+	var errs []NotifyError
+	m.RLock()
+	for session, m := range m.miners {
+		err := m.Broadcast(msg)
+		if err != nil {
+			errs = append(errs, NotifyError{
+				Session: session,
+				Error:   err,
+			})
+		}
+	}
+	m.RUnlock()
+	return errs
 }
 
 // AddMiner will add a miner to the map, and return a unique session id

@@ -28,19 +28,20 @@ func (u UnknownRPC) IsRequest() bool {
 }
 
 type Request struct {
-	ID     int         `json:"id"`
-	Method string      `json:"method"`
-	Params interface{} `json:"params"`
+	ID     int             `json:"id"`
+	Method string          `json:"method"`
+	Params json.RawMessage `json:"params"`
+}
+
+func (r Request) SetParams(p interface{}) Request {
+	data, _ := json.Marshal(p)
+	r.Params = json.RawMessage(data)
+	return r
 }
 
 // TODO: If we store the json.RawMessage, it would give us a performance boost
 func (r Request) FitParams(t interface{}) error {
-	data, err := json.Marshal(r.Params)
-	if err != nil {
-		return err
-	}
-
-	return json.Unmarshal(data, t)
+	return json.Unmarshal(r.Params, t)
 }
 
 type SubscribeParams []string
@@ -50,24 +51,34 @@ func SubscribeRequest() Request {
 		ID:     rand.Int(),
 		Method: "mining.subscribe",
 		// TODO: We need to compile in the version and come up with a name
-		Params: SubscribeParams{"privpool/0.1.0", ""},
-	}
+		// Params: SubscribeParams{"privpool/0.1.0", ""},
+	}.SetParams(SubscribeParams{"privpool/0.1.0", ""})
+}
+
+type AuthorizeParams []string
+
+func AuthorizeRequest(username, password string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.authorize",
+		//Params: AuthorizeParams{username, password},
+	}.SetParams(AuthorizeParams{username, password})
 }
 
 type Response struct {
-	ID     int         `json:"id"`
-	Result interface{} `json:"result"`
-	Error  *RPCError   `json:"error,omitempty"`
+	ID     int             `json:"id"`
+	Result json.RawMessage `json:"result"`
+	Error  *RPCError       `json:"error,omitempty"`
 }
 
-// TODO: If we store the json.RawMessage, it would give us a performance boost
-func (r Response) FitResult(t interface{}) error {
-	data, err := json.Marshal(r.Result)
-	if err != nil {
-		return err
-	}
+func (r Response) SetResult(o interface{}) Response {
+	data, _ := json.Marshal(o)
+	r.Result = json.RawMessage(data)
+	return r
+}
 
-	return json.Unmarshal(data, t)
+func (r Response) FitResult(t interface{}) error {
+	return json.Unmarshal(r.Result, t)
 }
 
 // SubscribeResult is [session id, extranonce1]
@@ -76,10 +87,9 @@ type SubscribeResult []string
 func SubscribeResponse(id int, session string, nonce uint32) Response {
 	return Response{
 		ID: id,
-		Result: SubscribeResult{
-			session, fmt.Sprintf("%x", nonce),
-		},
-	}
+	}.SetResult(SubscribeResult{
+		session, fmt.Sprintf("%x", nonce),
+	})
 }
 
 type RPCError struct {

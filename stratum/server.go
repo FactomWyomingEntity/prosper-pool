@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -24,6 +25,15 @@ func NewServer(conf *viper.Viper) (*Server, error) {
 	s.config = conf
 	s.Miners = NewMinerMap()
 	return s, nil
+}
+
+// Notify will notify all miners of a new block to mine
+// TODO: Come up with a job structure
+func (s Server) Notify(job interface{}) {
+	data, _ := json.Marshal(job)
+	errs := s.Miners.Notify(json.RawMessage(data))
+	var _ = errs
+	// TODO: handle errs
 }
 
 func (s Server) Listen(ctx context.Context) {
@@ -71,13 +81,18 @@ func (s Server) Listen(ctx context.Context) {
 func (s Server) NewConn(conn net.Conn) {
 	m := InitMiner(conn)
 	go s.HandleClient(m)
+	go s.HandleBroadcasts(m)
 }
 
 type Miner struct {
-	log  *log.Entry
-	conn net.Conn
-	enc  *json.Encoder
+	log     *log.Entry
+	conn    net.Conn
+	enc     *json.Encoder
+	encSync sync.Mutex // All encodes should be synchronized
 	// TODO: Manage all miner state. Like authentication, jobs, shares, etc
+
+	// broadcast will broadcast any notify messages to this miner
+	broadcast chan interface{}
 
 	// State information
 	subscribed  bool
@@ -93,8 +108,55 @@ func InitMiner(conn net.Conn) *Miner {
 	m.conn = conn
 	m.enc = json.NewEncoder(conn)
 	m.log = log.WithFields(log.Fields{"ip": m.conn.RemoteAddr().String()})
+	// To push the encoding time to the individual threads, rather than
+	// the looping over all miners
+	m.broadcast = make(chan interface{}, 2)
 
 	return m
+}
+
+func (m *Miner) Close() {
+	close(m.broadcast)
+}
+
+// Broadcast should accept the already json marshalled msg
+func (m Miner) Broadcast(msg json.RawMessage) (err error) {
+	defer func() {
+		// This should never happen, but we don't want a bugged miner taking us
+		// down.
+		if r := recover(); r != nil {
+			err = fmt.Errorf("miner was closed")
+		}
+	}()
+	select {
+	case m.broadcast <- msg:
+		return nil
+	default:
+		return fmt.Errorf("channel full")
+	}
+}
+
+// HandleBroadcasts will send out all pool broadcast messages to the miners.
+// This handles all notify messages
+func (s Server) HandleBroadcasts(client *Miner) {
+	for {
+		select {
+		case msg, ok := <-client.broadcast:
+			if !ok {
+				return
+			}
+			client.encSync.Lock()
+			err := client.enc.Encode(msg)
+			client.encSync.Unlock()
+			if err == io.EOF {
+				client.log.Infof("client disconnected")
+				return
+			}
+			if err != nil {
+				client.log.WithError(err).Warn("failed to notify")
+			}
+		}
+	}
 }
 
 func (s Server) HandleClient(client *Miner) {
@@ -116,7 +178,9 @@ func (s Server) HandleClient(client *Miner) {
 			break
 		}
 
+		client.encSync.Lock()
 		s.HandleMessage(client, data)
+		client.encSync.Unlock()
 	}
 }
 
@@ -159,7 +223,10 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 
 		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID, client.extraNonce1)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+		} else {
+			client.subscribed = true
 		}
+	case "mining.authorize":
 	default:
 		client.log.Warnf("unknown method %s", req.Method)
 		_ = client.enc.Encode(QuickRPCError(req.ID, ErrorMethodNotFound))
