@@ -1,32 +1,53 @@
 package stratum
 
-type Request struct {
+// UnknownRPC is the struct any json rpc can be unmarshalled into before it is catagorized.
+type UnknownRPC struct {
 	ID int `json:"id"`
-	Method string `json:"method"`
+	Request
+	Response
+}
+
+func (u UnknownRPC) GetResponse() Response {
+	u.Response.ID = u.ID
+	return u.Response
+}
+
+func (u UnknownRPC) GetRequest() Request {
+	u.Request.ID = u.ID
+	return u.Request
+}
+
+func (u UnknownRPC) IsRequest() bool {
+	return u.Request.Method != ""
+}
+
+type Request struct {
+	ID     int         `json:"id"`
+	Method string      `json:"method"`
 	Params interface{} `json:"params"`
 }
 
 type Response struct {
-	ID int `json:"id"`
+	ID     int         `json:"id"`
 	Result interface{} `json:"result"`
-	Error *RPCError `json:"error"`
+	Error  *RPCError   `json:"error"`
 }
 
 type RPCError struct {
-	Code int `json:"code"`
-	Message string `json:"message"`
-	Data interface{} `json:"data"`
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
 }
 
 const (
-	ErrorUknownException = 1
-	ErrorServiceNotFound = 2
-	ErrorMethodNotFound = 3
-	ErrorFeeRequired = 10
-	ErrorSignatureRequired = 20
+	ErrorUnknownException     = 1
+	ErrorServiceNotFound      = 2
+	ErrorMethodNotFound       = 3
+	ErrorFeeRequired          = 10
+	ErrorSignatureRequired    = 20
 	ErrorSignatureUnavailable = 21
 	ErrorUnknownSignatureType = 22
-	ErrorBadSignature = 23
+	ErrorBadSignature         = 23
 )
 
 // -1, Unknown exception, error message should contain more specific description
