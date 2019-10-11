@@ -7,18 +7,22 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
 type Server struct {
+	// miners is a map of miners to their session id
+	Miners *MinerMap
 	config *viper.Viper
 }
 
 func NewServer(conf *viper.Viper) (*Server, error) {
 	s := new(Server)
 	s.config = conf
+	s.Miners = NewMinerMap()
 	return s, nil
 }
 
@@ -58,22 +62,45 @@ func (s Server) Listen(ctx context.Context) {
 			continue
 		}
 		_ = conn.SetKeepAlive(true)
-
-		// TODO: Add miners to an array or map in a thread safe manner.
-		//		We will need to broadcast to all miners for new jobs.
-		m := Miner{conn: conn}
-		go s.handleClient(&m)
+		s.NewConn(conn)
 	}
+}
+
+// NewConn handles all new conns from the listen. By factoring this out, we
+// can create unit tests using net.Pipe()
+func (s Server) NewConn(conn net.Conn) {
+	m := InitMiner(conn)
+	go s.HandleClient(m)
 }
 
 type Miner struct {
 	log  *log.Entry
-	conn *net.TCPConn
+	conn net.Conn
+	enc  *json.Encoder
 	// TODO: Manage all miner state. Like authentication, jobs, shares, etc
+
+	// State information
+	subscribed  bool
+	sessionID   string
+	extraNonce1 uint32
+	agent       string // Agent/version from subscribe
+
+	joined time.Time
 }
 
-func (s Server) handleClient(client *Miner) {
-	client.log = log.WithFields(log.Fields{"ip": client.conn.RemoteAddr().String()})
+func InitMiner(conn net.Conn) *Miner {
+	m := new(Miner)
+	m.conn = conn
+	m.enc = json.NewEncoder(conn)
+	m.log = log.WithFields(log.Fields{"ip": m.conn.RemoteAddr().String()})
+
+	return m
+}
+
+func (s Server) HandleClient(client *Miner) {
+	// Register this new miner
+	s.Miners.AddMiner(client)
+
 	reader := bufio.NewReader(client.conn)
 	for {
 		data, isPrefix, err := reader.ReadLine()
@@ -89,11 +116,11 @@ func (s Server) handleClient(client *Miner) {
 			break
 		}
 
-		s.handleMessage(client, data)
+		s.HandleMessage(client, data)
 	}
 }
 
-func (s Server) handleMessage(client *Miner, data []byte) {
+func (s Server) HandleMessage(client *Miner, data []byte) {
 	var u UnknownRPC
 	err := json.Unmarshal(data, &u)
 	if err != nil {
@@ -102,8 +129,7 @@ func (s Server) handleMessage(client *Miner, data []byte) {
 
 	if u.IsRequest() {
 		req := u.GetRequest()
-		// TODO: Handle req
-		var _ = req
+		s.HandleRequest(client, req)
 	} else {
 		resp := u.GetResponse()
 		// TODO: Handle resp
@@ -112,4 +138,30 @@ func (s Server) handleMessage(client *Miner, data []byte) {
 
 	// TODO: Don't just print everything
 	client.log.Infof(string(data))
+}
+
+func (s Server) HandleRequest(client *Miner, req Request) {
+	switch req.Method {
+	case "mining.subscribe":
+		var params SubscribeParams
+		if err := req.FitParams(&params); err != nil {
+			client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+
+		if len(params) < 1 {
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+		// Ignore the session id if provided in the params
+		client.agent = params[0]
+
+		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID, client.extraNonce1)); err != nil {
+			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+		}
+	default:
+		client.log.Warnf("unknown method %s", req.Method)
+		_ = client.enc.Encode(QuickRPCError(req.ID, ErrorMethodNotFound))
+	}
 }

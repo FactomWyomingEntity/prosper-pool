@@ -1,5 +1,11 @@
 package stratum
 
+import (
+	"encoding/json"
+	"fmt"
+	"math/rand"
+)
+
 // UnknownRPC is the struct any json rpc can be unmarshalled into before it is catagorized.
 type UnknownRPC struct {
 	ID int `json:"id"`
@@ -27,10 +33,53 @@ type Request struct {
 	Params interface{} `json:"params"`
 }
 
+// TODO: If we store the json.RawMessage, it would give us a performance boost
+func (r Request) FitParams(t interface{}) error {
+	data, err := json.Marshal(r.Params)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(data, t)
+}
+
+type SubscribeParams []string
+
+func SubscribeRequest() Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.subscribe",
+		// TODO: We need to compile in the version and come up with a name
+		Params: SubscribeParams{"privpool/0.1.0", ""},
+	}
+}
+
 type Response struct {
 	ID     int         `json:"id"`
 	Result interface{} `json:"result"`
-	Error  *RPCError   `json:"error"`
+	Error  *RPCError   `json:"error,omitempty"`
+}
+
+// TODO: If we store the json.RawMessage, it would give us a performance boost
+func (r Response) FitResult(t interface{}) error {
+	data, err := json.Marshal(r.Result)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(data, t)
+}
+
+// SubscribeResult is [session id, extranonce1]
+type SubscribeResult []string
+
+func SubscribeResponse(id int, session string, nonce uint32) Response {
+	return Response{
+		ID: id,
+		Result: SubscribeResult{
+			session, fmt.Sprintf("%x", nonce),
+		},
+	}
 }
 
 type RPCError struct {
@@ -40,15 +89,62 @@ type RPCError struct {
 }
 
 const (
-	ErrorUnknownException     = 1
-	ErrorServiceNotFound      = 2
-	ErrorMethodNotFound       = 3
+	ErrorParseError     = 32700
+	ErrorInvalidRequest = 32600
+	ErrorMethodNotFound = 32601
+	ErrorInvalidParams  = 32602
+	ErrorInternalError  = 32603
+
+	ErrorUnknownException = 1
+	ErrorServiceNotFound  = 2
+	//ErrorMethodNotFound       = 3
 	ErrorFeeRequired          = 10
 	ErrorSignatureRequired    = 20
 	ErrorSignatureUnavailable = 21
 	ErrorUnknownSignatureType = 22
 	ErrorBadSignature         = 23
 )
+
+func RPCErrorString(errorType int) string {
+	switch errorType {
+	case ErrorParseError:
+		return "ErrorParseError"
+	case ErrorInvalidRequest:
+		return "ErrorInvalidRequest"
+	case ErrorInvalidParams:
+		return "ErrorInvalidParams"
+	case ErrorInternalError:
+		return "ErrorInternalError"
+	case ErrorUnknownException:
+		return "ErrorUnknownException"
+	case ErrorServiceNotFound:
+		return "ErrorServiceNotFound"
+	case ErrorMethodNotFound:
+		return "ErrorMethodNotFound"
+	case ErrorFeeRequired:
+		return "ErrorFeeRequired"
+	case ErrorSignatureRequired:
+		return "ErrorSignatureRequired"
+	case ErrorSignatureUnavailable:
+		return "ErrorSignatureUnavailable"
+	case ErrorUnknownSignatureType:
+		return "ErrorUnknownSignatureType"
+	case ErrorBadSignature:
+		return "ErrorBadSignature"
+	default:
+		return "unknown error"
+	}
+}
+
+func QuickRPCError(id int, errorType int) Response {
+	return Response{
+		ID: id,
+		Error: &RPCError{
+			Code:    errorType,
+			Message: RPCErrorString(errorType),
+		},
+	}
+}
 
 // -1, Unknown exception, error message should contain more specific description
 // -2, “Service not found”

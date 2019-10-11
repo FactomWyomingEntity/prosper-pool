@@ -14,6 +14,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+
+func init() {
+	rootCmd.AddCommand(testMiner)
+}
+
 // Execute is cobra's entry point
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
@@ -58,4 +63,26 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 	}()
+}
+
+// TODO: Move testMiner to it's own binary
+var testMiner = &cobra.Command{
+	Use:              "miner",
+	Short:            "Launch a miner",
+	PersistentPreRun: rootPreRunSetup,
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, cancel := context.WithCancel(context.Background())
+		exit.GlobalExitHandler.AddCancel(cancel)
+
+		client, err := stratum.NewClient()
+		if err != nil {
+			panic(err)
+		}
+
+		err = client.Connect("localhost:1234")
+		if err != nil {
+			panic(err)
+		}
+		var _ = ctx
+	},
 }

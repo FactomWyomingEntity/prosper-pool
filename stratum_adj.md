@@ -8,6 +8,8 @@ Stratum can be found:
 - https://slushpool.com/help/topic/stratum-protocol/
 - https://github.com/aeternity/protocol/blob/master/STRATUM.md#mining-configure
 - https://github.com/ctubio/php-proxy-stratum/wiki/Stratum-Mining-Protocol
+- https://github.com/str4d/zips/blob/77-zip-stratum/drafts/str4d-stratum/draft1.rst#rationale
+    - https://github.com/str4d/zips/blob/77-zip-stratum/drafts/str4d-stratum/draft1.rst#protocol-flow
 
 
 # Methods
@@ -27,7 +29,16 @@ request
 {
   "method" : "mining.subscribe",
   "id": 0,
-  "params": ["user agent/version", "password"]
+  "params": ["user agent/version", "session-id"]
+}
+```
+
+response
+```json
+{
+  "id": 0,
+  "error": null,
+  "result": ["sessionID", "nonce1"],
 }
 ```
 
