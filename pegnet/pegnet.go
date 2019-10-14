@@ -1,8 +1,6 @@
 package pegnet
 
 import (
-	"fmt"
-
 	"github.com/jinzhu/gorm"
 
 	"github.com/Factom-Asset-Tokens/factom"
@@ -31,6 +29,8 @@ type Node struct {
 
 	db   *database.SqlDatabase
 	Sync *database.BlockSync
+
+	hooks []chan<- grader.GradedBlock
 }
 
 func NewPegnetNode(conf *viper.Viper, db *database.SqlDatabase) (*Node, error) {
@@ -55,11 +55,14 @@ func NewPegnetNode(conf *viper.Viper, db *database.SqlDatabase) (*Node, error) {
 	return n, nil
 }
 
+func (n Node) AddHook(hook chan<- grader.GradedBlock) {
+	n.hooks = append(n.hooks, hook)
+}
+
 func (n Node) SelectSynced() (*database.BlockSync, error) {
 	var s database.BlockSync
 	// TODO: Ensure this is max() equivalent
 	dbErr := n.db.Order("synced desc").First(&s)
-	fmt.Println(s)
 	return &s, dbErr.Error
 }
 
