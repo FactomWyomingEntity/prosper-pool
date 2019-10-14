@@ -1,21 +1,37 @@
 package config
 
 import (
+	"time"
+
 	"github.com/spf13/viper"
 )
 
 // All config locations
 const (
+	LoggingLevel = "app.loglevel"
+
 	ConfigSQLHost     = "database.host"
+	ConfigSQLPort     = "database.port"
 	ConfigSQLDBName   = "database.dbname"
 	ConfigSQLUsername = "database.username"
 	ConfigSQLPassword = "database.password"
+
+	ConfigFactomdLocation = "factom.factomdlocation"
+
+	ConfigPegnetPollingPeriod = "pegnet.pollingperiod"
+	ConfigPegnetRetryPeriod   = "pegnet.retryperiod"
 )
 
 func SetDefaults(conf *viper.Viper) {
 	// All config defaults
-	conf.SetDefault(ConfigSQLHost, "localhost:5432")
-	conf.SetDefault(ConfigSQLDBName, "public")
+	conf.SetDefault(ConfigSQLHost, "localhost")
+	conf.SetDefault(ConfigSQLPort, 5432)
+	conf.SetDefault(ConfigSQLDBName, "postgres")
 	conf.SetDefault(ConfigSQLUsername, "postgres")
 	conf.SetDefault(ConfigSQLPassword, "password")
+
+	conf.SetDefault(ConfigFactomdLocation, "http://localhost:8088/v2")
+
+	viper.SetDefault(ConfigPegnetPollingPeriod, time.Second*2)
+	viper.SetDefault(ConfigPegnetRetryPeriod, time.Second*5)
 }
