@@ -7,13 +7,14 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/config"
+
 	"github.com/FactomWyomingEntity/private-pool/exit"
 	"github.com/FactomWyomingEntity/private-pool/stratum"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
 
 func init() {
 	rootCmd.AddCommand(testMiner)
@@ -63,6 +64,8 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 	}()
+
+	config.SetDefaults(viper.GetViper())
 }
 
 // TODO: Move testMiner to it's own binary
