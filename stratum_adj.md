@@ -36,17 +36,17 @@ response
 The result from an authorize request is usually true (successful), or false. The password may be omitted if the server does not require passwords.
 
 
-## mining.get_transactions
+## mining.get_oprhash
 
 request
 ```json
 {
-  "method" : "mining.get_transactions",
+  "method" : "mining.get_oprhash",
   "id": 0,
   "params": ["jobID"]
 }
 ```
-Server should send back an array with a hexdump of each transaction in the block specified for the given job id.
+Server should send back an array with the Oracle Price Record hash for the given job id.
 
 
 ## mining.submit
@@ -56,7 +56,7 @@ request
 {
   "method" : "mining.submit",
   "id": 0,
-  "params": ["username", "jobID", "nonce", "OPR-hash"]
+  "params": ["username", "jobID", "nonce", "oprHash"]
 }
 ```
 Miners submit shares using the method "mining.submit". Client submissions contain:
@@ -85,20 +85,19 @@ response
 {
   "id": 0,
   "error": null,
-  "result": ["sessionID", "nonce1"],
+  "result": ["sessionID", "nonce"],
 }
 ```
 
 The client receives a result:
 ```json
-
-[[["mining.set_difficulty", "subscription id 1"], ["mining.notify", "subscription id 2"]], "nonce1"]
+[[["mining.set_difficulty", "subscription id 1"], ["mining.notify", "subscription id 2"]], "nonce"]
 ```
 The result contains two items:
 
 
-1) Subscriptions. - An array of 2-item tuples, each with a subscription type and id.
-2) Nonce1. - Hex-encoded, per-connection unique string which will be used for creating generation transactions later.
+1) Subscriptions - An array of 2-item tuples, each with a subscription type and id.
+2) Nonce - Hex-encoded, per-connection unique string which will be used for creating generation transactions later.
 
 ## mining.suggest_difficulty
 
@@ -110,7 +109,7 @@ request
   "params": ["preferred-difficulty"]
 }
 ```
-Used to indicate a preference for share difficulty to the pool. Servers are not required to honour this request,.
+Used to indicate a preference for share difficulty to the pool. Servers are not required to honor this request.
 
 
 # Methods (server to client)
@@ -171,7 +170,7 @@ request
 {
   "method" : "mining.notify",
   "id": 0,
-  "params": ["jobID", "OPR-hash", "CLEANJOBS"]
+  "params": ["jobID", "oprHash", "CLEANJOBS"]
 }
 ```
 Fields in order:
