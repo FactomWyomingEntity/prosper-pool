@@ -20,6 +20,8 @@ const (
 
 	ConfigPegnetPollingPeriod = "pegnet.pollingperiod"
 	ConfigPegnetRetryPeriod   = "pegnet.retryperiod"
+
+	Config1ForgeKey = "oracle.1ForgeKey"
 )
 
 func SetDefaults(conf *viper.Viper) {
