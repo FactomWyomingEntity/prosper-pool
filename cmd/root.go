@@ -5,18 +5,21 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
 
-	"github.com/FactomWyomingEntity/private-pool/loghelp"
 	"github.com/FactomWyomingEntity/private-pool/accounting"
+	"github.com/FactomWyomingEntity/private-pool/auth"
 	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/FactomWyomingEntity/private-pool/database"
 	"github.com/FactomWyomingEntity/private-pool/exit"
+	"github.com/FactomWyomingEntity/private-pool/loghelp"
 	"github.com/FactomWyomingEntity/private-pool/pegnet"
 	"github.com/FactomWyomingEntity/private-pool/stratum"
+	"github.com/qor/session/manager"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -26,6 +29,7 @@ func init() {
 	rootCmd.AddCommand(testMiner)
 	rootCmd.AddCommand(testSync)
 	rootCmd.AddCommand(testAccountant)
+	rootCmd.AddCommand(testAuth)
 
 	rootCmd.PersistentFlags().String("log", "info", "Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal'")
 	rootCmd.PersistentFlags().String("phost", "192.168.32.2", "Postgres host url")
@@ -172,6 +176,9 @@ var testSync = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
+		exit.GlobalExitHandler.AddExit(func() error {
+			return db.Close()
+		})
 
 		p, err := pegnet.NewPegnetNode(conf, db)
 		if err != nil {
@@ -235,6 +242,49 @@ var testAccountant = &cobra.Command{
 
 		a.Listen(ctx)
 		var _ = ctx
+	},
+}
+
+var testAuth = &cobra.Command{
+	Use:    "auth",
+	Short:  "Run the pegnet authenticator",
+	PreRun: SoftReadConfig,
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, cancel := context.WithCancel(context.Background())
+		exit.GlobalExitHandler.AddCancel(cancel)
+		conf := viper.GetViper()
+
+		db, err := database.New(conf)
+		if err != nil {
+			panic(err)
+		}
+		exit.GlobalExitHandler.AddExit(func() error {
+			return db.Close()
+		})
+
+		a := auth.NewAuthenticator(db.DB)
+
+		mux := http.NewServeMux()
+
+		// Mount Auth to Router
+		mux.Handle("/auth/", a.NewServeMux())
+		var _ = ctx
+		srv := http.Server{Addr: ":9000", Handler: manager.SessionManager.Middleware(mux)}
+		go func() {
+			err := srv.ListenAndServe()
+			if err != nil {
+				fmt.Println(err)
+			}
+		}()
+
+	InfiniteLoop:
+		for {
+			select {
+			case <-ctx.Done():
+				_ = srv.Close()
+				break InfiniteLoop
+			}
+		}
 	},
 }
 
