@@ -95,10 +95,10 @@ type Miner struct {
 	broadcast chan interface{}
 
 	// State information
-	subscribed  bool
-	sessionID   string
-	extraNonce1 uint32
-	agent       string // Agent/version from subscribe
+	subscribed bool
+	sessionID  string
+	nonce      uint32
+	agent      string // Agent/version from subscribe
 
 	joined time.Time
 }
@@ -207,7 +207,7 @@ func (s Server) HandleMessage(client *Miner, data []byte) {
 func (s Server) HandleRequest(client *Miner, req Request) {
 	switch req.Method {
 	case "mining.subscribe":
-		var params SubscribeParams
+		var params RPCParams
 		if err := req.FitParams(&params); err != nil {
 			client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
@@ -221,7 +221,7 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 		// Ignore the session id if provided in the params
 		client.agent = params[0]
 
-		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID, client.extraNonce1)); err != nil {
+		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID, client.nonce)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		} else {
 			client.subscribed = true
@@ -231,4 +231,13 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 		client.log.Warnf("unknown method %s", req.Method)
 		_ = client.enc.Encode(QuickRPCError(req.ID, ErrorMethodNotFound))
 	}
+}
+
+func (s Server) GetVersion(clientName string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(GetVersionRequest())
+	return err
 }

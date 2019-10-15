@@ -37,10 +37,6 @@ func (c *Client) Connect(address string) error {
 	return c.Handshake(conn)
 }
 
-//func (c *Client) read(ctx context.Context) ([]byte, bool, error) {
-//return c.
-//}
-
 func (c *Client) Handshake(conn net.Conn) error {
 	c.InitConn(conn)
 
@@ -66,6 +62,33 @@ func (c *Client) InitConn(conn net.Conn) {
 	c.dec = bufio.NewReader(conn)
 }
 
+// Authorize against stratum pool
+func (c Client) Authorize(username, password string) error {
+	err := c.enc.Encode(AuthorizeRequest(username, password))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Request current OPR hash from server
+func (c Client) GetOPRHash(jobID string) error {
+	err := c.enc.Encode(GetOPRHashRequest(jobID))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Submit completed work to server
+func (c Client) Submit(username, jobID, nonce, oprHash string) error {
+	err := c.enc.Encode(SubmitRequest(username, jobID, nonce, oprHash))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Subscribe to stratum pool
 func (c Client) Subscribe() error {
 	err := c.enc.Encode(SubscribeRequest())
@@ -75,9 +98,9 @@ func (c Client) Subscribe() error {
 	return nil
 }
 
-// Subscribe to stratum pool
-func (c Client) Authorize(username, password string) error {
-	err := c.enc.Encode(AuthorizeRequest(username, password))
+// Suggest preferred mining difficulty to server
+func (c Client) SuggestDifficulty(preferredDifficulty string) error {
+	err := c.enc.Encode(SuggestDifficultyRequest(preferredDifficulty))
 	if err != nil {
 		return err
 	}

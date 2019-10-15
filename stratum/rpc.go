@@ -6,7 +6,7 @@ import (
 	"math/rand"
 )
 
-// UnknownRPC is the struct any json rpc can be unmarshalled into before it is catagorized.
+// UnknownRPC is the struct any json rpc can be unmarshalled into before it is categorized.
 type UnknownRPC struct {
 	ID int `json:"id"`
 	Request
@@ -44,25 +44,87 @@ func (r Request) FitParams(t interface{}) error {
 	return json.Unmarshal(r.Params, t)
 }
 
-type SubscribeParams []string
+type RPCParams []string
 
-func SubscribeRequest() Request {
-	return Request{
-		ID:     rand.Int(),
-		Method: "mining.subscribe",
-		// TODO: We need to compile in the version and come up with a name
-		// Params: SubscribeParams{"privpool/0.1.0", ""},
-	}.SetParams(SubscribeParams{"privpool/0.1.0", ""})
-}
-
-type AuthorizeParams []string
+// Client-to-server methods
 
 func AuthorizeRequest(username, password string) Request {
 	return Request{
 		ID:     rand.Int(),
 		Method: "mining.authorize",
-		//Params: AuthorizeParams{username, password},
-	}.SetParams(AuthorizeParams{username, password})
+	}.SetParams(RPCParams{username, password})
+}
+
+func GetOPRHashRequest(jobID string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.get_oprhash",
+	}.SetParams(RPCParams{jobID})
+}
+
+func SubmitRequest(username, jobID, nonce, oprHash string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.submit",
+	}.SetParams(RPCParams{username, jobID, nonce, oprHash})
+}
+
+func SubscribeRequest() Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.subscribe",
+	}.SetParams(RPCParams{"prosper/0.1.0"})
+}
+
+func SuggestDifficultyRequest(preferredDifficulty string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.suggest_difficulty",
+	}.SetParams(RPCParams{preferredDifficulty})
+}
+
+// Server-to-client methods
+
+func GetVersionRequest() Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "client.get_version",
+	}.SetParams(nil)
+}
+
+func ReconnectRequest(hostname, port, waittime string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "client.reconnect",
+	}.SetParams(RPCParams{hostname, port, waittime})
+}
+
+func ShowMessageRequest(message string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "client.show_message",
+	}.SetParams(RPCParams{message})
+}
+
+func NotifyRequest(jobID, oprHash, cleanjobs string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.notify",
+	}.SetParams(RPCParams{jobID, oprHash, cleanjobs})
+}
+
+func SetDifficultyRequest(difficulty string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.set_difficulty",
+	}.SetParams(RPCParams{difficulty})
+}
+
+func SetNonceRequest(nonce string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.set_nonce",
+	}.SetParams(RPCParams{nonce})
 }
 
 type Response struct {
@@ -81,7 +143,7 @@ func (r Response) FitResult(t interface{}) error {
 	return json.Unmarshal(r.Result, t)
 }
 
-// SubscribeResult is [session id, extranonce1]
+// SubscribeResult is [session id, nonce]
 type SubscribeResult []string
 
 func SubscribeResponse(id int, session string, nonce uint32) Response {
