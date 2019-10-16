@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -81,6 +82,16 @@ func (c *Client) InitConn(conn net.Conn) {
 	c.conn = conn
 	c.enc = json.NewEncoder(conn)
 	c.dec = bufio.NewReader(conn)
+}
+
+// Wait waittime seconds, then proceed with Connect
+func (c *Client) WaitThenConnect(address, waittime string) error {
+	i, err := strconv.ParseInt(waittime, 10, 64)
+	if err != nil {
+		return err
+	}
+	time.Sleep(time.Duration(i) * time.Second)
+	return c.Connect(address)
 }
 
 // Authorize against stratum pool
@@ -185,31 +196,44 @@ func (c Client) HandleRequest(req Request) {
 		}
 
 		if err := c.enc.Encode(GetVersionResponse(req.ID, c.version)); err != nil {
-			log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+			log.WithField("method", req.Method).WithError(err).Error("failed to respond to get_version")
 		}
 	case "client.reconnect":
-		// TODO: handle client.reconnect case
+		if err := req.FitParams(&params); err != nil {
+			log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
+			return
+		}
+		fmt.Println(params)
+
+		if len(params) < 2 {
+			log.Errorf("Not enough parameters to reconnect with: %s\n", params)
+			return
+		}
+
+		waittime := "0"
+		if len(params) > 2 {
+			_, err := strconv.ParseInt(params[2], 10, 64)
+			if err == nil {
+				waittime = params[2]
+			}
+		}
+
+		if err := c.WaitThenConnect(params[0]+":"+params[1], waittime); err != nil {
+			log.WithField("method", req.Method).WithError(err).Error("failed to reconnect")
+		}
 	case "client.show_message":
 		if err := req.FitParams(&params); err != nil {
 			log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
 			return
 		}
-		if len(req.Params) < 1 {
-			log.WithField("message", req.Params).Errorf("No message to show: %s", req.Params)
-			return
-		}
-		var msg []string
-		if err := json.Unmarshal(req.Params, &msg); err != nil {
-			log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
-			return
-		}
-		if len(msg) < 1 {
+
+		if len(params) < 1 {
 			log.Errorln("No message to show")
 			return
 		}
 		// Print & log message in human-readable way
-		fmt.Printf("\n\nMessage from server: %s\n\n\n", msg[0])
-		log.Printf("Message from server: %s\n", msg[0])
+		fmt.Printf("\n\nMessage from server: %s\n\n\n", params[0])
+		log.Printf("Message from server: %s\n", params[0])
 	case "mining.notify":
 		// TODO: handle mining.notify case
 	case "mining.set_difficulty":

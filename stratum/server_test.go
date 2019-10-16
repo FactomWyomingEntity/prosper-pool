@@ -138,6 +138,6 @@ func TestServer_ShowMessage(t *testing.T) {
 	for _, k := range s.Miners.ListMiners() {
 		err := s.ShowMessage(k, "Test message")
 		require.NoError(err)
-		// TODO: actually ensure message is logged client-side
+		// TODO: actually ensure message is printed/logged client-side
 	}
 }

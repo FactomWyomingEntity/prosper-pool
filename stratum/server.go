@@ -268,6 +268,15 @@ func (s Server) GetVersion(clientName string) error {
 	return err
 }
 
+func (s Server) ReconnectClient(clientName, hostname, port, waittime string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(ReconnectRequest(hostname, port, waittime))
+	return err
+}
+
 func (s Server) ShowMessage(clientName, message string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
