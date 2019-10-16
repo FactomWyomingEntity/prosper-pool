@@ -208,25 +208,6 @@ func (s Server) HandleMessage(client *Miner, data []byte) {
 func (s Server) HandleRequest(client *Miner, req Request) {
 	var params RPCParams
 	switch req.Method {
-	case "mining.subscribe":
-		if err := req.FitParams(&params); err != nil {
-			client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
-			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
-			return
-		}
-
-		if len(params) < 1 {
-			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
-			return
-		}
-		// Ignore the session id if provided in the params
-		client.agent = params[0]
-
-		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID)); err != nil {
-			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
-		} else {
-			client.subscribed = true
-		}
 	case "mining.authorize":
 		if err := req.FitParams(&params); err != nil {
 			client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
@@ -247,6 +228,31 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 		} else {
 			client.authorized = true
 		}
+	case "mining.get_oprhash":
+		// TODO: handle get_oprhash case
+	case "mining.submit":
+		// TODO: handle submit case
+	case "mining.subscribe":
+		if err := req.FitParams(&params); err != nil {
+			client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+
+		if len(params) < 1 {
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+		// Ignore the session id if provided in the params
+		client.agent = params[0]
+
+		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID)); err != nil {
+			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+		} else {
+			client.subscribed = true
+		}
+	case "mining.suggest_difficulty":
+		// TODO: handle suggest_difficulty case
 	default:
 		client.log.Warnf("unknown method %s", req.Method)
 		_ = client.enc.Encode(QuickRPCError(req.ID, ErrorMethodNotFound))
@@ -259,5 +265,14 @@ func (s Server) GetVersion(clientName string) error {
 		return err
 	}
 	err = miner.enc.Encode(GetVersionRequest())
+	return err
+}
+
+func (s Server) ShowMessage(clientName, message string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(ShowMessageRequest(message))
 	return err
 }

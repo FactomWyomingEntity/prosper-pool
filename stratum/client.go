@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"time"
 
@@ -186,6 +187,35 @@ func (c Client) HandleRequest(req Request) {
 		if err := c.enc.Encode(GetVersionResponse(req.ID, c.version)); err != nil {
 			log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		}
+	case "client.reconnect":
+		// TODO: handle client.reconnect case
+	case "client.show_message":
+		if err := req.FitParams(&params); err != nil {
+			log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
+			return
+		}
+		if len(req.Params) < 1 {
+			log.WithField("message", req.Params).Errorf("No message to show: %s", req.Params)
+			return
+		}
+		var msg []string
+		if err := json.Unmarshal(req.Params, &msg); err != nil {
+			log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
+			return
+		}
+		if len(msg) < 1 {
+			log.Errorln("No message to show")
+			return
+		}
+		// Print & log message in human-readable way
+		fmt.Printf("\n\nMessage from server: %s\n\n\n", msg[0])
+		log.Printf("Message from server: %s\n", msg[0])
+	case "mining.notify":
+		// TODO: handle mining.notify case
+	case "mining.set_difficulty":
+		// TODO: handle mining.set_difficulty case
+	case "mining.set_nonce":
+		// TODO: handle mining.set_nonce case
 	default:
 		log.Warnf("unknown method %s", req.Method)
 	}
