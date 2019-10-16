@@ -121,7 +121,7 @@ func (m *Miner) Close() {
 }
 
 // Broadcast should accept the already json marshalled msg
-func (m Miner) Broadcast(msg json.RawMessage) (err error) {
+func (m *Miner) Broadcast(msg json.RawMessage) (err error) {
 	defer func() {
 		// This should never happen, but we don't want a bugged miner taking us
 		// down.

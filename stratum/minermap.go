@@ -30,13 +30,13 @@ type NotifyError struct {
 	Error   error
 }
 
-func (m MinerMap) Len() int {
+func (m *MinerMap) Len() int {
 	m.RLock()
 	defer m.RUnlock()
 	return len(m.miners)
 }
 
-func (m MinerMap) Notify(msg json.RawMessage) []NotifyError {
+func (m *MinerMap) Notify(msg json.RawMessage) []NotifyError {
 	var errs []NotifyError
 	m.RLock()
 	for session, m := range m.miners {
