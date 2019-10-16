@@ -203,7 +203,6 @@ func (c Client) HandleRequest(req Request) {
 			log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
 			return
 		}
-		fmt.Println(params)
 
 		if len(params) < 2 {
 			log.Errorf("Not enough parameters to reconnect with: %s\n", params)

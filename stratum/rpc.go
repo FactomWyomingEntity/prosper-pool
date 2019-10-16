@@ -174,6 +174,12 @@ func GetVersionResponse(id int, version string) Response {
 	}.SetResult(version)
 }
 
+func GetOPRHashResponse(id int, oprHash string) Response {
+	return Response{
+		ID: id,
+	}.SetResult(oprHash)
+}
+
 type RPCError struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`

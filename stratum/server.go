@@ -207,14 +207,14 @@ func (s Server) HandleMessage(client *Miner, data []byte) {
 
 func (s Server) HandleRequest(client *Miner, req Request) {
 	var params RPCParams
+	if err := req.FitParams(&params); err != nil {
+		client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
+		_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+		return
+	}
+
 	switch req.Method {
 	case "mining.authorize":
-		if err := req.FitParams(&params); err != nil {
-			client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
-			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
-			return
-		}
-
 		if len(params) < 1 {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
 			return
@@ -229,16 +229,24 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 			client.authorized = true
 		}
 	case "mining.get_oprhash":
-		// TODO: handle get_oprhash case
-	case "mining.submit":
-		// TODO: handle submit case
-	case "mining.subscribe":
-		if err := req.FitParams(&params); err != nil {
-			client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
+		if len(params) < 1 {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
 			return
 		}
+		// Ignore the session id if provided in the params
+		client.agent = params[0]
 
+		// TODO: actually retrieve OPR hash for the given jobID (for now using dummy data)
+		dummyOPRHash := "00037f39cf870a1f49129f9c82d935665d352ffd25ea3296208f6f7b16fd654f"
+
+		if err := client.enc.Encode(GetOPRHashResponse(req.ID, dummyOPRHash)); err != nil {
+			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+		} else {
+			client.authorized = true
+		}
+	case "mining.submit":
+		// TODO: handle submit case
+	case "mining.subscribe":
 		if len(params) < 1 {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
 			return
