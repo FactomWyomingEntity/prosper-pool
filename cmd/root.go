@@ -99,6 +99,7 @@ var testMiner = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
+
 		client.Listen(ctx)
 	},
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -90,6 +91,8 @@ type Miner struct {
 	enc     *json.Encoder
 	encSync sync.Mutex // All encodes should be synchronized
 	// TODO: Manage all miner state. Like authentication, jobs, shares, etc
+
+	preferredDifficulty uint64
 
 	// broadcast will broadcast any notify messages to this miner
 	broadcast chan interface{}
@@ -260,7 +263,15 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 			client.subscribed = true
 		}
 	case "mining.suggest_difficulty":
-		// TODO: handle suggest_difficulty case
+		if len(params) < 1 {
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+
+		preferredDifficulty, err := strconv.ParseUint(params[0], 10, 64)
+		if err == nil {
+			client.preferredDifficulty = preferredDifficulty
+		}
 	default:
 		client.log.Warnf("unknown method %s", req.Method)
 		_ = client.enc.Encode(QuickRPCError(req.ID, ErrorMethodNotFound))
