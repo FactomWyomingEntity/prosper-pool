@@ -10,19 +10,15 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-
-	"github.com/pegnet/pegnet/common"
-	"github.com/zpatrick/go-config"
+	"github.com/spf13/viper"
 )
 
 // FreeForexAPIDataSource is the datasource at https://www.freeforexapi.com
 type FreeForexAPIDataSource struct {
-	config *config.Config
 }
 
-func NewFreeForexAPIDataSource(config *config.Config) (*FreeForexAPIDataSource, error) {
+func NewFreeForexAPIDataSource(_ *viper.Viper) (*FreeForexAPIDataSource, error) {
 	s := new(FreeForexAPIDataSource)
-	s.config = config
 
 	return s, nil
 }
@@ -41,7 +37,7 @@ func (d *FreeForexAPIDataSource) ApiUrl() string {
 
 func (d *FreeForexAPIDataSource) SupportedPegs() []string {
 	// Does not have all the commodities
-	return common.MergeLists(common.CurrencyAssets, []string{"XAU", "XAG"})
+	return MergeLists(CurrencyAssets, []string{"XAU", "XAG"})
 }
 
 func (d *FreeForexAPIDataSource) FetchPegPrices() (peg PegAssets, err error) {

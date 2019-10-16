@@ -1,14 +1,15 @@
 package polling_test
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"testing"
+	"time"
 
-	"github.com/pegnet/pegnet/common"
-	. "github.com/pegnet/pegnet/polling"
-	"github.com/pegnet/pegnet/testutils"
-	"github.com/zpatrick/go-config"
+	"github.com/FactomWyomingEntity/private-pool/config"
+	. "github.com/FactomWyomingEntity/private-pool/polling"
+	"github.com/spf13/viper"
 )
 
 // TestBasicPollingSources creates 8 polling sources. 5 have 1 asset, 3 have all.
@@ -18,27 +19,25 @@ import (
 func TestBasicPollingSources(t *testing.T) {
 	end := 6
 	// Create the unit test creator
-	NewTestingDataSource = func(config *config.Config, source string) (IDataSource, error) {
-		s := new(testutils.UnitTestDataSource)
+	NewTestingDataSource = func(conf *viper.Viper, source string) (IDataSource, error) {
+		s := new(UnitTestDataSource)
 		v, err := strconv.Atoi(string(source[8]))
 		if err != nil {
 			panic(err)
 		}
 		s.Value = float64(v)
-		s.Assets = []string{common.AllAssets[v]}
+		s.Assets = []string{AllAssets[v]}
 		s.SourceName = fmt.Sprintf("UnitTest%d", v)
 
 		// Catch all
 		if v >= end {
-			s.Assets = common.AllAssets[1:]
+			s.Assets = AllAssets[1:]
 		}
 		return s, nil
 	}
 
-	p := common.NewUnitTestConfigProvider()
-	// The order of these retrieved is random since the settings are a map
-	p.Data = `
-[OracleDataSources]
+	conf := GetConfig(`
+[oracledatasources]
   UnitTest1=1
   UnitTest2=2
   UnitTest3=3
@@ -47,17 +46,15 @@ func TestBasicPollingSources(t *testing.T) {
   UnitTest6=6
   UnitTest7=7
   UnitTest8=8
-`
+`)
 
-	c := config.NewConfig([]config.Provider{p})
-
-	s := NewDataSources(c)
+	s := NewDataSources(conf)
 
 	pa, err := s.PullAllPEGAssets(1)
 	if err != nil {
 		t.Error(err)
 	}
-	for i, asset := range common.AllAssets {
+	for i, asset := range AllAssets {
 		v, ok := pa[asset]
 		if !ok {
 			t.Errorf("%s is missing", asset)
@@ -85,24 +82,22 @@ func TestBasicPollingSources(t *testing.T) {
 
 	// Test the override mechanic
 	t.Run("Test the override", func(t *testing.T) {
-		p.Data = `
-[OracleDataSources]
-  UnitTest1=1
-  UnitTest2=2
-  UnitTest3=3
-  UnitTest4=4
-  UnitTest5=5
-  UnitTest6=6
-  UnitTest7=7
-  UnitTest8=8
+		conf := GetConfig(`
+[oracledatasources]
+  UnitTest1 = 1
+  UnitTest2 = 2
+  UnitTest3 = 3
+  UnitTest4 = 4
+  UnitTest5 = 5
+  UnitTest6 = 6
+  UnitTest7 = 7
+  UnitTest8 = 8
+[oracleassetdatasourcespriority]
+  usd = "UnitTest8"
 
-[OracleAssetDataSourcesPriority]
-  # Specific coin overrides
-  USD=UnitTest8
-`
-		c = config.NewConfig([]config.Provider{p})
+`)
 
-		s = NewDataSources(c)
+		s = NewDataSources(conf)
 		pa, err := s.PullAllPEGAssets(1)
 		if err != nil {
 			t.Error(err)
@@ -147,4 +142,81 @@ func TestTruncate(t *testing.T) {
 			t.Errorf("t8 exp %f, got %f", v.Exp8, r)
 		}
 	}
+}
+
+// AlwaysOnePolling returns 1 for all prices
+func AlwaysOnePolling() *DataSources {
+	NewTestingDataSource = func(conf *viper.Viper, source string) (IDataSource, error) {
+		s := new(UnitTestDataSource)
+		v, err := strconv.Atoi(string(source[8]))
+		if err != nil {
+			panic(err)
+		}
+		s.Value = float64(1)
+		s.Assets = AllAssets
+		s.SourceName = fmt.Sprintf("UnitTest%d", v)
+
+		return s, nil
+	}
+
+	c := GetConfig(`
+[oracledatasources]
+  UnitTest1 = 1
+`)
+
+	s := NewDataSources(c)
+	return s
+}
+
+// UnitTestDataSource just reports the Value for the supported Assets
+type UnitTestDataSource struct {
+	Value      float64
+	Assets     []string
+	SourceName string
+}
+
+func NewUnitTestDataSource(_ *viper.Viper) (*UnitTestDataSource, error) {
+	s := new(UnitTestDataSource)
+	return s, nil
+}
+
+func (d *UnitTestDataSource) Name() string {
+	return d.SourceName
+}
+
+func (d *UnitTestDataSource) Url() string {
+	return "https://unit.test/"
+}
+
+func (d *UnitTestDataSource) SupportedPegs() []string {
+	return d.Assets
+}
+
+func (d *UnitTestDataSource) FetchPegPrices() (peg PegAssets, err error) {
+	peg = make(map[string]PegItem)
+
+	timestamp := time.Now()
+	for _, asset := range d.SupportedPegs() {
+		peg[asset] = PegItem{Value: d.Value, When: timestamp, WhenUnix: timestamp.Unix()}
+	}
+
+	return peg, nil
+}
+
+func (d *UnitTestDataSource) FetchPegPrice(peg string) (i PegItem, err error) {
+	return FetchPegPrice(peg, d.FetchPegPrices)
+}
+
+func GetConfig(content string) *viper.Viper {
+	var buf bytes.Buffer
+	// The order of these retrieved is random since the settings are a map
+	buf.WriteString(content)
+	conf := viper.New()
+	config.SetDefaults(conf)
+	conf.SetConfigType("toml")
+	err := conf.ReadConfig(&buf)
+	if err != nil {
+		panic(err)
+	}
+	return conf
 }

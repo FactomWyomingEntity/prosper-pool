@@ -3,18 +3,16 @@ package polling
 import (
 	"time"
 
-	"github.com/zpatrick/go-config"
+	"github.com/spf13/viper"
 )
 
 // FixedUSDDataSource is the datasource for USD.
 // USD is always 1 USD = 1USD.
 type FixedUSDDataSource struct {
-	config *config.Config
 }
 
-func NewFixedUSDDataSource(config *config.Config) (*FixedUSDDataSource, error) {
+func NewFixedUSDDataSource(_ *viper.Viper) (*FixedUSDDataSource, error) {
 	s := new(FixedUSDDataSource)
-	s.config = config
 
 	return s, nil
 }

@@ -9,21 +9,17 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pegnet/pegnet/common"
-
 	"github.com/cenkalti/backoff"
 	log "github.com/sirupsen/logrus"
-	"github.com/zpatrick/go-config"
+	"github.com/spf13/viper"
 )
 
 // ExchangeRatesDataSource is the datasource at "https://exchangeratesapi.io"
 type ExchangeRatesDataSource struct {
-	config *config.Config
 }
 
-func NewExchangeRatesDataSource(config *config.Config) (*ExchangeRatesDataSource, error) {
+func NewExchangeRatesDataSource(_ *viper.Viper) (*ExchangeRatesDataSource, error) {
 	s := new(ExchangeRatesDataSource)
-	s.config = config
 	return s, nil
 }
 
@@ -36,11 +32,11 @@ func (d *ExchangeRatesDataSource) Url() string {
 }
 
 func (d *ExchangeRatesDataSource) SupportedPegs() []string {
-	return common.CurrencyAssets
+	return CurrencyAssets
 }
 
 func (d *ExchangeRatesDataSource) FetchPegPrices() (peg PegAssets, err error) {
-	resp, err := CallExchangeRatesAPI(d.config)
+	resp, err := CallExchangeRatesAPI()
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +69,7 @@ type ExchangeRatesAPIResponse struct {
 	Rates map[string]float64 `json:"rates"`
 }
 
-func CallExchangeRatesAPI(c *config.Config) (ExchangeRatesAPIResponse, error) {
+func CallExchangeRatesAPI() (ExchangeRatesAPIResponse, error) {
 	var ExchangeRatesAPIResponse ExchangeRatesAPIResponse
 
 	operation := func() error {

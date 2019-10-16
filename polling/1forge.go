@@ -10,11 +10,8 @@ import (
 	"time"
 
 	"github.com/FactomWyomingEntity/private-pool/config"
-
-	"github.com/spf13/viper"
-
 	"github.com/cenkalti/backoff"
-	"github.com/pegnet/pegnet/common"
+	"github.com/spf13/viper"
 )
 
 // OneForgeDataSource is the datasource at https://1forge.com
@@ -28,7 +25,7 @@ func NewOneForgeDataSourceDataSource(conf *viper.Viper) (*OneForgeDataSource, er
 	// Load api key
 	s.apikey = conf.GetString(config.Config1ForgeKey)
 	if s.apikey == "" {
-		return nil, fmt.Errorf("1Forge requires an api key")
+		return nil, fmt.Errorf("%s requires an api key", s.Name())
 	}
 
 	return s, nil
@@ -48,7 +45,7 @@ func (d *OneForgeDataSource) ApiUrl() string {
 
 func (d *OneForgeDataSource) SupportedPegs() []string {
 	// Does not have all the currencies, commodities, or crypto
-	return common.MergeLists([]string{"EUR", "JPY", "GBP", "CAD", "CHF", "SGD", "HKD", "MXN"}, []string{"XAU", "XAG"})
+	return MergeLists([]string{"EUR", "JPY", "GBP", "CAD", "CHF", "SGD", "HKD", "MXN"}, []string{"XAU", "XAG"})
 }
 
 // AssetMapping changes some asset symbols to others to match 1forge

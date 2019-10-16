@@ -6,8 +6,6 @@ package polling
 import (
 	"math/rand"
 	"time"
-
-	"github.com/pegnet/pegnet/common"
 )
 
 const qlimit = 580 // Limit queries to once just shy of 10 minutes (600 seconds)
@@ -16,7 +14,7 @@ type PegAssets map[string]PegItem
 
 func (p PegAssets) Clone(randomize float64) PegAssets {
 	np := make(PegAssets)
-	for _, asset := range common.AllAssets {
+	for _, asset := range AllAssets {
 		np[asset] = p[asset].Clone(randomize)
 	}
 

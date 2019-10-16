@@ -12,27 +12,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/cenkalti/backoff"
-
-	"github.com/pegnet/pegnet/common"
-	"github.com/zpatrick/go-config"
+	"github.com/spf13/viper"
 )
 
 // CoinMarketCapDataSource is the datasource at https://coinmarketcap.com/
 type CoinMarketCapDataSource struct {
-	config *config.Config
 	apikey string
 }
 
-func NewCoinMarketCapDataSource(config *config.Config) (*CoinMarketCapDataSource, error) {
-	var err error
+func NewCoinMarketCapDataSource(conf *viper.Viper) (*CoinMarketCapDataSource, error) {
 	s := new(CoinMarketCapDataSource)
-	s.config = config
-
 	// Load api key
-	s.apikey, err = s.config.String(common.ConfigCoinMarketCapKey)
-	if err != nil {
-		return nil, err
+	s.apikey = conf.GetString(config.ConfigCoinMarketCapKey)
+	if s.apikey == "" {
+		return nil, fmt.Errorf("%s requires an api key", s.Name())
 	}
 
 	return s, nil
@@ -51,7 +46,7 @@ func (d *CoinMarketCapDataSource) ApiUrl() string {
 }
 
 func (d *CoinMarketCapDataSource) SupportedPegs() []string {
-	return common.CryptoAssets
+	return CryptoAssets
 }
 
 func (d *CoinMarketCapDataSource) FetchPegPrices() (peg PegAssets, err error) {

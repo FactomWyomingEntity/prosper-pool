@@ -9,18 +9,15 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/pegnet/pegnet/common"
-	"github.com/zpatrick/go-config"
+	"github.com/spf13/viper"
 )
 
 // AlternativeMeDataSource is the datasource at https://alternative.me/crypto/api/
 type AlternativeMeDataSource struct {
-	config *config.Config
 }
 
-func NewAlternativeMeDataSource(config *config.Config) (*AlternativeMeDataSource, error) {
+func NewAlternativeMeDataSource(_ *viper.Viper) (*AlternativeMeDataSource, error) {
 	s := new(AlternativeMeDataSource)
-	s.config = config
 
 	return s, nil
 }
@@ -39,7 +36,7 @@ func (d *AlternativeMeDataSource) ApiUrl() string {
 
 func (d *AlternativeMeDataSource) SupportedPegs() []string {
 	// Does not have all the currencies, commodities, or crypto
-	return common.MergeLists(common.CryptoAssets)
+	return MergeLists(CryptoAssets)
 }
 
 // AssetMapping changes some asset symbols to others to match 1forge

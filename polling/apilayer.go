@@ -5,24 +5,28 @@ package polling
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/cenkalti/backoff"
-	"github.com/pegnet/pegnet/common"
 	log "github.com/sirupsen/logrus"
-	"github.com/zpatrick/go-config"
+	"github.com/spf13/viper"
 )
 
 // APILayerDataSource is the datasource at http://www.apilayer.net
 type APILayerDataSource struct {
-	config *config.Config
+	apikey string
 }
 
-func NewAPILayerDataSource(config *config.Config) (*APILayerDataSource, error) {
+func NewAPILayerDataSource(conf *viper.Viper) (*APILayerDataSource, error) {
 	s := new(APILayerDataSource)
-	s.config = config
+	s.apikey = conf.GetString(config.ConfigApiLayerKey)
+	if s.apikey == "" {
+		return nil, fmt.Errorf("%s requires an api key", s.Name())
+	}
 	return s, nil
 }
 
@@ -35,11 +39,11 @@ func (d *APILayerDataSource) Url() string {
 }
 
 func (d *APILayerDataSource) SupportedPegs() []string {
-	return common.CurrencyAssets
+	return CurrencyAssets
 }
 
 func (d *APILayerDataSource) FetchPegPrices() (peg PegAssets, err error) {
-	resp, err := CallAPILayer(d.config)
+	resp, err := d.CallAPILayer()
 	if err != nil {
 		return nil, err
 	}
@@ -85,17 +89,11 @@ func check(e error) {
 	}
 }
 
-func CallAPILayer(c *config.Config) (response APILayerResponse, err error) {
+func (d *APILayerDataSource) CallAPILayer() (response APILayerResponse, err error) {
 	var APILayerResponse APILayerResponse
 
-	var apikey string
-	{
-		apikey, err = c.String("Oracle.APILayerKey")
-		check(err)
-	}
-
 	operation := func() error {
-		resp, err := http.Get("http://www.apilayer.net/api/live?access_key=" + apikey)
+		resp, err := http.Get("http://www.apilayer.net/api/live?access_key=" + d.apikey)
 		if err != nil {
 			log.WithError(err).Warning("Failed to get response from API Layer")
 		}

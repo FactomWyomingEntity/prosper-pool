@@ -5,25 +5,29 @@ package polling
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
 
-	"github.com/pegnet/pegnet/common"
-
+	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/cenkalti/backoff"
 	log "github.com/sirupsen/logrus"
-	"github.com/zpatrick/go-config"
+	"github.com/spf13/viper"
 )
 
 // OpenExchangeRatesDataSource is the datasource at "https://openexchangerates.org/"
 type OpenExchangeRatesDataSource struct {
-	config *config.Config
+	apikey string
 }
 
-func NewOpenExchangeRatesDataSource(config *config.Config) (*OpenExchangeRatesDataSource, error) {
+func NewOpenExchangeRatesDataSource(conf *viper.Viper) (*OpenExchangeRatesDataSource, error) {
 	s := new(OpenExchangeRatesDataSource)
-	s.config = config
+	s.apikey = conf.GetString(config.ConfigOpenExchangeRatesKey)
+	if s.apikey == "" {
+		return nil, fmt.Errorf("%s requires an api key", s.Name())
+	}
+
 	return s, nil
 }
 
@@ -36,11 +40,11 @@ func (d *OpenExchangeRatesDataSource) Url() string {
 }
 
 func (d *OpenExchangeRatesDataSource) SupportedPegs() []string {
-	return common.MergeLists(common.CurrencyAssets, common.CommodityAssets, []string{"XBT"})
+	return MergeLists(CurrencyAssets, CommodityAssets, []string{"XBT"})
 }
 
 func (d *OpenExchangeRatesDataSource) FetchPegPrices() (peg PegAssets, err error) {
-	resp, err := CallOpenExchangeRates(d.config)
+	resp, err := d.CallOpenExchangeRates()
 	if err != nil {
 		return nil, err
 	}
@@ -83,17 +87,11 @@ type OpenExchangeRatesResponse struct {
 	Rates       map[string]float64 `json:"rates"`
 }
 
-func CallOpenExchangeRates(c *config.Config) (response OpenExchangeRatesResponse, err error) {
+func (d *OpenExchangeRatesDataSource) CallOpenExchangeRates() (response OpenExchangeRatesResponse, err error) {
 	var OpenExchangeRatesResponse OpenExchangeRatesResponse
 
-	var apikey string
-	{
-		apikey, err = c.String("Oracle.OpenExchangeRatesKey")
-		check(err)
-	}
-
 	operation := func() error {
-		resp, err := http.Get("https://openexchangerates.org/api/latest.json?app_id=" + apikey)
+		resp, err := http.Get("https://openexchangerates.org/api/latest.json?app_id=" + d.apikey)
 		if err != nil {
 			log.WithError(err).Warning("Failed to get response from OpenExchangeRates")
 			return err

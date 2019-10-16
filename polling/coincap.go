@@ -12,19 +12,16 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff"
-	"github.com/pegnet/pegnet/common"
 	log "github.com/sirupsen/logrus"
-	"github.com/zpatrick/go-config"
+	"github.com/spf13/viper"
 )
 
 // CoinCapDataSource is the datasource at https://coincap.io/
 type CoinCapDataSource struct {
-	config *config.Config
 }
 
-func NewCoinCapDataSource(config *config.Config) (*CoinCapDataSource, error) {
+func NewCoinCapDataSource(_ *viper.Viper) (*CoinCapDataSource, error) {
 	s := new(CoinCapDataSource)
-	s.config = config
 	return s, nil
 }
 
@@ -37,11 +34,11 @@ func (d *CoinCapDataSource) Url() string {
 }
 
 func (d *CoinCapDataSource) SupportedPegs() []string {
-	return common.CryptoAssets
+	return CryptoAssets
 }
 
 func (d *CoinCapDataSource) FetchPegPrices() (peg PegAssets, err error) {
-	resp, err := CallCoinCap(d.config)
+	resp, err := CallCoinCap()
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +70,7 @@ func (d *CoinCapDataSource) FetchPegPrices() (peg PegAssets, err error) {
 			}
 		default:
 			// See if the ticker is in our crypto currency list
-			if common.AssetListContains(common.CryptoAssets, currency.Symbol) {
+			if AssetListContains(CryptoAssets, currency.Symbol) {
 				value, err := strconv.ParseFloat(currency.PriceUSD, 64)
 				peg[currency.Symbol] = PegItem{Value: value, WhenUnix: UnixTimestamp, When: timestamp}
 				if err != nil {
@@ -128,12 +125,12 @@ var CoinCapIOCryptoAssetNames = map[string]string{
 	"DCR":  "decred",
 }
 
-func CallCoinCap(config *config.Config) (CoinCapResponse, error) {
+func CallCoinCap() (CoinCapResponse, error) {
 	var CoinCapResponse CoinCapResponse
 
 	var ids []string
 	// Need to append all the ids we care about for the call
-	for _, a := range common.CryptoAssets {
+	for _, a := range CryptoAssets {
 		ids = append(ids, CoinCapIOCryptoAssetNames[a])
 	}
 

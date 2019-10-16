@@ -7,9 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pegnet/pegnet/common"
 	log "github.com/sirupsen/logrus"
-	"github.com/zpatrick/go-config"
+	"github.com/spf13/viper"
 )
 
 var dLog = log.WithField("id", "DataSources")
@@ -58,7 +57,7 @@ func CorrectCasing(in string) string {
 	// Unit tests can create arbitrary 'DataSources'.
 	// If you run this outside a unit test, the data source
 	// will error out and fail to be made.
-	r, _ := regexp.Compile("UnitTest[0-9]*")
+	r, _ := regexp.Compile("unittest[0-9]*")
 	if r.Match([]byte(in)) {
 		return "UnitTest"
 	}
@@ -66,34 +65,34 @@ func CorrectCasing(in string) string {
 	return in
 }
 
-func NewDataSource(source string, config *config.Config) (IDataSource, error) {
+func NewDataSource(source string, conf *viper.Viper) (IDataSource, error) {
 	var ds IDataSource
 	var err error
 
 	// Make it case insensitive.
 	switch CorrectCasing(source) {
 	case "APILayer":
-		ds, err = NewAPILayerDataSource(config)
+		ds, err = NewAPILayerDataSource(conf)
 	case "CoinCap":
-		ds, err = NewCoinCapDataSource(config)
+		ds, err = NewCoinCapDataSource(conf)
 	case "ExchangeRates":
-		ds, err = NewExchangeRatesDataSource(config)
+		ds, err = NewExchangeRatesDataSource(conf)
 	case "Kitco":
-		ds, err = NewKitcoDataSource(config)
+		ds, err = NewKitcoDataSource(conf)
 	case "OpenExchangeRates":
-		ds, err = NewOpenExchangeRatesDataSource(config)
+		ds, err = NewOpenExchangeRatesDataSource(conf)
 	case "CoinMarketCap":
-		ds, err = NewCoinMarketCapDataSource(config)
+		ds, err = NewCoinMarketCapDataSource(conf)
 	case "FreeForexAPI":
-		ds, err = NewFreeForexAPIDataSource(config)
+		ds, err = NewFreeForexAPIDataSource(conf)
 	case "1Forge":
-		ds, err = NewOneForgeDataSourceDataSource(config)
+		ds, err = NewOneForgeDataSourceDataSource(conf)
 	case "FixedUSD":
-		ds, err = NewFixedUSDDataSource(config)
+		ds, err = NewFixedUSDDataSource(conf)
 	case "AlternativeMe":
-		ds, err = NewAlternativeMeDataSource(config)
+		ds, err = NewAlternativeMeDataSource(conf)
 	case "UnitTest": // This will fail outside a unit test
-		ds, err = NewTestingDataSource(config, source)
+		ds, err = NewTestingDataSource(conf, source)
 	default:
 		return nil, fmt.Errorf("%s is not a supported data source", source)
 	}
@@ -125,7 +124,7 @@ type DataSources struct {
 	// The list of data sources by priority.
 	PriorityList []DataSourceWithPriority
 
-	config *config.Config
+	viperConfig *viper.Viper
 }
 
 type DataSourceWithPriority struct {
@@ -134,24 +133,23 @@ type DataSourceWithPriority struct {
 }
 
 // NewDataSources reads the config and sets everything up for polling
-func NewDataSources(config *config.Config) *DataSources {
+func NewDataSources(conf *viper.Viper) *DataSources {
 	d := new(DataSources)
 	d.AssetSources = make(map[string][]string)
 	d.DataSources = make(map[string]IDataSource)
+	d.viperConfig = conf
 
 	// All the config settings
-	allSettings, err := config.Settings()
-	common.CheckAndPanic(err)
+	allSettings := conf.AllKeys()
 
 	// We only want the OracleDataSources section. And they must be alpha numeric
-	datasourceRegex, err := regexp.Compile(`OracleDataSources\.[a-zA-Z0-9]+`)
-	common.CheckAndPanic(err)
+	datasourceRegex, err := regexp.Compile(`oracledatasources\.[a-zA-Z0-9]+`)
+	CheckAndPanic(err)
 
-	for setting := range allSettings {
+	for _, setting := range allSettings {
 		if datasourceRegex.Match([]byte(setting)) {
 			// Get the priority. Priorities CANNOT be the same.
-			p, err := config.Int(setting)
-			common.CheckAndPanic(err)
+			p := conf.GetInt(setting)
 
 			if p == -1 {
 				continue // -1 priority means this source is disabled
@@ -159,10 +157,10 @@ func NewDataSources(config *config.Config) *DataSources {
 
 			source := strings.Split(setting, ".")
 			if len(source) != 2 {
-				panic(common.DetailError(fmt.Errorf("expect only 1 '.' in a setting. Found more : %s", setting)))
+				panic(DetailError(fmt.Errorf("expect only 1 '.' in a setting. Found more : %s", setting)))
 			}
-			s, err := NewDataSource(source[1], config)
-			common.CheckAndPanic(err)
+			s, err := NewDataSource(source[1], conf)
+			CheckAndPanic(err)
 
 			// Add to our lists
 			d.PriorityList = append(d.PriorityList, DataSourceWithPriority{DataSource: s, Priority: p})
@@ -179,7 +177,7 @@ func NewDataSources(config *config.Config) *DataSources {
 		if v.Priority == last.Priority {
 			dLog.Errorf("You may only use priorities once for your data sources in your config file. '%s' and '%s' both have '%d'",
 				v.DataSource.Name(), last.DataSource.Name(), v.Priority)
-			common.CheckAndPanic(fmt.Errorf("priority '%d' used more than once", v.Priority))
+			CheckAndPanic(fmt.Errorf("priority '%d' used more than once", v.Priority))
 		}
 		last = v
 	}
@@ -187,9 +185,9 @@ func NewDataSources(config *config.Config) *DataSources {
 	// Add the data sources
 	// Yes I'm brute forcing it. Yes there is probably a better way. These lists are small
 	// so it's not worth trying to get fancy. (3 nested for loops)
-	for _, asset := range common.AllAssets { // For each asset we need
+	for _, asset := range AllAssets { // For each asset we need
 		for _, s := range d.PriorityList { // Append the data sources for that asset in priority order
-			if common.FindIndexInStringArray(s.DataSource.SupportedPegs(), asset) != -1 {
+			if FindIndexInStringArray(s.DataSource.SupportedPegs(), asset) != -1 {
 				d.AssetSources[asset] = append(d.AssetSources[asset], s.DataSource.Name())
 			}
 		}
@@ -199,8 +197,8 @@ func NewDataSources(config *config.Config) *DataSources {
 	// so we will not check if the data source has the asset or anything proper.
 	// If they mess this up... well, they shouldn't be using this feature.
 	// If someone wants to add validation here, go ahead :)
-	for _, asset := range common.AllAssets {
-		if order, err := config.String("OracleAssetDataSourcesPriority." + asset); err == nil && order != "" {
+	for _, asset := range AllAssets {
+		if order := conf.GetString("oracleassetdatasourcespriority." + strings.ToLower(asset)); order != "" {
 			d.AssetSources[asset] = strings.Split(order, ",")
 		}
 	}
@@ -246,7 +244,7 @@ func (ds *DataSources) AssetPriorityString(asset string) string {
 //		first need a price from that source. These calls should be quick,
 //		but it might be faster to eager eval all the data sources concurrently.
 func (d *DataSources) PullAllPEGAssets(oprversion uint8) (pa PegAssets, err error) {
-	assets := common.AllAssets // All the assets we are tracking.
+	assets := AllAssets // All the assets we are tracking.
 
 	// Wrap all the data sources with a quick caching layer for
 	// this loop. We only want to make 1 api call per source per Pull.
