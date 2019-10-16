@@ -124,3 +124,20 @@ func TestServer_GetVersion(t *testing.T) {
 		require.NoError(err)
 	}
 }
+
+func TestServer_ShowMessage(t *testing.T) {
+	require := require.New(t)
+	s, m, _, _ := serverAndClient(t)
+	for s.Miners.Len() == 0 { // Wait for miner to be added
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	ctx := context.Background()
+	go m.Listen(ctx)
+
+	for _, k := range s.Miners.ListMiners() {
+		err := s.ShowMessage(k, "Test message")
+		require.NoError(err)
+		// TODO: actually ensure message is logged client-side
+	}
+}
