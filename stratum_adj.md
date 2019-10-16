@@ -136,6 +136,32 @@ response
 The client should send a result String with its name and version.
 
 
+## client.reconnect
+
+request
+```json
+{
+  "method" : "client.reconnect",
+  "id": 0,
+  "params": ["hostname", "port", "waittime"]
+}
+```
+The client should disconnect, wait waittime seconds (if provided), then connect to the given host/port (which defaults to the current server). Note that for security purposes, clients may ignore such requests if the destination is not the same or similar.
+
+
+## client.show_message
+
+request
+```json
+{
+  "method" : "client.show_message",
+  "id": 0,
+  "params": ["message"]
+}
+```
+The client should display the message to its user in a human-readable way.
+
+
 ## mining.notify
 
 request
@@ -151,19 +177,6 @@ Fields in order:
 1) Job ID. This is included when miners submit a results so work can be matched with proper transactions.
 2) Oracle Price Record hash. Used to build the header.
 3) (optional) "CLEANJOBS". Used to force the miner to begin using a new difficulty immediately.
-
-
-## client.reconnect
-
-request
-```json
-{
-  "method" : "client.reconnect",
-  "id": 0,
-  "params": ["hostname", "port", "waittime"]
-}
-```
-The client should disconnect, wait waittime seconds (if provided), then connect to the given host/port (which defaults to the current server). Note that for security purposes, clients may ignore such requests if the destination is not the same or similar.
 
 
 ## mining.set_difficulty
@@ -190,19 +203,6 @@ request
 }
 ```
 This value, when provided, replaces the initial subscription value beginning with the next mining.notify job.
-
-
-## client.show_message
-
-request
-```json
-{
-  "method" : "client.show_message",
-  "id": 0,
-  "params": ["message"]
-}
-```
-The client should display the message to its user in a human-readable way.
 
 
 
