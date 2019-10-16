@@ -21,6 +21,11 @@ type Server struct {
 	config *viper.Viper
 }
 
+type Job struct {
+	JobID   string `json:"jobid"`
+	OPRHash string `json:"oprhash"`
+}
+
 func NewServer(conf *viper.Viper) (*Server, error) {
 	s := new(Server)
 	s.config = conf
@@ -30,8 +35,9 @@ func NewServer(conf *viper.Viper) (*Server, error) {
 
 // Notify will notify all miners of a new block to mine
 // TODO: Come up with a job structure
-func (s Server) Notify(job interface{}) {
-	data, _ := json.Marshal(job)
+func (s Server) Notify(job *Job) {
+	jobReq := NotifyRequest(job.JobID, job.OPRHash, "")
+	data, _ := json.Marshal(jobReq)
 	errs := s.Miners.Notify(json.RawMessage(data))
 	var _ = errs
 	// TODO: handle errs
@@ -301,6 +307,24 @@ func (s Server) ReconnectClient(clientName, hostname, port, waittime string) err
 		return err
 	}
 	err = miner.enc.Encode(ReconnectRequest(hostname, port, waittime))
+	return err
+}
+
+func (s Server) SetDifficulty(clientName, difficulty string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(SetDifficultyRequest(difficulty))
+	return err
+}
+
+func (s Server) SetNonce(clientName, nonce string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(SetNonceRequest(nonce))
 	return err
 }
 

@@ -188,22 +188,17 @@ func (c Client) HandleMessage(data []byte) {
 
 func (c Client) HandleRequest(req Request) {
 	var params RPCParams
+	if err := req.FitParams(&params); err != nil {
+		log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
+		return
+	}
+
 	switch req.Method {
 	case "client.get_version":
-		if err := req.FitParams(&params); err != nil {
-			log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
-			return
-		}
-
 		if err := c.enc.Encode(GetVersionResponse(req.ID, c.version)); err != nil {
 			log.WithField("method", req.Method).WithError(err).Error("failed to respond to get_version")
 		}
 	case "client.reconnect":
-		if err := req.FitParams(&params); err != nil {
-			log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
-			return
-		}
-
 		if len(params) < 2 {
 			log.Errorf("Not enough parameters to reconnect with: %s\n", params)
 			return
@@ -221,11 +216,6 @@ func (c Client) HandleRequest(req Request) {
 			log.WithField("method", req.Method).WithError(err).Error("failed to reconnect")
 		}
 	case "client.show_message":
-		if err := req.FitParams(&params); err != nil {
-			log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
-			return
-		}
-
 		if len(params) < 1 {
 			log.Errorln("No message to show")
 			return
@@ -234,11 +224,36 @@ func (c Client) HandleRequest(req Request) {
 		fmt.Printf("\n\nMessage from server: %s\n\n\n", params[0])
 		log.Printf("Message from server: %s\n", params[0])
 	case "mining.notify":
-		// TODO: handle mining.notify case
+		if len(params) < 2 {
+			log.Errorf("Not enough parameters from notify: %s\n", params)
+			return
+		}
+
+		jobID := params[0]
+		oprHash := params[1]
+
+		log.Printf("JobID: %s ... OPR Hash: %s\n", jobID, oprHash)
+		// TODO: do more than just log the notification details (actually update miner)
 	case "mining.set_difficulty":
-		// TODO: handle mining.set_difficulty case
+		if len(params) < 1 {
+			log.Errorf("Not enough parameters from set_difficulty: %s\n", params)
+			return
+		}
+
+		newDifficulty := params[0]
+
+		log.Printf("New Difficulty: %s\n", newDifficulty)
+		// TODO: do more than just log the newDifficulty details (actually update miner)
 	case "mining.set_nonce":
-		// TODO: handle mining.set_nonce case
+		if len(params) < 1 {
+			log.Errorf("Not enough parameters from set_nonce: %s\n", params)
+			return
+		}
+
+		nonce := params[0]
+
+		log.Printf("New Nonce: %s\n", nonce)
+		// TODO: do more than just log the nonce details (actually update miner job)
 	default:
 		log.Warnf("unknown method %s", req.Method)
 	}
