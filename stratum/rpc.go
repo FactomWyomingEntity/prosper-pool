@@ -156,6 +156,12 @@ func AuthorizeResponse(id int, result bool, err error) Response {
 	}.SetResult(result)
 }
 
+func SubmitResponse(id int, result bool, err error) Response {
+	return Response{
+		ID: id,
+	}.SetResult(result)
+}
+
 func SubscribeResponse(id int, session string) Response {
 	notifySub := Subscription{Id: session, Type: "mining.notify"}
 	setDiffSub := Subscription{Id: session, Type: "mining.set_difficulty"}

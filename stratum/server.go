@@ -248,7 +248,15 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 			client.authorized = true
 		}
 	case "mining.submit":
-		// TODO: handle submit case
+		if len(params) < 1 {
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+
+		// TODO: actually process the submission (ProcessSubmission); for now just pretend success
+		if err := client.enc.Encode(SubmitResponse(req.ID, true, nil)); err != nil {
+			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+		}
 	case "mining.subscribe":
 		if len(params) < 1 {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
