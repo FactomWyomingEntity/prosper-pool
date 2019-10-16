@@ -2,6 +2,7 @@ package stratum_test
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"net"
 	"testing"
@@ -20,7 +21,7 @@ func serverAndClient(t *testing.T) (s *Server, miner *Client, srv net.Conn, cli 
 	require.NoError(err)
 
 	srv, cli = net.Pipe()
-	miner, err = NewClient()
+	miner, err = NewClient(false)
 	require.NoError(err)
 
 	miner.InitConn(cli)
@@ -73,5 +74,20 @@ func TestServer_Notify(t *testing.T) {
 	require.False(isPrefix)
 	if string(data) != string(exp) {
 		t.Errorf("exp '%s' got '%s'", string(exp), string(data))
+	}
+}
+
+func TestServer_GetVersion(t *testing.T) {
+	require := require.New(t)
+	s, m, _, _ := serverAndClient(t)
+	for s.Miners.Len() == 0 { // Wait for miner to be added
+		time.Sleep(20 * time.Millisecond)
+	}
+	ctx := context.Background()
+	go m.Listen(ctx)
+
+	for _, k := range s.Miners.ListMiners() {
+		err := s.GetVersion(k)
+		require.NoError(err)
 	}
 }

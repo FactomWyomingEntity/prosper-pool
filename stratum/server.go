@@ -99,6 +99,7 @@ type Miner struct {
 	sessionID  string
 	nonce      uint32
 	agent      string // Agent/version from subscribe
+	authorized bool
 
 	joined time.Time
 }
@@ -205,9 +206,9 @@ func (s Server) HandleMessage(client *Miner, data []byte) {
 }
 
 func (s Server) HandleRequest(client *Miner, req Request) {
+	var params RPCParams
 	switch req.Method {
 	case "mining.subscribe":
-		var params RPCParams
 		if err := req.FitParams(&params); err != nil {
 			client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
@@ -221,12 +222,31 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 		// Ignore the session id if provided in the params
 		client.agent = params[0]
 
-		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID, client.nonce)); err != nil {
+		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		} else {
 			client.subscribed = true
 		}
 	case "mining.authorize":
+		if err := req.FitParams(&params); err != nil {
+			client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+
+		if len(params) < 1 {
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+		// Ignore the session id if provided in the params
+		client.agent = params[0]
+
+		// TODO: actually check username/password (if user/pass authentication is desired)
+		if err := client.enc.Encode(AuthorizeResponse(req.ID, true, nil)); err != nil {
+			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+		} else {
+			client.authorized = true
+		}
 	default:
 		client.log.Warnf("unknown method %s", req.Method)
 		_ = client.enc.Encode(QuickRPCError(req.ID, ErrorMethodNotFound))

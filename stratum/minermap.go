@@ -57,7 +57,6 @@ func (m *MinerMap) AddMiner(u *Miner) string {
 	session := make([]byte, 16)
 	_, _ = rand.Read(session)
 	u.sessionID = fmt.Sprintf("%x", session)
-	u.sessionID = "abc"
 	u.joined = time.Now()
 	m.Lock()
 	u.nonce = m.nextNonce
@@ -74,4 +73,12 @@ func (m *MinerMap) GetMiner(name string) (*Miner, error) {
 	} else {
 		return nil, fmt.Errorf("No client/miner named %s", name)
 	}
+}
+
+func (m *MinerMap) ListMiners() []string {
+	names := make([]string, 0)
+	for miner := range m.miners {
+		names = append(names, miner)
+	}
+	return names
 }

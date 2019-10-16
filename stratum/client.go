@@ -2,8 +2,10 @@ package stratum
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"net"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -16,11 +18,18 @@ type Client struct {
 	enc  *json.Encoder
 	dec  *bufio.Reader
 	conn net.Conn
+
+	version string
+
+	subscriptions []Subscription
+	verbose       bool
 }
 
-func NewClient() (*Client, error) {
-	s := new(Client)
-	return s, nil
+func NewClient(verbose bool) (*Client, error) {
+	c := new(Client)
+	c.verbose = verbose
+	c.version = "0.0.1"
+	return c, nil
 }
 
 func (c *Client) Connect(address string) error {
@@ -39,19 +48,30 @@ func (c *Client) Connect(address string) error {
 
 func (c *Client) Handshake(conn net.Conn) error {
 	c.InitConn(conn)
-
 	err := c.Subscribe()
 	if err != nil {
 		return err
 	}
 
-	// Wait for subscribe response
+	// Receive subscribe response
+	data, _, err := c.dec.ReadLine()
+	var resp Response
+	err = json.Unmarshal(data, &resp)
+
+	if c.verbose {
+		log.Printf("CLIENT READ: %s\n", string(data))
+	}
 
 	err = c.Authorize("user", "password")
 	if err != nil {
 		return err
 	}
 
+	data, _, err = c.dec.ReadLine()
+	err = json.Unmarshal(data, &resp)
+	if c.verbose {
+		log.Printf("CLIENT READ: %s\n", string(data))
+	}
 	return nil
 }
 
@@ -105,4 +125,68 @@ func (c Client) SuggestDifficulty(preferredDifficulty string) error {
 		return err
 	}
 	return nil
+}
+
+func (c Client) Listen(ctx context.Context) {
+	defer c.conn.Close()
+	// Capture a cancel and close the server
+	go func() {
+		select {
+		case <-ctx.Done():
+			log.Infof("shutting down stratum client")
+			c.conn.Close()
+			return
+		}
+	}()
+
+	log.Printf("Stratum client listening to server at %s\n", c.conn.RemoteAddr().String())
+
+	r := bufio.NewReader(c.conn)
+
+	for {
+		readBytes, _, err := r.ReadLine()
+		if err != nil {
+			return
+		} else {
+			c.HandleMessage(readBytes)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func (c Client) HandleMessage(data []byte) {
+	var u UnknownRPC
+	err := json.Unmarshal(data, &u)
+	if err != nil {
+		log.WithError(err).Warnf("client read failed")
+	}
+
+	if u.IsRequest() {
+		req := u.GetRequest()
+		c.HandleRequest(req)
+	} else {
+		resp := u.GetResponse()
+		// TODO: Handle resp
+		var _ = resp
+	}
+
+	// TODO: Don't just print everything
+	log.Infof(string(data))
+}
+
+func (c Client) HandleRequest(req Request) {
+	var params RPCParams
+	switch req.Method {
+	case "client.get_version":
+		if err := req.FitParams(&params); err != nil {
+			log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
+			return
+		}
+
+		if err := c.enc.Encode(GetVersionResponse(req.ID, c.version)); err != nil {
+			log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+		}
+	default:
+		log.Warnf("unknown method %s", req.Method)
+	}
 }

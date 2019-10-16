@@ -14,9 +14,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-
 func init() {
 	rootCmd.AddCommand(testMiner)
+	testMiner.Flags().Bool("v", false, "Verbosity (if enabled, print messages)")
 }
 
 // Execute is cobra's entry point
@@ -74,7 +74,8 @@ var testMiner = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		exit.GlobalExitHandler.AddCancel(cancel)
 
-		client, err := stratum.NewClient()
+		verbosityEnabled, _ := cmd.Flags().GetBool("v")
+		client, err := stratum.NewClient(verbosityEnabled)
 		if err != nil {
 			panic(err)
 		}
@@ -83,6 +84,6 @@ var testMiner = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		var _ = ctx
+		client.Listen(ctx)
 	},
 }

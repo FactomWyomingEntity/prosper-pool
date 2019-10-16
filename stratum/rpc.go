@@ -2,7 +2,6 @@ package stratum
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 )
 
@@ -143,15 +142,36 @@ func (r Response) FitResult(t interface{}) error {
 	return json.Unmarshal(r.Result, t)
 }
 
-// SubscribeResult is [session id, nonce]
-type SubscribeResult []string
+type Subscription struct {
+	Type string `json:"type"`
+	Id   string `json:"id"`
+}
 
-func SubscribeResponse(id int, session string, nonce uint32) Response {
+// SubscribeResult is [session id, nonce]
+type SubscribeResult []Subscription
+
+func AuthorizeResponse(id int, result bool, err error) Response {
 	return Response{
 		ID: id,
-	}.SetResult(SubscribeResult{
-		session, fmt.Sprintf("%x", nonce),
-	})
+	}.SetResult(result)
+}
+
+func SubscribeResponse(id int, session string) Response {
+	notifySub := Subscription{Id: session, Type: "mining.notify"}
+	setDiffSub := Subscription{Id: session, Type: "mining.set_difficulty"}
+
+	res := make([]Subscription, 2)
+	res[0] = notifySub
+	res[1] = setDiffSub
+	return Response{
+		ID: id,
+	}.SetResult(res)
+}
+
+func GetVersionResponse(id int, version string) Response {
+	return Response{
+		ID: id,
+	}.SetResult(version)
 }
 
 type RPCError struct {
