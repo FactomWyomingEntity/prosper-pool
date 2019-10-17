@@ -9,9 +9,9 @@ import (
 const (
 	MiningPeriod = 480 // in seconds
 
-	// Roughly 13K h/s for 5s will achieve a pDiff
+	// Roughly 6.5K h/s for 5s will achieve a pDiff
 	// A raspberry pi is 11k h/s
-	PDiff uint64 = 0xffff000000000000
+	PDiff uint64 = 0xfffe000000000000
 
 	// TODO: Maybe define a BDiff?
 	BDiff uint64 = 0xffffffa68581fc34
