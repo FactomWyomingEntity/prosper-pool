@@ -29,20 +29,20 @@ var (
 //
 //	TH = 2^64 * (1 - (1 / target))
 //
-func TotalHashes(target uint64) uint64 {
+func TotalHashes(target uint64) *big.Int {
 	inv := new(big.Float).Quo(oneF, new(big.Float).SetUint64(target))
 	sub := new(big.Float).Sub(oneF, inv)
 	res := new(big.Float).Mul(BigMaxUint64F, sub)
-	u, _ := res.Uint64()
-	return u
+	resI, _ := res.Int(nil)
+	return resI
 }
 
 // TargetFromHashRate returns the target given a hashrate and a duration, where
 // the rate is in hashes per second.
-func TargetFromHashRate(rate float64, duration time.Duration) *big.Int {
+func TargetFromHashRate(rate float64, duration time.Duration) uint64 {
 	total := new(big.Float).Mul(big.NewFloat(rate), big.NewFloat(duration.Seconds()))
 	i, _ := total.Int(nil)
-	return i
+	return Target(i)
 }
 
 func TargetI(totalHashes uint64) uint64 {
