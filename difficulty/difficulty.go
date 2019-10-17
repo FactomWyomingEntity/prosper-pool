@@ -9,10 +9,11 @@ import (
 const (
 	MiningPeriod = 480 // in seconds
 
-	//             0x00000000
-	//             0x00000000FFFF
-	//             0xffffc813713da191
-	PDiff uint64 = 0xffff00000000000
+	// Roughly 13K h/s for 5s will achieve a pDiff
+	// A raspberry pi is 11k h/s
+	PDiff uint64 = 0xffff000000000000
+
+	// TODO: Maybe define a BDiff?
 	BDiff uint64 = 0xffffffa68581fc34
 )
 
@@ -23,17 +24,22 @@ var (
 	oneF = big.NewFloat(1)
 )
 
+// TODO: Type up all equations on a pdf, not in the comments. It's ugly here.
+
 // TotalHashes returns the estimated number of hashes done to obtain the given
 // target. This is an estimate of the average case, and can be used to determine
 // the estimated hashrate.
 //
-//	TH = 2^64 * (1 - (1 / target))
+//	TH = 2^64 / (2^64 - Target)
+//  In Python: m = np.uint64((2**64)-1); 1.0*m/(m-np.uint64(target))
 //
 func TotalHashes(target uint64) *big.Int {
-	inv := new(big.Float).Quo(oneF, new(big.Float).SetUint64(target))
-	sub := new(big.Float).Sub(oneF, inv)
-	res := new(big.Float).Mul(BigMaxUint64F, sub)
-	resI, _ := res.Int(nil)
+
+	tF := new(big.Float).SetUint64(target)
+	den := new(big.Float).Sub(BigMaxUint64F, tF)
+	quo := new(big.Float).Quo(BigMaxUint64F, den)
+	resI, _ := quo.Int(nil)
+
 	return resI
 }
 

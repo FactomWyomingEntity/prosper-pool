@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"math/big"
 	"testing"
 	"time"
 
@@ -31,6 +32,20 @@ const (
 //	fmt.Printf("%x\n", ExpectedMinimumTarget(5*K*MiningPeriod, 1))
 //	fmt.Printf("%x\n", ExpectedMinimumTarget(100*K*MiningPeriod, 1))
 //}
+
+func TestPDiffProperties(t *testing.T) {
+	total := TotalHashes(PDiff)
+	tF := new(big.Float).SetInt(total)
+
+	stat := func(dur time.Duration) {
+		fmt.Printf("%.2f h/s for %s\n",
+			new(big.Float).Quo(tF, big.NewFloat(dur.Seconds())), dur)
+	}
+	stat(time.Second)
+	stat(time.Second * 2)
+	stat(time.Second * 5)
+	stat(time.Minute)
+}
 
 func TestDifficulty(t *testing.T) {
 	t.Run("hashrate doubling using estimates", func(t *testing.T) {
