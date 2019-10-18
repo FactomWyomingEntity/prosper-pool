@@ -113,8 +113,8 @@ func (c Client) GetOPRHash(jobID string) error {
 }
 
 // Submit completed work to server
-func (c Client) Submit(username, jobID, nonce, oprHash string) error {
-	err := c.enc.Encode(SubmitRequest(username, jobID, nonce, oprHash))
+func (c Client) Submit(username, jobID, nonce, oprHash, target string) error {
+	err := c.enc.Encode(SubmitRequest(username, jobID, nonce, oprHash, target))
 	if err != nil {
 		return err
 	}
@@ -123,16 +123,16 @@ func (c Client) Submit(username, jobID, nonce, oprHash string) error {
 
 // Subscribe to stratum pool
 func (c Client) Subscribe() error {
-	err := c.enc.Encode(SubscribeRequest())
+	err := c.enc.Encode(SubscribeRequest(c.version))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// Suggest preferred mining difficulty to server
-func (c Client) SuggestDifficulty(preferredDifficulty string) error {
-	err := c.enc.Encode(SuggestDifficultyRequest(preferredDifficulty))
+// Suggest preferred mining target to server
+func (c Client) SuggestTarget(preferredTarget string) error {
+	err := c.enc.Encode(SuggestTargetRequest(preferredTarget))
 	if err != nil {
 		return err
 	}
@@ -234,16 +234,16 @@ func (c Client) HandleRequest(req Request) {
 
 		log.Printf("JobID: %s ... OPR Hash: %s\n", jobID, oprHash)
 		// TODO: do more than just log the notification details (actually update miner)
-	case "mining.set_difficulty":
+	case "mining.set_target":
 		if len(params) < 1 {
-			log.Errorf("Not enough parameters from set_difficulty: %s\n", params)
+			log.Errorf("Not enough parameters from set_target: %s\n", params)
 			return
 		}
 
-		newDifficulty := params[0]
+		newTarget := params[0]
 
-		log.Printf("New Difficulty: %s\n", newDifficulty)
-		// TODO: do more than just log the newDifficulty details (actually update miner)
+		log.Printf("New Target: %s\n", newTarget)
+		// TODO: do more than just log the newTarget details (actually update miner)
 	case "mining.set_nonce":
 		if len(params) < 1 {
 			log.Errorf("Not enough parameters from set_nonce: %s\n", params)

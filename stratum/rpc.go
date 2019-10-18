@@ -61,25 +61,25 @@ func GetOPRHashRequest(jobID string) Request {
 	}.SetParams(RPCParams{jobID})
 }
 
-func SubmitRequest(username, jobID, nonce, oprHash string) Request {
+func SubmitRequest(username, jobID, nonce, oprHash, target string) Request {
 	return Request{
 		ID:     rand.Int(),
 		Method: "mining.submit",
-	}.SetParams(RPCParams{username, jobID, nonce, oprHash})
+	}.SetParams(RPCParams{username, jobID, nonce, oprHash, target})
 }
 
-func SubscribeRequest() Request {
+func SubscribeRequest(version string) Request {
 	return Request{
 		ID:     rand.Int(),
 		Method: "mining.subscribe",
-	}.SetParams(RPCParams{"prosper/0.1.0"})
+	}.SetParams(RPCParams{"prosper/" + version})
 }
 
-func SuggestDifficultyRequest(preferredDifficulty string) Request {
+func SuggestTargetRequest(preferredTarget string) Request {
 	return Request{
 		ID:     rand.Int(),
-		Method: "mining.suggest_difficulty",
-	}.SetParams(RPCParams{preferredDifficulty})
+		Method: "mining.suggest_target",
+	}.SetParams(RPCParams{preferredTarget})
 }
 
 // Server-to-client methods
@@ -112,11 +112,11 @@ func NotifyRequest(jobID, oprHash, cleanjobs string) Request {
 	}.SetParams(RPCParams{jobID, oprHash, cleanjobs})
 }
 
-func SetDifficultyRequest(difficulty string) Request {
+func SetTargetRequest(target string) Request {
 	return Request{
 		ID:     rand.Int(),
-		Method: "mining.set_difficulty",
-	}.SetParams(RPCParams{difficulty})
+		Method: "mining.set_target",
+	}.SetParams(RPCParams{target})
 }
 
 func SetNonceRequest(nonce string) Request {
@@ -164,11 +164,11 @@ func SubmitResponse(id int, result bool, err error) Response {
 
 func SubscribeResponse(id int, session string) Response {
 	notifySub := Subscription{Id: session, Type: "mining.notify"}
-	setDiffSub := Subscription{Id: session, Type: "mining.set_difficulty"}
+	setTargetSub := Subscription{Id: session, Type: "mining.set_target"}
 
 	res := make([]Subscription, 2)
 	res[0] = notifySub
-	res[1] = setDiffSub
+	res[1] = setTargetSub
 	return Response{
 		ID: id,
 	}.SetResult(res)

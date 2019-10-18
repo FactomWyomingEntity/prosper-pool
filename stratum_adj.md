@@ -56,7 +56,7 @@ request
 {
   "method" : "mining.submit",
   "id": 0,
-  "params": ["username", "jobID", "nonce", "oprHash"]
+  "params": ["username", "jobID", "nonce", "oprHash", "target"]
 }
 ```
 Miners submit shares using the method "mining.submit". Client submissions contain:
@@ -65,6 +65,7 @@ Miners submit shares using the method "mining.submit". Client submissions contai
 2) Job ID
 3) Nonce
 4) OPR hash
+5) Target
 
 Server response is result (true for accepted, false for rejected). Alternatively, you may receive an error with more details.
 
@@ -91,7 +92,7 @@ response
 
 The client receives a result:
 ```json
-[[["mining.set_difficulty", "subscription id 1"], ["mining.notify", "subscription id 2"]], "nonce"]
+[[["mining.set_target", "subscription id 1"], ["mining.notify", "subscription id 2"]], "nonce"]
 ```
 The result contains two items:
 
@@ -99,17 +100,17 @@ The result contains two items:
 1) Subscriptions - An array of 2-item tuples, each with a subscription type and id.
 2) Nonce - Hex-encoded, per-connection unique string which will be used for creating generation transactions later.
 
-## mining.suggest_difficulty
+## mining.suggest_target
 
 request
 ```json
 {
-  "method" : "mining.suggest_difficulty",
+  "method" : "mining.suggest_target",
   "id": 0,
-  "params": ["preferred-difficulty"]
+  "params": ["preferred-target"]
 }
 ```
-Used to indicate a preference for share difficulty to the pool. Servers are not required to honor this request.
+Used to indicate a preference for mining target to the pool. Servers are not required to honor this request.
 
 
 # Methods (server to client)
@@ -176,20 +177,20 @@ Fields in order:
 
 1) Job ID. This is included when miners submit a results so work can be matched with proper transactions.
 2) Oracle Price Record hash. Used to build the header.
-3) (optional) "CLEANJOBS". Used to force the miner to begin using a new difficulty immediately.
+3) (optional) "CLEANJOBS". Used to force the miner to begin using a new mining parameters immediately.
 
 
-## mining.set_difficulty
+## mining.set_target
 
 request
 ```json
 {
-  "method" : "mining.set_difficulty",
+  "method" : "mining.set_target",
   "id": 0,
-  "params": ["difficulty"]
+  "params": ["target"]
 }
 ```
-The server can adjust the difficulty required for miner shares with the "mining.set_difficulty" method. The miner should begin enforcing the new difficulty on the next job received. Some pools may force a new job out when set_difficulty is sent, using CLEANJOBS to force the miner to begin using the new difficulty immediately.
+The server can adjust the target required for miner shares with the "mining.set_target" method. The miner should begin enforcing the new target on the next job received. Some pools may force a new job out when set_target is sent, using CLEANJOBS to force the miner to begin using the new target immediately.
 
 
 ## mining.set_nonce

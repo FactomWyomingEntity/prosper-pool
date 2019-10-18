@@ -66,8 +66,10 @@ func (m *MinerMap) AddMiner(u *Miner) string {
 	return u.sessionID
 }
 
-// GetMiner will add a miner to the map, and return a unique session id
+// GetMiner returns a pointer to the miner in the MinerMap under the 'name' key
 func (m *MinerMap) GetMiner(name string) (*Miner, error) {
+	defer m.Unlock()
+	m.Lock()
 	if miner, ok := m.miners[name]; ok {
 		return miner, nil
 	} else {
@@ -77,8 +79,10 @@ func (m *MinerMap) GetMiner(name string) (*Miner, error) {
 
 func (m *MinerMap) ListMiners() []string {
 	names := make([]string, 0)
+	m.Lock()
 	for miner := range m.miners {
 		names = append(names, miner)
 	}
+	m.Unlock()
 	return names
 }

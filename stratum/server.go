@@ -98,7 +98,7 @@ type Miner struct {
 	encSync sync.Mutex // All encodes should be synchronized
 	// TODO: Manage all miner state. Like authentication, jobs, shares, etc
 
-	preferredDifficulty uint64
+	preferredTarget uint64
 
 	// broadcast will broadcast any notify messages to this miner
 	broadcast chan interface{}
@@ -276,15 +276,15 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 		} else {
 			client.subscribed = true
 		}
-	case "mining.suggest_difficulty":
+	case "mining.suggest_target":
 		if len(params) < 1 {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
 			return
 		}
 
-		preferredDifficulty, err := strconv.ParseUint(params[0], 10, 64)
+		preferredTarget, err := strconv.ParseUint(params[0], 16, 64)
 		if err == nil {
-			client.preferredDifficulty = preferredDifficulty
+			client.preferredTarget = preferredTarget
 		}
 	default:
 		client.log.Warnf("unknown method %s", req.Method)
@@ -310,12 +310,12 @@ func (s Server) ReconnectClient(clientName, hostname, port, waittime string) err
 	return err
 }
 
-func (s Server) SetDifficulty(clientName, difficulty string) error {
+func (s Server) SetTarget(clientName, target string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
 		return err
 	}
-	err = miner.enc.Encode(SetDifficultyRequest(difficulty))
+	err = miner.enc.Encode(SetTargetRequest(target))
 	return err
 }
 
