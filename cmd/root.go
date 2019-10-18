@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -100,6 +101,27 @@ var testMiner = &cobra.Command{
 			panic(err)
 		}
 
+		go func() {
+			keyboardReader := bufio.NewReader(os.Stdin)
+			for {
+				userCommand, _ := keyboardReader.ReadString('\n')
+				words := strings.Fields(userCommand)
+				if len(words) > 0 {
+					switch words[0] {
+					case "getopr":
+						if len(words) > 1 {
+							client.GetOPRHash(words[1])
+						}
+					case "suggesttarget":
+						if len(words) > 1 {
+							client.SuggestTarget(words[1])
+						}
+					default:
+						fmt.Println("Client command not supported: ", words[0])
+					}
+				}
+			}
+		}()
 		client.Listen(ctx)
 	},
 }
