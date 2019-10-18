@@ -51,6 +51,30 @@ var rootCmd = &cobra.Command{
 			log.WithError(err).Fatal("failed to launch stratum server")
 		}
 
+		go func() {
+			keyboardReader := bufio.NewReader(os.Stdin)
+			for {
+				userCommand, _ := keyboardReader.ReadString('\n')
+				words := strings.Fields(userCommand)
+				if len(words) > 0 {
+					switch words[0] {
+					case "listclients":
+						fmt.Println(strings.Join(s.Miners.ListMiners()[:], ", "))
+					case "showmessage":
+						if len(words) > 2 {
+							s.ShowMessage(words[1], strings.Join(words[2:], " "))
+						}
+					case "getversion":
+						if len(words) > 1 {
+							s.GetVersion(words[1])
+						}
+					default:
+						fmt.Println("Client command not supported: ", words[0])
+					}
+				}
+			}
+		}()
+
 		s.Listen(ctx)
 	},
 }
