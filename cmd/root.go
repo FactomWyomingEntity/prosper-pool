@@ -58,7 +58,7 @@ var rootCmd = &cobra.Command{
 				words := strings.Fields(userCommand)
 				if len(words) > 0 {
 					switch words[0] {
-					case "listclients":
+					case "listclients", "listminers":
 						fmt.Println(strings.Join(s.Miners.ListMiners()[:], ", "))
 					case "showmessage":
 						if len(words) > 2 {
