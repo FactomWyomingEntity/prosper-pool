@@ -64,6 +64,26 @@ func TestServer_GetVersion(t *testing.T) {
 	}
 }
 
+func TestServer_ReconnectClient(t *testing.T) {
+	require := require.New(t)
+	srv, miner, _, cli := serverAndClient(t)
+
+	err := miner.Subscribe()
+	require.NoError(err)
+
+	ctx := context.Background()
+	go miner.Listen(ctx)
+
+	r := bufio.NewReader(cli)
+	_, isPrefix, err := r.ReadLine()
+	require.NoError(err)
+	require.False(isPrefix)
+
+	err = srv.ReconnectClient(srv.Miners.ListMiners()[0], "pipe", "1234", "3")
+	// TODO: see if client actually reinitates a connection, maybe sleep and check again
+	require.NoError(err)
+}
+
 func TestServer_ShowMessage(t *testing.T) {
 	require := require.New(t)
 	s, m, _, _ := serverAndClient(t)
@@ -79,4 +99,44 @@ func TestServer_ShowMessage(t *testing.T) {
 		require.NoError(err)
 		// TODO: actually ensure message is printed/logged client-side
 	}
+}
+
+func TestServer_SetNonce(t *testing.T) {
+	require := require.New(t)
+	srv, miner, _, cli := serverAndClient(t)
+
+	err := miner.Subscribe()
+	require.NoError(err)
+
+	ctx := context.Background()
+	go miner.Listen(ctx)
+
+	r := bufio.NewReader(cli)
+	_, isPrefix, err := r.ReadLine()
+	require.NoError(err)
+	require.False(isPrefix)
+
+	err = srv.SetNonce(srv.Miners.ListMiners()[0], "ffeabea") // 268348394 in decimal
+	require.NoError(err)
+	// TODO: ensure client miner has updated nonce internally (once this is being done)
+}
+
+func TestServer_SetTarget(t *testing.T) {
+	require := require.New(t)
+	srv, miner, _, cli := serverAndClient(t)
+
+	err := miner.Subscribe()
+	require.NoError(err)
+
+	ctx := context.Background()
+	go miner.Listen(ctx)
+
+	r := bufio.NewReader(cli)
+	_, isPrefix, err := r.ReadLine()
+	require.NoError(err)
+	require.False(isPrefix)
+
+	err = srv.SetTarget(srv.Miners.ListMiners()[0], "ffeabea") // 268348394 in decimal
+	require.NoError(err)
+	// TODO: ensure client miner has updated target internally (once this is being done)
 }
