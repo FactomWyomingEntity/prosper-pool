@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/shopspring/decimal"
+
 	. "github.com/FactomWyomingEntity/private-pool/accounting"
 )
 
@@ -31,23 +33,27 @@ func TestShareMap(t *testing.T) {
 func TestPayouts_TakePoolCut(t *testing.T) {
 	t.Run("vectored", func(t *testing.T) {
 		type tVec struct {
-			Rate      int64
+			Rate      string
 			Reward    int64
 			Remaining int64
 			Cut       int64
 		}
 
 		vecs := []tVec{
-			{Rate: 0, Reward: 10 * 1e8, Remaining: 10 * 1e8, Cut: 0},             // 0%
-			{Rate: 100, Reward: 1 * 1e8, Remaining: 1*1e8 - 1*1e6, Cut: 1e6},     // 1%
-			{Rate: 500, Reward: 500 * 1e8, Remaining: 475 * 1e8, Cut: 25 * 1e8},  // 5%
-			{Rate: 1000, Reward: 500 * 1e8, Remaining: 450 * 1e8, Cut: 50 * 1e8}, // 10%
-			{Rate: 10000, Reward: 500 * 1e8, Remaining: 0, Cut: 500 * 1e8},       // 100%
+			{Rate: "0", Reward: 10 * 1e8, Remaining: 10 * 1e8, Cut: 0},             // 0%
+			{Rate: "0.01", Reward: 1 * 1e8, Remaining: 1*1e8 - 1*1e6, Cut: 1e6},    // 1%
+			{Rate: "0.05", Reward: 500 * 1e8, Remaining: 475 * 1e8, Cut: 25 * 1e8}, // 5%
+			{Rate: "0.10", Reward: 500 * 1e8, Remaining: 450 * 1e8, Cut: 50 * 1e8}, // 10%
+			{Rate: "1", Reward: 500 * 1e8, Remaining: 0, Cut: 500 * 1e8},           // 100%
 		}
 
 		for _, v := range vecs {
+			r, err := decimal.NewFromString(v.Rate)
+			if err != nil {
+				t.Error(err)
+			}
 			pays := Payouts{
-				PoolFeeRate: v.Rate,
+				PoolFeeRate: r,
 			}
 
 			remain := pays.TakePoolCut(v.Reward)
@@ -64,11 +70,13 @@ func TestPayouts_TakePoolCut(t *testing.T) {
 		for i := 0; i < 1000; i++ {
 			rate := TruncateTo4(rand.Float64())
 			reward := rand.Int63() % (1e5 * 1e8) // 100K max
-			cutF := int64(float64(reward) * rate)
+			r := decimal.NewFromFloat(rate)
+
+			cutF := decimal.NewFromFloat(float64(reward)).Mul(r).IntPart()
 			remainingF := reward - cutF
 
 			pays := Payouts{
-				PoolFeeRate: int64(1e4 * rate),
+				PoolFeeRate: r,
 			}
 			remainingI := pays.TakePoolCut(reward)
 
@@ -107,21 +115,34 @@ func TestNewPayout(t *testing.T) {
 			}, randomRate(),
 				*randomShareMap("test", users))
 
-			var totalProp int64
+			var totalProp decimal.Decimal
 			var totalPay int64
 			for _, payouts := range pays.UserPayouts {
 				totalPay += payouts.Payout
-				totalProp += payouts.Proportion
+				totalProp = totalProp.Add(payouts.Proportion)
 			}
 
-			if totalPay+pays.PoolFee != pays.Reward.PoolReward {
-				t.Errorf("exp total payouts to be %d, found %d", pays.Reward.PoolReward, totalPay+pays.PoolFee)
+			diff := pays.Reward.PoolReward - (totalPay + pays.PoolFee)
+			diffP := decimal.New(diff, 0).Div(decimal.New(pays.Reward.PoolReward, 0))
+			diffP = diffP.Mul(decimal.New(100, 0))
+			if totalPay+pays.PoolFee != pays.Reward.PoolReward && diffP.GreaterThan(decimal.NewFromFloat(0.0001)) {
+				t.Errorf("exp total payouts to be %d, found %d. %s%% off", pays.Reward.PoolReward, totalPay+pays.PoolFee, diffP.String())
 			}
-			if totalProp != 100*100 {
-				t.Errorf("props add to %d, not %d", totalProp, 100*100)
+
+			// If > 1 || < 0.99990
+			min, _ := decimal.NewFromString("0.99990")
+			if totalProp.GreaterThan(decimal.New(1, 0)) || totalProp.LessThan(min) {
+				t.Errorf("props add to %s, not %d", totalProp, 1)
 			}
-			if pays.Dust != 0 {
-				t.Errorf("should have 0 dust")
+
+			// More than 1 PEG as dust is a problem
+			if pays.Dust > 1e8 {
+				t.Errorf("[%.8f] should have 0 dust, found %d, or %.8f PEG", float64(pays.PoolReward)/1e8, pays.Dust, float64(pays.Dust)/1e8)
+			}
+
+			dustP := decimal.New(pays.Dust, 0).Div(decimal.New(pays.Reward.PoolReward, 0))
+			if dustP.GreaterThan(decimal.NewFromFloat(0.00001)) {
+				t.Error("More than 0.001% in dust")
 			}
 		}
 	})
@@ -149,9 +170,10 @@ func randomShareMap(jobid string, users int) *ShareMap {
 	s := NewShareMap()
 	for i := 0; i < users; i++ {
 		buf := make([]byte, 8)
+		rand.Read(buf)
 		s.AddShare(fmt.Sprintf("%x", buf), Share{
 			JobID:      jobid,
-			Difficulty: rand.Float64() * 100,
+			Difficulty: rand.Float64() * 20,
 			Accepted:   false,
 			MinerID:    fmt.Sprintf("%x", buf),
 			UserID:     fmt.Sprintf("%x", buf),
@@ -161,9 +183,8 @@ func randomShareMap(jobid string, users int) *ShareMap {
 	return s
 }
 
-func randomRate() int64 {
-	rate := TruncateTo4(rand.Float64())
-	return int64(10000 * rate)
+func randomRate() decimal.Decimal {
+	return decimal.NewFromFloat(rand.Float64())
 }
 
 func abs(v int64) int64 {

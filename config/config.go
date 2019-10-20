@@ -69,5 +69,5 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigFixedUSDPriority, -1)
 	conf.SetDefault(ConfigAlternativeMePriority, -1)
 
-	conf.SetDefault(ConfigPoolCut, 500)
+	conf.SetDefault(ConfigPoolCut, "0.05")
 }

@@ -1,21 +1,25 @@
 package accounting
 
+import (
+	"github.com/shopspring/decimal"
+)
+
 type Payouts struct {
 	Reward // All the reward info
 
-	// PoolFeeRate denoted with 10000 being 100% and 1 being 0.01%
-	PoolFeeRate int64
-	PoolFee     int64 // In PEG
+	// PoolFeeRate is the pool cut
+	PoolFeeRate decimal.Decimal `sql:"type:decimal(20,8);"`
+	PoolFee     int64           // In PEG
 	// Dust should always be 0, but it is any rewards that are not accounted
 	// to a user or to the pool. We should account for it if it happens.
 	Dust int64
 
 	PoolDifficuty float64
 
-	UserPayouts []Payout
+	UserPayouts []UserPayout `gorm:"foreignkey:JobID"`
 }
 
-func NewPayout(r Reward, poolFeeRate int64, work ShareMap) *Payouts {
+func NewPayout(r Reward, poolFeeRate decimal.Decimal, work ShareMap) *Payouts {
 	p := new(Payouts)
 	p.PoolFeeRate = poolFeeRate
 	p.Reward = r
@@ -29,8 +33,9 @@ func (p *Payouts) Payouts(work ShareMap, remaining int64) {
 	p.PoolDifficuty = work.TotalDiff
 	var totalPayout int64
 	for user, work := range work.Sums {
-		prop := int64(TruncateTo4(work.TotalDifficulty/p.PoolDifficuty) * 1e4)
-		pay := Payout{
+		prop := decimal.NewFromFloat(work.TotalDifficulty).Div(decimal.NewFromFloat(p.PoolDifficuty))
+		prop = prop.Truncate(AccountingPrecision)
+		pay := UserPayout{
 			UserID:        user,
 			UserDifficuty: work.TotalDifficulty,
 			Proportion:    prop,
@@ -45,26 +50,29 @@ func (p *Payouts) Payouts(work ShareMap, remaining int64) {
 // TakePoolCut will take the amount owed the pool, and return the
 // remaining rewards to be distributed
 func (p *Payouts) TakePoolCut(remaining int64) int64 {
-	if p.PoolFeeRate == 0 {
+	if p.PoolFeeRate.IsZero() {
 		return remaining
 	}
-	p.PoolFee = (remaining * p.PoolFeeRate) / (100 * 100)
+
 	p.PoolFee = cut(remaining, p.PoolFeeRate)
 	return remaining - p.PoolFee
 }
 
-func cut(total, prop int64) int64 {
-	// Divide by 100*100 since our fee is in 100*100 (1 == 0.01% == 0.0001)
-	return (total * prop) / (100 * 100)
+// cut returns the proportional amount in the total
+func cut(total int64, prop decimal.Decimal) int64 {
+	amt := decimal.New(total, 0)
+	cut := amt.Mul(prop)
+	return cut.IntPart()
 }
 
-type Payout struct {
-	UserID        string
+type UserPayout struct {
+	JobID         string `gorm:"primary_key"`
+	UserID        string `gorm:"primary_key"`
 	UserDifficuty float64
 
 	// Proportion denoted with 10000 being 100% and 1 being 0.01%
-	Proportion int64
-	Payout     int64 // In PEG
+	Proportion decimal.Decimal `sql:"type:decimal(20,8);"`
+	Payout     int64           // In PEG
 }
 
 type Reward struct {

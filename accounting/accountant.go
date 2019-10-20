@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/shopspring/decimal"
+
 	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/spf13/viper"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
+
+const AccountingPrecision = 8
 
 type Accountant struct {
 	DB *gorm.DB
@@ -25,28 +29,51 @@ type Accountant struct {
 	rewards chan *Reward
 
 	// Pool Configuration
-	PoolFeeRate int64 // Denoted with 1 being 0.01%
+	PoolFeeRate decimal.Decimal
 }
 
 func NewAccountant(conf *viper.Viper, db *gorm.DB) (*Accountant, error) {
 	a := new(Accountant)
 	a.DB = db
 	a.shares = make(chan *Share, 1000)
+	a.rewards = make(chan *Reward, 1000)
+	a.newJobs = make(chan string, 100)
+	a.JobsByMiner = make(map[string]*ShareMap)
+	a.JobsByUser = make(map[string]*ShareMap)
 
-	cut := conf.GetInt64(config.ConfigPoolCut)
-	if cut == 0 {
+	cut := conf.GetString(config.ConfigPoolCut)
+
+	if cut == "0" || cut == "" {
 		return nil, fmt.Errorf("you set a pool fee of 0. If this was intentional, set it to -1 to have no fee")
+	} else if cut == "-1" {
+		a.PoolFeeRate = decimal.New(0, 0)
+	} else {
+		var err error
+		a.PoolFeeRate, err = decimal.NewFromString(cut)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	if cut > 100*10 {
-		return nil, fmt.Errorf("pool fee is set to over 100%%")
-	} else if cut == -1 {
-		a.PoolFeeRate = 0
-	} else {
-		a.PoolFeeRate = cut
+	if a.PoolFeeRate.IntPart() > 1 || a.PoolFeeRate.IntPart() < 0 {
+		return nil, fmt.Errorf("pool fee must be between 0 and 1")
 	}
+
+	a.PoolFeeRate = a.PoolFeeRate.Truncate(AccountingPrecision)
 
 	return a, nil
+}
+
+func (a Accountant) JobChannel() chan<- string {
+	return a.newJobs
+}
+
+func (a Accountant) RewardChannel() chan<- *Reward {
+	return a.rewards
+}
+
+func (a Accountant) ShareChannel() chan<- *Share {
+	return a.shares
 }
 
 // Listen accepts new shares and shares for handling the payout accounting.
@@ -103,7 +130,16 @@ func (a *Accountant) Listen(ctx context.Context) {
 			pays := NewPayout(*reward, a.PoolFeeRate, *us)
 
 			// TODO: Throw this into the database
-			var _ = pays
+			dbErr := a.DB.Create(pays)
+			if dbErr.Error != nil {
+				// TODO: This is pretty bad. This means payments failed.
+				// 		We don't want to just panic and kill the pool.
+				//		For now, we can just write everything to a file,
+				//		and try to notify someone.
+
+				// TODO: Write to a file all the details so we can recover the payments
+				rLog.WithError(dbErr.Error).Error("failed to write payouts to database")
+			}
 
 			rLog.WithFields(log.Fields{"pool": us.TotalDiff}).Infof("pool stats")
 			a.jobLock.Unlock()
