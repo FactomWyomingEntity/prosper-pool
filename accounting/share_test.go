@@ -1,6 +1,7 @@
 package accounting_test
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 
@@ -62,12 +63,12 @@ func TestPayouts_TakePoolCut(t *testing.T) {
 	t.Run("float approximations", func(t *testing.T) {
 		for i := 0; i < 1000; i++ {
 			rate := TruncateTo4(rand.Float64())
-			reward := rand.Int63() % 1e5 * 1e8 // 100K max
+			reward := rand.Int63() % (1e5 * 1e8) // 100K max
 			cutF := int64(float64(reward) * rate)
 			remainingF := reward - cutF
 
 			pays := Payouts{
-				PoolFeeRate: int64(10000 * rate),
+				PoolFeeRate: int64(1e4 * rate),
 			}
 			remainingI := pays.TakePoolCut(reward)
 
@@ -90,8 +91,79 @@ func TestPayouts_TakePoolCut(t *testing.T) {
 	})
 }
 
-func TruncateTo4(v float64) float64 {
-	return float64(int64(v*1e4)) / 1e4
+func TestNewPayout(t *testing.T) {
+	// Just testing the float -> int math and proportions
+	t.Run("ensure props add to 100", func(t *testing.T) {
+		for i := 0; i < 1000; i++ {
+			users := rand.Int() % 100
+			if users == 0 {
+				users = 1
+			}
+			pays := NewPayout(Reward{
+				JobID:      "test",
+				PoolReward: rand.Int63() % (1e6 * 1e8), // 100K max PEG
+				Winning:    10,
+				Graded:     15,
+			}, randomRate(),
+				*randomShareMap("test", users))
+
+			var totalProp int64
+			var totalPay int64
+			for _, payouts := range pays.UserPayouts {
+				totalPay += payouts.Payout
+				totalProp += payouts.Proportion
+			}
+
+			if totalPay+pays.PoolFee != pays.Reward.PoolReward {
+				t.Errorf("exp total payouts to be %d, found %d", pays.Reward.PoolReward, totalPay+pays.PoolFee)
+			}
+			if totalProp != 100*100 {
+				t.Errorf("props add to %d, not %d", totalProp, 100*100)
+			}
+			if pays.Dust != 0 {
+				t.Errorf("should have 0 dust")
+			}
+		}
+	})
+
+	t.Run("test the 0 user case", func(t *testing.T) {
+		// Idk how we could have 0 users, and a winner, but things should not panic
+		pays := NewPayout(Reward{
+			JobID:      "test",
+			PoolReward: rand.Int63() % (1e6 * 1e8), // 100K max PEG
+			Winning:    10,
+			Graded:     15,
+		}, randomRate(),
+			*randomShareMap("test", 0))
+
+		if pays.PoolFee == 0 {
+			t.Errorf("pool always takes a cut")
+		}
+		if pays.Dust+pays.PoolFee != pays.Reward.PoolReward {
+			t.Errorf("dust + pool cut should equal reward")
+		}
+	})
+}
+
+func randomShareMap(jobid string, users int) *ShareMap {
+	s := NewShareMap()
+	for i := 0; i < users; i++ {
+		buf := make([]byte, 8)
+		s.AddShare(fmt.Sprintf("%x", buf), Share{
+			JobID:      jobid,
+			Difficulty: rand.Float64() * 100,
+			Accepted:   false,
+			MinerID:    fmt.Sprintf("%x", buf),
+			UserID:     fmt.Sprintf("%x", buf),
+		})
+	}
+
+	return s
+}
+
+func randomRate() int64 {
+	rate := TruncateTo4(rand.Float64())
+	return int64(10000 * rate)
 }
 
 func abs(v int64) int64 {

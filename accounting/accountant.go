@@ -81,7 +81,7 @@ func (a *Accountant) Listen(ctx context.Context) {
 		case reward := <-a.rewards:
 			rLog := log.WithFields(log.Fields{
 				"job": reward.JobID,
-				"peg": reward.Reward / 1e8,
+				"peg": reward.PoolReward / 1e8,
 			})
 			// Indication of a block being completed and us earning rewards
 			if !a.JobExists(reward.JobID) {
@@ -98,16 +98,12 @@ func (a *Accountant) Listen(ctx context.Context) {
 			us.Seal()
 			ms.Seal()
 
-			// Setup the payout struct
-			var pays = &Payouts{
-				PoolFeeRate:   a.PoolFeeRate,
-				PoolDifficuty: us.TotalDiff,
-				Reward:        *reward,
-			}
+			// Setup the payout struct with all the proportional payouts.
+			// This will also calculate the pool cut
+			pays := NewPayout(*reward, a.PoolFeeRate, *us)
 
-			// First take the pool cut
-			remaining := reward.Reward
-			remaining = pays.TakePoolCut(remaining)
+			// TODO: Throw this into the database
+			var _ = pays
 
 			rLog.WithFields(log.Fields{"pool": us.TotalDiff}).Infof("pool stats")
 			a.jobLock.Unlock()

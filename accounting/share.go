@@ -6,10 +6,40 @@ type Payouts struct {
 	// PoolFeeRate denoted with 10000 being 100% and 1 being 0.01%
 	PoolFeeRate int64
 	PoolFee     int64 // In PEG
+	// Dust should always be 0, but it is any rewards that are not accounted
+	// to a user or to the pool. We should account for it if it happens.
+	Dust int64
 
 	PoolDifficuty float64
 
 	UserPayouts []Payout
+}
+
+func NewPayout(r Reward, poolFeeRate int64, work ShareMap) *Payouts {
+	p := new(Payouts)
+	p.PoolFeeRate = poolFeeRate
+	p.Reward = r
+	remaining := p.TakePoolCut(p.Reward.PoolReward)
+	p.Payouts(work, remaining)
+
+	return p
+}
+
+func (p *Payouts) Payouts(work ShareMap, remaining int64) {
+	p.PoolDifficuty = work.TotalDiff
+	var totalPayout int64
+	for user, work := range work.Sums {
+		prop := int64(TruncateTo4(work.TotalDifficulty/p.PoolDifficuty) * 1e4)
+		pay := Payout{
+			UserID:        user,
+			UserDifficuty: work.TotalDifficulty,
+			Proportion:    prop,
+			Payout:        cut(remaining, prop),
+		}
+		p.UserPayouts = append(p.UserPayouts, pay)
+		totalPayout += pay.Payout
+	}
+	p.Dust = remaining - totalPayout
 }
 
 // TakePoolCut will take the amount owed the pool, and return the
@@ -18,9 +48,14 @@ func (p *Payouts) TakePoolCut(remaining int64) int64 {
 	if p.PoolFeeRate == 0 {
 		return remaining
 	}
-	// Divide by 100*100 since our fee is in 100*100 (1 == 0.01% == 0.0001)
 	p.PoolFee = (remaining * p.PoolFeeRate) / (100 * 100)
+	p.PoolFee = cut(remaining, p.PoolFeeRate)
 	return remaining - p.PoolFee
+}
+
+func cut(total, prop int64) int64 {
+	// Divide by 100*100 since our fee is in 100*100 (1 == 0.01% == 0.0001)
+	return (total * prop) / (100 * 100)
 }
 
 type Payout struct {
@@ -33,8 +68,8 @@ type Payout struct {
 }
 
 type Reward struct {
-	JobID  string `gorm:"primary_key"` // Block height of reward payout
-	Reward int64  // PEG reward for block
+	JobID      string `gorm:"primary_key"` // Block height of reward payout
+	PoolReward int64  // PEG reward for block
 
 	Winning int // Number of oprs in the winning set
 	Graded  int // Number of oprs in the graded set
@@ -93,4 +128,9 @@ type ShareSum struct {
 func (sum *ShareSum) AddShare(s Share) {
 	sum.TotalDifficulty += s.Difficulty
 	sum.TotalShares++
+}
+
+// some utils
+func TruncateTo4(v float64) float64 {
+	return float64(int64(v*1e4)) / 1e4
 }
