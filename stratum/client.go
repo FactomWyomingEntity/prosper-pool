@@ -137,14 +137,19 @@ func (c Client) SuggestTarget(preferredTarget string) error {
 	return nil
 }
 
+func (c Client) Close() error {
+	log.Infof("shutting down stratum client")
+	err := c.conn.Close()
+	return err
+}
+
 func (c Client) Listen(ctx context.Context) {
 	defer c.conn.Close()
-	// Capture a cancel and close the server
+	// Capture a cancel and close the client
 	go func() {
 		select {
 		case <-ctx.Done():
-			log.Infof("shutting down stratum client")
-			c.conn.Close()
+			c.Close()
 			return
 		}
 	}()
@@ -160,7 +165,6 @@ func (c Client) Listen(ctx context.Context) {
 		} else {
 			c.HandleMessage(readBytes)
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 }
 
