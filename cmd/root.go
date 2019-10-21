@@ -152,7 +152,7 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 
 }
 
-// TODO: Move testMiner to it's own binary
+// TODO: Move testMiner to its own binary
 var testMiner = &cobra.Command{
 	Use:    "miner",
 	Short:  "Launch a miner",
@@ -193,6 +193,14 @@ var testMiner = &cobra.Command{
 				}
 			}
 		}()
+
+		go func() {
+			// Give the client a brief wait before initiating a handshake, so
+			// it has time to start listening
+			time.Sleep(50 * time.Millisecond)
+			client.Handshake()
+		}()
+
 		client.Listen(ctx)
 	},
 }

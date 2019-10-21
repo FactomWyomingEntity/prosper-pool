@@ -24,6 +24,7 @@ type Client struct {
 	version string
 
 	subscriptions []Subscription
+	requestsMade  map[int]func(Response)
 	verbose       bool
 }
 
@@ -31,6 +32,7 @@ func NewClient(verbose bool) (*Client, error) {
 	c := new(Client)
 	c.verbose = verbose
 	c.version = "0.0.1"
+	c.requestsMade = make(map[int]func(Response))
 	return c, nil
 }
 
@@ -41,32 +43,17 @@ func (c *Client) Connect(address string) error {
 	}
 
 	conn, err := net.DialTCP("tcp", nil, addr)
-	if err != nil {
-		return err
-	}
-
-	return c.Handshake(conn)
+	c.InitConn(conn)
+	return err
 }
 
-func (c *Client) Handshake(conn net.Conn) error {
-	c.InitConn(conn)
+func (c *Client) Handshake() error {
 	err := c.Subscribe()
 	if err != nil {
 		return err
 	}
 
-	// Receive subscribe response
-	data, _, err := c.dec.ReadLine()
-	c.HandleMessage(data)
-	err = c.Authorize("user", "password")
-	if err != nil {
-		return err
-	}
-
-	data, _, err = c.dec.ReadLine()
-	c.HandleMessage(data)
-
-	return nil
+	return c.Authorize("user", "password")
 }
 
 // InitConn will not start the handshake process. Good for unit tests
@@ -88,7 +75,14 @@ func (c *Client) WaitThenConnect(address, waittime string) error {
 
 // Authorize against stratum pool
 func (c Client) Authorize(username, password string) error {
-	err := c.enc.Encode(AuthorizeRequest(username, password))
+	req := AuthorizeRequest(username, password)
+	c.requestsMade[req.ID] = func(resp Response) {
+		var result bool
+		if err := resp.FitResult(&result); err == nil {
+			log.Infof("AuthorizeResponse result: %t\n", result)
+		}
+	}
+	err := c.enc.Encode(req)
 	if err != nil {
 		return err
 	}
@@ -115,7 +109,19 @@ func (c Client) Submit(username, jobID, nonce, oprHash, target string) error {
 
 // Subscribe to stratum pool
 func (c Client) Subscribe() error {
-	err := c.enc.Encode(SubscribeRequest(c.version))
+	req := SubscribeRequest(c.version)
+	c.requestsMade[req.ID] = func(resp Response) {
+		var subscriptions []Subscription
+		if err := resp.FitResult(&subscriptions); err == nil {
+			log.Println("Subscriptions Results:")
+			for _, subscription := range subscriptions {
+				log.Println("...", subscription)
+			}
+		} else {
+			log.Error(err)
+		}
+	}
+	err := c.enc.Encode(req)
 	if err != nil {
 		return err
 	}
@@ -170,8 +176,7 @@ func (c Client) HandleMessage(data []byte) {
 		c.HandleRequest(req)
 	} else {
 		resp := u.GetResponse()
-		// TODO: Handle resp
-		var _ = resp
+		c.HandleResponse(resp)
 	}
 
 	// TODO: Don't just print everything
@@ -251,5 +256,11 @@ func (c Client) HandleRequest(req Request) {
 		// TODO: actually pause mining until new job is received
 	default:
 		log.Warnf("unknown method %s", req.Method)
+	}
+}
+
+func (c Client) HandleResponse(resp Response) {
+	if val, ok := c.requestsMade[resp.ID]; ok {
+		val(resp)
 	}
 }
