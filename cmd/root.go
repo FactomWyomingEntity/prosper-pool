@@ -89,6 +89,10 @@ var testStratum = &cobra.Command{
 						if len(words) > 1 {
 							s.GetVersion(words[1])
 						}
+					case "notify":
+						if len(words) > 3 {
+							s.SingleClientNotify(words[1], words[2], words[3], "")
+						}
 					case "reconnect":
 						if len(words) > 4 {
 							s.ReconnectClient(words[1], words[2], words[3], words[4])

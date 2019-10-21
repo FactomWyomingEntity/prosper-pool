@@ -19,8 +19,9 @@ import (
 
 type Server struct {
 	// miners is a map of miners to their session id
-	Miners *MinerMap
-	config *viper.Viper
+	Miners     *MinerMap
+	config     *viper.Viper
+	currentJob *Job
 }
 
 type Job struct {
@@ -36,9 +37,15 @@ func NewServer(conf *viper.Viper) (*Server, error) {
 	return s, nil
 }
 
+// UpdateCurrentJob sets currently-active job details on the stratum server
+// and automatically pushes a notification to all connected miners
+func (s *Server) UpdateCurrentJob(job *Job) {
+	s.currentJob = job
+	s.Notify(job)
+}
+
 // Notify will notify all miners of a new block to mine
-// TODO: Come up with a job structure
-func (s Server) Notify(job *Job) {
+func (s *Server) Notify(job *Job) {
 	jobReq := NotifyRequest(job.JobID, job.OPRHash, "")
 	data, _ := json.Marshal(jobReq)
 	errs := s.Miners.Notify(json.RawMessage(data))
@@ -46,7 +53,7 @@ func (s Server) Notify(job *Job) {
 	// TODO: handle errs
 }
 
-func (s Server) Listen(ctx context.Context) {
+func (s *Server) Listen(ctx context.Context) {
 	// TODO: Change this with config file
 	host := fmt.Sprintf("0.0.0.0:1234")
 	addr, err := net.ResolveTCPAddr("tcp", host)
@@ -88,7 +95,7 @@ func (s Server) Listen(ctx context.Context) {
 
 // NewConn handles all new conns from the listen. By factoring this out, we
 // can create unit tests using net.Pipe()
-func (s Server) NewConn(conn net.Conn) {
+func (s *Server) NewConn(conn net.Conn) {
 	m := InitMiner(conn)
 	go s.HandleClient(m)
 	go s.HandleBroadcasts(m)
@@ -158,7 +165,7 @@ func (m *Miner) Broadcast(msg json.RawMessage) (err error) {
 
 // HandleBroadcasts will send out all pool broadcast messages to the miners.
 // This handles all notify messages
-func (s Server) HandleBroadcasts(client *Miner) {
+func (s *Server) HandleBroadcasts(client *Miner) {
 	for {
 		select {
 		case msg, ok := <-client.broadcast:
@@ -179,7 +186,7 @@ func (s Server) HandleBroadcasts(client *Miner) {
 	}
 }
 
-func (s Server) HandleClient(client *Miner) {
+func (s *Server) HandleClient(client *Miner) {
 	// Register this new miner
 	s.Miners.AddMiner(client)
 
@@ -204,7 +211,7 @@ func (s Server) HandleClient(client *Miner) {
 	}
 }
 
-func (s Server) HandleMessage(client *Miner, data []byte) {
+func (s *Server) HandleMessage(client *Miner, data []byte) {
 	var u UnknownRPC
 	err := json.Unmarshal(data, &u)
 	if err != nil {
@@ -224,7 +231,7 @@ func (s Server) HandleMessage(client *Miner, data []byte) {
 	client.log.Infof(string(data))
 }
 
-func (s Server) HandleRequest(client *Miner, req Request) {
+func (s *Server) HandleRequest(client *Miner, req Request) {
 	var params RPCParams
 	if err := req.FitParams(&params); err != nil {
 		client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
@@ -285,6 +292,19 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		} else {
 			client.subscribed = true
+
+			// Notify newly-subscribed client with current job details
+			if s.currentJob != nil {
+				err = s.SingleClientNotify(client.sessionID, s.currentJob.JobID, s.currentJob.OPRHash, "")
+				if err != nil {
+					log.Error(err)
+				}
+				// For some reason, double-notifying seems necessary upon initial connection to pool
+				err = s.SingleClientNotify(client.sessionID, s.currentJob.JobID, s.currentJob.OPRHash, "")
+				if err != nil {
+					log.Error(err)
+				}
+			}
 		}
 	case "mining.suggest_target":
 		if len(params) < 1 {
@@ -302,7 +322,7 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 	}
 }
 
-func (s Server) GetVersion(clientName string) error {
+func (s *Server) GetVersion(clientName string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
 		return err
@@ -311,7 +331,16 @@ func (s Server) GetVersion(clientName string) error {
 	return err
 }
 
-func (s Server) ReconnectClient(clientName, hostname, port, waittime string) error {
+func (s *Server) SingleClientNotify(clientName, jobID, oprHash, cleanjobs string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(NotifyRequest(jobID, oprHash, cleanjobs))
+	return err
+}
+
+func (s *Server) ReconnectClient(clientName, hostname, port, waittime string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
 		return err
@@ -320,7 +349,7 @@ func (s Server) ReconnectClient(clientName, hostname, port, waittime string) err
 	return err
 }
 
-func (s Server) SetTarget(clientName, target string) error {
+func (s *Server) SetTarget(clientName, target string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
 		return err
@@ -329,7 +358,7 @@ func (s Server) SetTarget(clientName, target string) error {
 	return err
 }
 
-func (s Server) SetNonce(clientName, nonce string) error {
+func (s *Server) SetNonce(clientName, nonce string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
 		return err
@@ -338,7 +367,7 @@ func (s Server) SetNonce(clientName, nonce string) error {
 	return err
 }
 
-func (s Server) ShowMessage(clientName, message string) error {
+func (s *Server) ShowMessage(clientName, message string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
 		return err
