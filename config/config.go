@@ -10,6 +10,8 @@ import (
 const (
 	LoggingLevel = "app.loglevel"
 
+	ConfigPoolCut = "pool.PoolFeeRate"
+
 	ConfigSQLHost     = "Database.host"
 	ConfigSQLPort     = "Database.port"
 	ConfigSQLDBName   = "Database.dbname"
@@ -66,4 +68,6 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigFreeForexAPIpPriority, -1)
 	conf.SetDefault(ConfigFixedUSDPriority, -1)
 	conf.SetDefault(ConfigAlternativeMePriority, -1)
+
+	conf.SetDefault(ConfigPoolCut, "0.05")
 }

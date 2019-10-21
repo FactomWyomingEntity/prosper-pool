@@ -3,6 +3,8 @@ package database
 import (
 	"fmt"
 
+	"github.com/FactomWyomingEntity/private-pool/accounting"
+
 	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -39,7 +41,9 @@ func (s SqlDatabase) FullAutoMigrate() {
 	s.DB.AutoMigrate(&PegnetPayout{})
 	s.DB.AutoMigrate(&BlockSync{})
 
+	s.DB.AutoMigrate(&accounting.UserPayout{})
+	s.DB.AutoMigrate(&accounting.Payouts{})
+
 	// Add unique constraint for height and position for payouts
 	s.Model(&PegnetPayout{}).AddUniqueIndex("uidx_payouts", "height", "position")
-
 }

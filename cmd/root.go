@@ -4,11 +4,14 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/loghelp"
+	"github.com/FactomWyomingEntity/private-pool/accounting"
 	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/FactomWyomingEntity/private-pool/database"
 	"github.com/FactomWyomingEntity/private-pool/exit"
@@ -22,6 +25,8 @@ import (
 func init() {
 	rootCmd.AddCommand(testMiner)
 	rootCmd.AddCommand(testSync)
+	rootCmd.AddCommand(testAccountant)
+
 	rootCmd.PersistentFlags().String("log", "info", "Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal'")
 	rootCmd.PersistentFlags().String("phost", "192.168.32.2", "Postgres host url")
 	rootCmd.PersistentFlags().Int("pport", 5432, "Postgres host port")
@@ -178,6 +183,61 @@ var testSync = &cobra.Command{
 	},
 }
 
+var testAccountant = &cobra.Command{
+	Use:    "accountant",
+	Short:  "Run the pool accountant",
+	PreRun: SoftReadConfig,
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, cancel := context.WithCancel(context.Background())
+		exit.GlobalExitHandler.AddCancel(cancel)
+		conf := viper.GetViper()
+
+		db, err := database.New(conf)
+		if err != nil {
+			panic(err)
+		}
+
+		a, err := accounting.NewAccountant(conf, db.DB)
+		if err != nil {
+			panic(err)
+		}
+
+		go func() {
+			users := 3
+			for i := 0; i < 10; i++ {
+				if ctx.Err() != nil {
+					return
+				}
+
+				job := fmt.Sprintf("%d", i)
+				a.NewJob(job) // Force the new job
+				for u := 0; u < users; u++ {
+					for w := 0; w < 3; w++ {
+						a.ShareChannel() <- &accounting.Share{
+							JobID:      job,
+							Difficulty: rand.Float64() * 20,
+							Accepted:   false,
+							MinerID:    fmt.Sprintf("user-%d_%d", u, w),
+							UserID:     fmt.Sprintf("user-%d", u),
+						}
+					}
+				}
+
+				time.Sleep(100 * time.Millisecond)
+				a.RewardChannel() <- &accounting.Reward{
+					JobID:      job,
+					PoolReward: 200 * 1e8 * 12,
+					Winning:    12,
+					Graded:     15,
+				}
+			}
+		}()
+
+		a.Listen(ctx)
+		var _ = ctx
+	},
+}
+
 // SoftReadConfig will not fail. It can be used for a command that needs the config,
 // but is happy with the defaults
 func SoftReadConfig(cmd *cobra.Command, args []string) {
@@ -204,4 +264,6 @@ func initLogger() {
 	case "fatal":
 		log.SetLevel(log.FatalLevel)
 	}
+
+	log.StandardLogger().Hooks.Add(&loghelp.ContextHook{})
 }
