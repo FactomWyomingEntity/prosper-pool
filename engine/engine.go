@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/FactomWyomingEntity/private-pool/accounting"
+
 	"github.com/FactomWyomingEntity/private-pool/exit"
 
 	"github.com/Factom-Asset-Tokens/factom"
@@ -22,6 +24,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+var (
+	engLog = log.WithField("mod", "eng")
+)
+
 type PoolEngine struct {
 	conf *viper.Viper
 
@@ -29,11 +35,13 @@ type PoolEngine struct {
 	Database      *database.SqlDatabase
 	PegnetNode    *pegnet.Node
 	Poller        *polling.DataSources
-	Identity      IdentityInformation
+	Accountant    *accounting.Accountant
+
+	Identity IdentityInformation
 
 	// Engine hooks
 	// nodeHook listens for new pegnet blocks
-	nodeHook <-chan pegnet.HookStruct
+	nodeHook <-chan pegnet.PegnetdHook
 }
 
 // IdentityInformation contains all the info needed to make OPRs
@@ -86,6 +94,11 @@ func (e *PoolEngine) init() error {
 	// TODO: We should probably make this like the rest
 	pol := polling.NewDataSources(e.conf)
 
+	acc, err := accounting.NewAccountant(e.conf, db.DB)
+	if err != nil {
+		return err
+	}
+
 	// Load our identity info for oprs
 	if id := e.conf.GetString(config.ConfigPoolIdentity); id == "" {
 		return fmt.Errorf("opr identity must be set")
@@ -118,6 +131,7 @@ func (e *PoolEngine) init() error {
 	e.Database = db
 	e.PegnetNode = p
 	e.Poller = pol
+	e.Accountant = acc
 
 	// Add all closes
 	exit.GlobalExitHandler.AddExit(e.Database.Close)
@@ -134,9 +148,13 @@ func (e *PoolEngine) link() error {
 func (e *PoolEngine) Run(ctx context.Context) {
 	// TODO: Spin off all threads
 
+	// Stratum server listens to new jobs - spits out new shares
 	go e.StratumServer.Listen(ctx)
 
-	// Start syncing Blocks
+	// Accountant listens to new jobs, new rewards, and new shares
+	go e.Accountant.Listen(ctx)
+
+	// Start syncing Blocks - spits out new jobs, new rewards
 	go e.PegnetNode.DBlockSync(ctx)
 
 	// Listen for new jobs
@@ -146,54 +164,97 @@ func (e *PoolEngine) Run(ctx context.Context) {
 func (e *PoolEngine) listenBlocks(ctx context.Context) {
 	for {
 		select {
-		case block := <-e.nodeHook:
-			hLog := log.WithFields(log.Fields{"height": block.Height})
-			// New block, let's construct the job
-			assets, err := e.Poller.PullAllPEGAssets(2)
-			if err != nil {
-				hLog.WithError(err).Errorf("failed to poll asset pricing")
+		case hook := <-e.nodeHook:
+			job := e.createJob(hook)
+			if job == nil {
+				// This is a problem. createJob() will log the error
 				continue
 			}
 
-			var _ = assets
-			// Construct the OPR
-			// TODO: Modules should have a constructor for us
-			record := opr.V2Content{}
-			record.Height = block.Height
-			record.ID = e.Identity.Identity
-			record.Address = e.Identity.CoinbaseAddress
-			for _, winner := range block.GradedBlock.WinnersShortHashes() {
-				data, err := hex.DecodeString(winner)
-				if err != nil {
-					hLog.WithError(err).Errorf("winner hex failed to parse")
-					continue
-				}
-				record.Winners = append(record.Winners, data)
-			}
-			// Assets need to be set in a specific order
-			record.Assets = make([]uint64, len(opr.V2Assets))
-			for i, name := range opr.V2Assets {
-				asset := assets[name]
-				record.Assets[i] = uint64(math.Round(asset.Value * 1e8))
-			}
-
-			// Get OPRHash
-			data, err := record.Marshal()
-			if err != nil {
-				hLog.WithError(err).Errorf("failed to get oprhash")
-				continue
-			}
-			oprHash := sha256.Sum256(data)
-			oprHashHex := fmt.Sprintf("%x", oprHash[:])
-			hLog.WithFields(log.Fields{"oprhash": oprHashHex}).Debugf("new job")
-			e.StratumServer.UpdateCurrentJob(&stratum.Job{
-				JobID:   fmt.Sprintf("%d", block.Height),
-				OPRHash: oprHashHex,
-				OPR:     record,
-			})
+			// Update current job and notify the Miners
+			e.StratumServer.UpdateCurrentJob(job)
+			// Notify Accounting
+			//	Notify of the new job
+			e.Accountant.JobChannel() <- job.JobID
+			//	Notify of the rewards
+			e.Accountant.RewardChannel() <- e.findRewards(hook)
+			// Notify Submissions
 
 		case <-ctx.Done():
 			return
 		}
+	}
+}
+
+// findRewards takes the graded block and tallies up the pool's rewards.
+func (e *PoolEngine) findRewards(hook pegnet.PegnetdHook) *accounting.Reward {
+	r := accounting.Reward{
+		JobID: stratum.JobIDFromHeight(hook.Height),
+	}
+
+	for _, graded := range hook.GradedBlock.Graded() {
+		// Match on either. If someone mines with a new identity, but for us
+		// we will take it?
+		if graded.OPR.GetID() == e.Identity.Identity ||
+			graded.OPR.GetAddress() == e.Identity.CoinbaseAddress {
+			r.Graded++
+			if graded.Payout() > 0 {
+				r.Winning++
+				r.PoolReward += graded.Payout()
+			}
+		}
+	}
+	return &r
+}
+
+// createJob returns the job to send to the stratum miners.
+func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
+	hLog := engLog.WithFields(log.Fields{"height": hook.Height})
+	// New block, let's construct the job
+	assets, err := e.Poller.PullAllPEGAssets(2)
+	if err != nil {
+		hLog.WithError(err).Errorf("failed to poll asset pricing")
+		return nil
+	}
+
+	var _ = assets
+	// Construct the OPR
+	// TODO: Modules should have a constructor for us
+	record := opr.V2Content{}
+	record.Height = hook.Height
+	record.ID = e.Identity.Identity
+	record.Address = e.Identity.CoinbaseAddress
+	for _, winner := range hook.GradedBlock.WinnersShortHashes() {
+		data, err := hex.DecodeString(winner)
+		if err != nil {
+			hLog.WithError(err).Errorf("winner hex failed to parse")
+			return nil
+		}
+		record.Winners = append(record.Winners, data)
+	}
+
+	// Assets need to be set in a specific order
+	record.Assets = make([]uint64, len(opr.V2Assets))
+	for i, name := range opr.V2Assets {
+		asset := assets[name]
+		record.Assets[i] = uint64(math.Round(asset.Value * 1e8))
+	}
+
+	// Get OPRHash
+	data, err := record.Marshal()
+	if err != nil {
+		hLog.WithError(err).Errorf("failed to get oprhash")
+		return nil
+	}
+	oprHash := sha256.Sum256(data)
+	oprHashHex := fmt.Sprintf("%x", oprHash[:])
+	hLog.WithFields(log.Fields{"oprhash": oprHashHex}).Debugf("new job")
+
+	// The job is for the height + 1. The synced block is wrapping up the last
+	// job
+	return &stratum.Job{
+		JobID:   stratum.JobIDFromHeight(hook.Height + 1),
+		OPRHash: oprHashHex,
+		OPR:     record,
 	}
 }

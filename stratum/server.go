@@ -30,6 +30,13 @@ type Job struct {
 	OPR     opr.V2Content
 }
 
+// JobIDFromHeight is just a standard function to get the jobid for a height.
+// If we decide to extend the jobids, we can more easily control it with a
+// function.
+func JobIDFromHeight(height int32) string {
+	return fmt.Sprintf("%d", height)
+}
+
 func NewServer(conf *viper.Viper) (*Server, error) {
 	s := new(Server)
 	s.config = conf
