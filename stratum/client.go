@@ -53,7 +53,7 @@ func (c *Client) Handshake() error {
 		return err
 	}
 
-	return c.Authorize("user", "password")
+	return c.Authorize("user,miner", "password")
 }
 
 // InitConn will not start the handshake process. Good for unit tests
