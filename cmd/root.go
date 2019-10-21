@@ -69,7 +69,7 @@ var rootCmd = &cobra.Command{
 							s.GetVersion(words[1])
 						}
 					default:
-						fmt.Println("Client command not supported: ", words[0])
+						fmt.Println("Server command not supported: ", words[0])
 					}
 				}
 			}
