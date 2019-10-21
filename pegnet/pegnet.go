@@ -62,7 +62,9 @@ func NewPegnetNode(conf *viper.Viper, db *database.SqlDatabase) (*Node, error) {
 // PegnetdHook contains all the info (aside from assets) needed to make
 // and opr for mining
 type PegnetdHook struct {
-	Height      int32
+	Height int32
+	// Top means the block is the latest block
+	Top         bool
 	GradedBlock grader.GradedBlock
 }
 

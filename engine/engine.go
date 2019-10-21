@@ -179,14 +179,20 @@ func (e *PoolEngine) listenBlocks(ctx context.Context) {
 				continue
 			}
 
-			// Update current job and notify the Miners
-			e.StratumServer.UpdateCurrentJob(job)
-			// Notify Accounting
-			//	Notify of the new job
-			e.Accountant.JobChannel() <- job.JobID
+			// We update the job if it is the latest block
+			if hook.Top {
+				// Update current job and notify the Miners
+				e.StratumServer.UpdateCurrentJob(job)
+				// Notify Accounting
+				//	Notify of the new job
+				e.Accountant.JobChannel() <- job.JobID
+			}
+
+			// Rewards are always processed, even if they are not new.
 			//	Notify of the rewards
 			e.Accountant.RewardChannel() <- e.findRewards(hook)
 			// Notify Submissions
+			// TODO: Notify submission module
 
 		case <-ctx.Done():
 			return

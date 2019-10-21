@@ -124,13 +124,16 @@ OuterSyncLoop:
 
 			// Send the new block to anyone listening
 			// TODO: Ensure this logic is correct.
-			if current == int32(heights.DirectoryBlock) {
-				for i := range n.hooks {
-					select {
-					case n.hooks[i] <- PegnetdHook{GradedBlock: block, Height: current}:
-					default:
+			hook := PegnetdHook{
+				GradedBlock: block,
+				Top:         current == int32(heights.DirectoryBlock),
+				Height:      current,
+			}
+			for i := range n.hooks {
+				select {
+				case n.hooks[i] <- hook:
+				default:
 
-					}
 				}
 			}
 
