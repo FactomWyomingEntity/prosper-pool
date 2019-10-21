@@ -68,6 +68,10 @@ var rootCmd = &cobra.Command{
 						if len(words) > 1 {
 							s.GetVersion(words[1])
 						}
+					case "reconnect":
+						if len(words) > 4 {
+							s.ReconnectClient(words[1], words[2], words[3], words[4])
+						}
 					default:
 						fmt.Println("Server command not supported: ", words[0])
 					}
