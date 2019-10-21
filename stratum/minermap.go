@@ -30,13 +30,13 @@ type NotifyError struct {
 	Error   error
 }
 
-func (m MinerMap) Len() int {
+func (m *MinerMap) Len() int {
 	m.RLock()
 	defer m.RUnlock()
 	return len(m.miners)
 }
 
-func (m MinerMap) Notify(msg json.RawMessage) []NotifyError {
+func (m *MinerMap) Notify(msg json.RawMessage) []NotifyError {
 	var errs []NotifyError
 	m.RLock()
 	for session, m := range m.miners {
@@ -59,9 +59,30 @@ func (m *MinerMap) AddMiner(u *Miner) string {
 	u.sessionID = fmt.Sprintf("%x", session)
 	u.joined = time.Now()
 	m.Lock()
-	u.extraNonce1 = m.nextNonce
+	u.nonce = m.nextNonce
 	m.nextNonce++
 	m.miners[u.sessionID] = u
 	m.Unlock()
 	return u.sessionID
+}
+
+// GetMiner returns a pointer to the miner in the MinerMap under the 'name' key
+func (m *MinerMap) GetMiner(name string) (*Miner, error) {
+	defer m.Unlock()
+	m.Lock()
+	if miner, ok := m.miners[name]; ok {
+		return miner, nil
+	} else {
+		return nil, fmt.Errorf("No client/miner named %s", name)
+	}
+}
+
+func (m *MinerMap) ListMiners() []string {
+	names := make([]string, 0)
+	m.Lock()
+	for miner := range m.miners {
+		names = append(names, miner)
+	}
+	m.Unlock()
+	return names
 }

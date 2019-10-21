@@ -2,6 +2,7 @@ package stratum_test
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"net"
 	"testing"
@@ -20,40 +21,12 @@ func serverAndClient(t *testing.T) (s *Server, miner *Client, srv net.Conn, cli 
 	require.NoError(err)
 
 	srv, cli = net.Pipe()
-	miner, err = NewClient()
+	miner, err = NewClient(false)
 	require.NoError(err)
 
 	miner.InitConn(cli)
 	s.NewConn(srv)
 	return s, miner, srv, cli
-}
-
-func TestServer_Subscribe(t *testing.T) {
-	require := require.New(t)
-	_, miner, _, cli := serverAndClient(t)
-
-	err := miner.Subscribe()
-	require.NoError(err)
-
-	r := bufio.NewReader(cli)
-	data, isPrefix, err := r.ReadLine()
-	require.NoError(err)
-	require.False(isPrefix)
-
-	var resp Response
-	err = json.Unmarshal(data, &resp)
-	require.NoError(err)
-	require.NotZero(resp.ID)
-	require.Nil(resp.Error)
-
-	// Check the response
-	var sRes SubscribeResult
-	err = resp.FitResult(&sRes)
-	require.NoError(err)
-
-	if len(sRes) != 2 {
-		t.Error("exp string array of 2")
-	}
 }
 
 func TestServer_Notify(t *testing.T) {
@@ -74,4 +47,96 @@ func TestServer_Notify(t *testing.T) {
 	if string(data) != string(exp) {
 		t.Errorf("exp '%s' got '%s'", string(exp), string(data))
 	}
+}
+
+func TestServer_GetVersion(t *testing.T) {
+	require := require.New(t)
+	s, m, _, _ := serverAndClient(t)
+	for s.Miners.Len() == 0 { // Wait for miner to be added
+		time.Sleep(20 * time.Millisecond)
+	}
+	ctx := context.Background()
+	go m.Listen(ctx)
+
+	for _, k := range s.Miners.ListMiners() {
+		err := s.GetVersion(k)
+		require.NoError(err)
+	}
+}
+
+func TestServer_ReconnectClient(t *testing.T) {
+	require := require.New(t)
+	srv, miner, _, cli := serverAndClient(t)
+
+	err := miner.Subscribe()
+	require.NoError(err)
+
+	ctx := context.Background()
+	go miner.Listen(ctx)
+
+	r := bufio.NewReader(cli)
+	_, isPrefix, err := r.ReadLine()
+	require.NoError(err)
+	require.False(isPrefix)
+
+	err = srv.ReconnectClient(srv.Miners.ListMiners()[0], "pipe", "1234", "3")
+	// TODO: see if client actually reinitates a connection, maybe sleep and check again
+	require.NoError(err)
+}
+
+func TestServer_ShowMessage(t *testing.T) {
+	require := require.New(t)
+	s, m, _, _ := serverAndClient(t)
+	for s.Miners.Len() == 0 { // Wait for miner to be added
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	ctx := context.Background()
+	go m.Listen(ctx)
+
+	for _, k := range s.Miners.ListMiners() {
+		err := s.ShowMessage(k, "Test message")
+		require.NoError(err)
+		// TODO: actually ensure message is printed/logged client-side
+	}
+}
+
+func TestServer_SetNonce(t *testing.T) {
+	require := require.New(t)
+	srv, miner, _, cli := serverAndClient(t)
+
+	err := miner.Subscribe()
+	require.NoError(err)
+
+	ctx := context.Background()
+	go miner.Listen(ctx)
+
+	r := bufio.NewReader(cli)
+	_, isPrefix, err := r.ReadLine()
+	require.NoError(err)
+	require.False(isPrefix)
+
+	err = srv.SetNonce(srv.Miners.ListMiners()[0], "ffeabea") // 268348394 in decimal
+	require.NoError(err)
+	// TODO: ensure client miner has updated nonce internally (once this is being done)
+}
+
+func TestServer_SetTarget(t *testing.T) {
+	require := require.New(t)
+	srv, miner, _, cli := serverAndClient(t)
+
+	err := miner.Subscribe()
+	require.NoError(err)
+
+	ctx := context.Background()
+	go miner.Listen(ctx)
+
+	r := bufio.NewReader(cli)
+	_, isPrefix, err := r.ReadLine()
+	require.NoError(err)
+	require.False(isPrefix)
+
+	err = srv.SetTarget(srv.Miners.ListMiners()[0], "ffeabea") // 268348394 in decimal
+	require.NoError(err)
+	// TODO: ensure client miner has updated target internally (once this is being done)
 }

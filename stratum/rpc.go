@@ -2,11 +2,10 @@ package stratum
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/rand"
 )
 
-// UnknownRPC is the struct any json rpc can be unmarshalled into before it is catagorized.
+// UnknownRPC is the struct any json rpc can be unmarshalled into before it is categorized.
 type UnknownRPC struct {
 	ID int `json:"id"`
 	Request
@@ -44,25 +43,87 @@ func (r Request) FitParams(t interface{}) error {
 	return json.Unmarshal(r.Params, t)
 }
 
-type SubscribeParams []string
+type RPCParams []string
 
-func SubscribeRequest() Request {
-	return Request{
-		ID:     rand.Int(),
-		Method: "mining.subscribe",
-		// TODO: We need to compile in the version and come up with a name
-		// Params: SubscribeParams{"privpool/0.1.0", ""},
-	}.SetParams(SubscribeParams{"privpool/0.1.0", ""})
-}
-
-type AuthorizeParams []string
+// Client-to-server methods
 
 func AuthorizeRequest(username, password string) Request {
 	return Request{
 		ID:     rand.Int(),
 		Method: "mining.authorize",
-		//Params: AuthorizeParams{username, password},
-	}.SetParams(AuthorizeParams{username, password})
+	}.SetParams(RPCParams{username, password})
+}
+
+func GetOPRHashRequest(jobID string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.get_oprhash",
+	}.SetParams(RPCParams{jobID})
+}
+
+func SubmitRequest(username, jobID, nonce, oprHash, target string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.submit",
+	}.SetParams(RPCParams{username, jobID, nonce, oprHash, target})
+}
+
+func SubscribeRequest(version string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.subscribe",
+	}.SetParams(RPCParams{"prosper/" + version})
+}
+
+func SuggestTargetRequest(preferredTarget string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.suggest_target",
+	}.SetParams(RPCParams{preferredTarget})
+}
+
+// Server-to-client methods
+
+func GetVersionRequest() Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "client.get_version",
+	}.SetParams(nil)
+}
+
+func ReconnectRequest(hostname, port, waittime string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "client.reconnect",
+	}.SetParams(RPCParams{hostname, port, waittime})
+}
+
+func ShowMessageRequest(message string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "client.show_message",
+	}.SetParams(RPCParams{message})
+}
+
+func NotifyRequest(jobID, oprHash, cleanjobs string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.notify",
+	}.SetParams(RPCParams{jobID, oprHash, cleanjobs})
+}
+
+func SetTargetRequest(target string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.set_target",
+	}.SetParams(RPCParams{target})
+}
+
+func SetNonceRequest(nonce string) Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.set_nonce",
+	}.SetParams(RPCParams{nonce})
 }
 
 type Response struct {
@@ -81,15 +142,48 @@ func (r Response) FitResult(t interface{}) error {
 	return json.Unmarshal(r.Result, t)
 }
 
-// SubscribeResult is [session id, extranonce1]
-type SubscribeResult []string
+type Subscription struct {
+	Type string `json:"type"`
+	Id   string `json:"id"`
+}
 
-func SubscribeResponse(id int, session string, nonce uint32) Response {
+// SubscribeResult is [session id, nonce]
+type SubscribeResult []Subscription
+
+func AuthorizeResponse(id int, result bool, err error) Response {
 	return Response{
 		ID: id,
-	}.SetResult(SubscribeResult{
-		session, fmt.Sprintf("%x", nonce),
-	})
+	}.SetResult(result)
+}
+
+func SubmitResponse(id int, result bool, err error) Response {
+	return Response{
+		ID: id,
+	}.SetResult(result)
+}
+
+func SubscribeResponse(id int, session string) Response {
+	notifySub := Subscription{Id: session, Type: "mining.notify"}
+	setTargetSub := Subscription{Id: session, Type: "mining.set_target"}
+
+	res := make([]Subscription, 2)
+	res[0] = notifySub
+	res[1] = setTargetSub
+	return Response{
+		ID: id,
+	}.SetResult(res)
+}
+
+func GetVersionResponse(id int, version string) Response {
+	return Response{
+		ID: id,
+	}.SetResult(version)
+}
+
+func GetOPRHashResponse(id int, oprHash string) Response {
+	return Response{
+		ID: id,
+	}.SetResult(oprHash)
 }
 
 type RPCError struct {

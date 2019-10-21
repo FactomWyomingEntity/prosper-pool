@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -20,6 +21,11 @@ type Server struct {
 	config *viper.Viper
 }
 
+type Job struct {
+	JobID   string `json:"jobid"`
+	OPRHash string `json:"oprhash"`
+}
+
 func NewServer(conf *viper.Viper) (*Server, error) {
 	s := new(Server)
 	s.config = conf
@@ -29,8 +35,9 @@ func NewServer(conf *viper.Viper) (*Server, error) {
 
 // Notify will notify all miners of a new block to mine
 // TODO: Come up with a job structure
-func (s Server) Notify(job interface{}) {
-	data, _ := json.Marshal(job)
+func (s Server) Notify(job *Job) {
+	jobReq := NotifyRequest(job.JobID, job.OPRHash, "")
+	data, _ := json.Marshal(jobReq)
 	errs := s.Miners.Notify(json.RawMessage(data))
 	var _ = errs
 	// TODO: handle errs
@@ -91,18 +98,22 @@ type Miner struct {
 	encSync sync.Mutex // All encodes should be synchronized
 	// TODO: Manage all miner state. Like authentication, jobs, shares, etc
 
+	preferredTarget uint64
+
 	// broadcast will broadcast any notify messages to this miner
 	broadcast chan interface{}
 
 	// State information
-	subscribed  bool
-	sessionID   string
-	extraNonce1 uint32
-	agent       string // Agent/version from subscribe
+	subscribed bool
+	sessionID  string
+	nonce      uint32
+	agent      string // Agent/version from subscribe
+	authorized bool
 
 	joined time.Time
 }
 
+// InitMiner starts a new miner with the needed encoders and channels set up
 func InitMiner(conn net.Conn) *Miner {
 	m := new(Miner)
 	m.conn = conn
@@ -115,12 +126,18 @@ func InitMiner(conn net.Conn) *Miner {
 	return m
 }
 
+// Close shuts down miner's broadcast channel
 func (m *Miner) Close() {
 	close(m.broadcast)
 }
 
+// ToString returns a string representation of the internal miner client state
+func (m *Miner) ToString() string {
+	return fmt.Sprintf("Session ID: %s\nAgent: %s\nPreferred Target: %d\nSubscribed: %t\nAuthorized: %t\nNonce: %d", m.sessionID, m.agent, m.preferredTarget, m.subscribed, m.authorized, m.nonce)
+}
+
 // Broadcast should accept the already json marshalled msg
-func (m Miner) Broadcast(msg json.RawMessage) (err error) {
+func (m *Miner) Broadcast(msg json.RawMessage) (err error) {
 	defer func() {
 		// This should never happen, but we don't want a bugged miner taking us
 		// down.
@@ -205,15 +222,15 @@ func (s Server) HandleMessage(client *Miner, data []byte) {
 }
 
 func (s Server) HandleRequest(client *Miner, req Request) {
-	switch req.Method {
-	case "mining.subscribe":
-		var params SubscribeParams
-		if err := req.FitParams(&params); err != nil {
-			client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
-			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
-			return
-		}
+	var params RPCParams
+	if err := req.FitParams(&params); err != nil {
+		client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
+		_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+		return
+	}
 
+	switch req.Method {
+	case "mining.authorize":
 		if len(params) < 1 {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
 			return
@@ -221,14 +238,108 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 		// Ignore the session id if provided in the params
 		client.agent = params[0]
 
-		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID, client.extraNonce1)); err != nil {
+		// TODO: actually check username/password (if user/pass authentication is desired)
+		if err := client.enc.Encode(AuthorizeResponse(req.ID, true, nil)); err != nil {
+			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+		} else {
+			client.authorized = true
+		}
+	case "mining.get_oprhash":
+		if len(params) < 1 {
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+		// Ignore the session id if provided in the params
+		client.agent = params[0]
+
+		// TODO: actually retrieve OPR hash for the given jobID (for now using dummy data)
+		dummyOPRHash := "00037f39cf870a1f49129f9c82d935665d352ffd25ea3296208f6f7b16fd654f"
+
+		if err := client.enc.Encode(GetOPRHashResponse(req.ID, dummyOPRHash)); err != nil {
+			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+		} else {
+			client.authorized = true
+		}
+	case "mining.submit":
+		if len(params) < 1 {
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+
+		// TODO: actually process the submission (ProcessSubmission); for now just pretend success
+		if err := client.enc.Encode(SubmitResponse(req.ID, true, nil)); err != nil {
+			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+		}
+	case "mining.subscribe":
+		if len(params) < 1 {
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+		// Ignore the session id if provided in the params
+		client.agent = params[0]
+
+		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		} else {
 			client.subscribed = true
 		}
-	case "mining.authorize":
+	case "mining.suggest_target":
+		if len(params) < 1 {
+			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+
+		preferredTarget, err := strconv.ParseUint(params[0], 16, 64)
+		if err == nil {
+			client.preferredTarget = preferredTarget
+		}
 	default:
 		client.log.Warnf("unknown method %s", req.Method)
 		_ = client.enc.Encode(QuickRPCError(req.ID, ErrorMethodNotFound))
 	}
+}
+
+func (s Server) GetVersion(clientName string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(GetVersionRequest())
+	return err
+}
+
+func (s Server) ReconnectClient(clientName, hostname, port, waittime string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(ReconnectRequest(hostname, port, waittime))
+	return err
+}
+
+func (s Server) SetTarget(clientName, target string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(SetTargetRequest(target))
+	return err
+}
+
+func (s Server) SetNonce(clientName, nonce string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(SetNonceRequest(nonce))
+	return err
+}
+
+func (s Server) ShowMessage(clientName, message string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(ShowMessageRequest(message))
+	return err
 }

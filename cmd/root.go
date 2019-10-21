@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -21,11 +22,10 @@ import (
 func init() {
 	rootCmd.AddCommand(testMiner)
 	rootCmd.AddCommand(testSync)
-
 	rootCmd.PersistentFlags().String("log", "info", "Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal'")
 	rootCmd.PersistentFlags().String("phost", "192.168.32.2", "Postgres host url")
 	rootCmd.PersistentFlags().Int("pport", 5432, "Postgres host port")
-
+	testMiner.Flags().Bool("v", false, "Verbosity (if enabled, print messages)")
 }
 
 // Execute is cobra's entry point
@@ -50,6 +50,34 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			log.WithError(err).Fatal("failed to launch stratum server")
 		}
+
+		go func() {
+			keyboardReader := bufio.NewReader(os.Stdin)
+			for {
+				userCommand, _ := keyboardReader.ReadString('\n')
+				words := strings.Fields(userCommand)
+				if len(words) > 0 {
+					switch words[0] {
+					case "listclients", "listminers":
+						fmt.Println(strings.Join(s.Miners.ListMiners()[:], ", "))
+					case "showmessage":
+						if len(words) > 2 {
+							s.ShowMessage(words[1], strings.Join(words[2:], " "))
+						}
+					case "getversion":
+						if len(words) > 1 {
+							s.GetVersion(words[1])
+						}
+					case "reconnect":
+						if len(words) > 4 {
+							s.ReconnectClient(words[1], words[2], words[3], words[4])
+						}
+					default:
+						fmt.Println("Server command not supported: ", words[0])
+					}
+				}
+			}
+		}()
 
 		s.Listen(ctx)
 	},
@@ -90,7 +118,8 @@ var testMiner = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		exit.GlobalExitHandler.AddCancel(cancel)
 
-		client, err := stratum.NewClient()
+		verbosityEnabled, _ := cmd.Flags().GetBool("v")
+		client, err := stratum.NewClient(verbosityEnabled)
 		if err != nil {
 			panic(err)
 		}
@@ -99,7 +128,29 @@ var testMiner = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		var _ = ctx
+
+		go func() {
+			keyboardReader := bufio.NewReader(os.Stdin)
+			for {
+				userCommand, _ := keyboardReader.ReadString('\n')
+				words := strings.Fields(userCommand)
+				if len(words) > 0 {
+					switch words[0] {
+					case "getopr":
+						if len(words) > 1 {
+							client.GetOPRHash(words[1])
+						}
+					case "suggesttarget":
+						if len(words) > 1 {
+							client.SuggestTarget(words[1])
+						}
+					default:
+						fmt.Println("Client command not supported: ", words[0])
+					}
+				}
+			}
+		}()
+		client.Listen(ctx)
 	},
 }
 
