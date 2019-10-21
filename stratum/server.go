@@ -382,3 +382,12 @@ func (s *Server) ShowMessage(clientName, message string) error {
 	err = miner.enc.Encode(ShowMessageRequest(message))
 	return err
 }
+
+func (s *Server) StopMining(clientName string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(StopMiningRequest())
+	return err
+}

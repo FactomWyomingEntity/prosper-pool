@@ -126,6 +126,13 @@ func SetNonceRequest(nonce string) Request {
 	}.SetParams(RPCParams{nonce})
 }
 
+func StopMiningRequest() Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "client.stop_mining",
+	}.SetParams(nil)
+}
+
 type Response struct {
 	ID     int             `json:"id"`
 	Result json.RawMessage `json:"result"`

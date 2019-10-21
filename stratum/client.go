@@ -254,6 +254,9 @@ func (c Client) HandleRequest(req Request) {
 
 		log.Printf("New Nonce: %s\n", nonce)
 		// TODO: do more than just log the nonce details (actually update miner job)
+	case "client.stop_mining":
+		log.Println("Request to stop mining received")
+		// TODO: actually pause mining until new job is received
 	default:
 		log.Warnf("unknown method %s", req.Method)
 	}
