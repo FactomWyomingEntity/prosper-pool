@@ -148,11 +148,13 @@ func (e *PoolEngine) link() error {
 func (e *PoolEngine) Run(ctx context.Context) {
 	// TODO: Spin off all threads
 
+	// Stratum server listens to new jobs - spits out new shares
 	go e.StratumServer.Listen(ctx)
 
+	// Accountant listens to new jobs, new rewards, and new shares
 	go e.Accountant.Listen(ctx)
 
-	// Start syncing Blocks
+	// Start syncing Blocks - spits out new jobs, new rewards
 	go e.PegnetNode.DBlockSync(ctx)
 
 	// Listen for new jobs
@@ -184,6 +186,7 @@ func (e *PoolEngine) listenBlocks(ctx context.Context) {
 	}
 }
 
+// findRewards takes the graded block and tallies up the pool's rewards.
 func (e *PoolEngine) findRewards(hook pegnet.PegnetdHook) *accounting.Reward {
 	r := accounting.Reward{
 		JobID: stratum.JobIDFromHeight(hook.Height),
