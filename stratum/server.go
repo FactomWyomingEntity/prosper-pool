@@ -113,6 +113,7 @@ type Miner struct {
 	joined time.Time
 }
 
+// InitMiner starts a new miner with the needed encoders and channels set up
 func InitMiner(conn net.Conn) *Miner {
 	m := new(Miner)
 	m.conn = conn
@@ -125,8 +126,14 @@ func InitMiner(conn net.Conn) *Miner {
 	return m
 }
 
+// Close shuts down miner's broadcast channel
 func (m *Miner) Close() {
 	close(m.broadcast)
+}
+
+// ToString returns a string representation of the internal miner client state
+func (m *Miner) ToString() string {
+	return fmt.Sprintf("Session ID: %s\nAgent: %s\nPreferred Target: %d\nSubscribed: %t\nAuthorized: %t\nNonce: %d", m.sessionID, m.agent, m.preferredTarget, m.subscribed, m.authorized, m.nonce)
 }
 
 // Broadcast should accept the already json marshalled msg

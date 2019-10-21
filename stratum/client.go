@@ -77,7 +77,7 @@ func (c *Client) Handshake(conn net.Conn) error {
 	return nil
 }
 
-// JustConnect will not start the handshake process. Good for unit tests
+// InitConn will not start the handshake process. Good for unit tests
 func (c *Client) InitConn(conn net.Conn) {
 	c.conn = conn
 	c.enc = json.NewEncoder(conn)
