@@ -206,6 +206,18 @@ request
 This value, when provided, replaces the initial subscription value beginning with the next mining.notify job.
 
 
+## mining.stop_mining
+
+request
+```json
+{
+  "method" : "mining.stop_mining",
+  "id": 0,
+  "params": null
+}
+```
+Instructs miner to pause mining until a new job is received.
+
 
 # Error codes
 

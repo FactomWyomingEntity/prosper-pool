@@ -129,7 +129,7 @@ func SetNonceRequest(nonce string) Request {
 func StopMiningRequest() Request {
 	return Request{
 		ID:     rand.Int(),
-		Method: "client.stop_mining",
+		Method: "mining.stop_mining",
 	}.SetParams(nil)
 }
 
