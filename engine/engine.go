@@ -184,11 +184,11 @@ func (e *PoolEngine) listenBlocks(ctx context.Context) {
 				continue
 			}
 			oprHash := sha256.Sum256(data)
-			oprHashHex := fmt.Sprintf("%x", oprHash)
+			oprHashHex := fmt.Sprintf("%x", oprHash[:])
 			hLog.WithFields(log.Fields{"oprhash": oprHashHex}).Debugf("new job")
 			e.StratumServer.Notify(&stratum.Job{
 				JobID:   fmt.Sprintf("%d", block.Height),
-				OPRHash: fmt.Sprintf("%x", oprHashHex),
+				OPRHash: oprHashHex,
 				OPR:     record,
 			})
 
