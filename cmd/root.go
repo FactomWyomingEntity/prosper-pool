@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/engine"
+
 	"github.com/FactomWyomingEntity/private-pool/accounting"
 	"github.com/FactomWyomingEntity/private-pool/auth"
 	"github.com/FactomWyomingEntity/private-pool/config"

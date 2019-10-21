@@ -38,7 +38,7 @@ OuterSyncLoop:
 		//	we will want to switch the client.
 		err := heights.Get(nil, n.FactomClient)
 		if err != nil {
-			log.WithError(err).WithFields(log.Fields{}).Errorf("failed to fetch heights")
+			pegdLog.WithError(err).WithFields(log.Fields{}).Errorf("failed to fetch heights")
 			time.Sleep(retryPeriod)
 			continue // Loop will just keep retrying until factomd is reached
 		}
@@ -58,7 +58,7 @@ OuterSyncLoop:
 		for n.Sync.Synced < int32(heights.DirectoryBlock) {
 			current := n.Sync.Synced + 1
 			start := time.Now()
-			hLog := log.WithFields(log.Fields{"height": current, "dheight": heights.DirectoryBlock, "hooks": len(n.hooks)})
+			hLog := pegdLog.WithFields(log.Fields{"height": current, "dheight": heights.DirectoryBlock, "hooks": len(n.hooks)})
 			if ctx.Err() != nil {
 				return // ctx is cancelled
 			}
@@ -127,7 +127,7 @@ OuterSyncLoop:
 			if current == int32(heights.DirectoryBlock) {
 				for i := range n.hooks {
 					select {
-					case n.hooks[i] <- HookStruct{GradedBlock: block, Height: current}:
+					case n.hooks[i] <- PegnetdHook{GradedBlock: block, Height: current}:
 					default:
 
 					}
@@ -156,7 +156,7 @@ OuterSyncLoop:
 // An error should then be returned. The context should be respected if it is
 // cancelled
 func (n *Node) SyncBlock(ctx context.Context, tx *gorm.DB, height uint32) (grader.GradedBlock, error) {
-	fLog := log.WithFields(log.Fields{"height": height})
+	fLog := pegdLog.WithFields(log.Fields{"height": height})
 	if err := ctx.Err(); err != nil { // Just an example about how to handle it being cancelled
 		return nil, err
 	}

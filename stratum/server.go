@@ -17,6 +17,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+
+
 type Server struct {
 	// miners is a map of miners to their session id
 	Miners *MinerMap
@@ -27,6 +29,13 @@ type Job struct {
 	JobID   string `json:"jobid"`
 	OPRHash string `json:"oprhash"`
 	OPR     opr.V2Content
+}
+
+// JobIDFromHeight is just a standard function to get the jobid for a height.
+// If we decide to extend the jobids, we can more easily control it with a
+// function.
+func JobIDFromHeight(height int32) string {
+	return fmt.Sprintf("%d", height)
 }
 
 func NewServer(conf *viper.Viper) (*Server, error) {

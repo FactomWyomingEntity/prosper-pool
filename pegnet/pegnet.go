@@ -11,6 +11,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+var (
+	pegdLog = log.WithField("mod", "pegd")
+)
+
 var OPRChain = *factom.NewBytes32FromString("a642a8674f46696cc47fdb6b65f9c87b2a19c5ea8123b3d2f0c13b6f33a9d5ef")
 var TransactionChain = *factom.NewBytes32FromString("cffce0f409ebba4ed236d49d89c70e4bd1f1367d86402a3363366683265a242d")
 var PegnetActivation uint32 = 206421
@@ -30,7 +34,7 @@ type Node struct {
 	db   *database.SqlDatabase
 	Sync *database.BlockSync
 
-	hooks []chan<- HookStruct
+	hooks []chan<- PegnetdHook
 }
 
 func NewPegnetNode(conf *viper.Viper, db *database.SqlDatabase) (*Node, error) {
@@ -43,7 +47,7 @@ func NewPegnetNode(conf *viper.Viper, db *database.SqlDatabase) (*Node, error) {
 		if err == gorm.ErrRecordNotFound {
 			n.Sync = new(database.BlockSync)
 			n.Sync.Synced = int32(PegnetActivation)
-			log.Debug("connected to a fresh database")
+			pegdLog.Debug("connected to a fresh database")
 		} else {
 			return nil, err
 		}
@@ -55,22 +59,22 @@ func NewPegnetNode(conf *viper.Viper, db *database.SqlDatabase) (*Node, error) {
 	return n, nil
 }
 
-// HookStruct contains all the info (aside from assets) needed to make
+// PegnetdHook contains all the info (aside from assets) needed to make
 // and opr for mining
-type HookStruct struct {
+type PegnetdHook struct {
 	Height      int32
 	GradedBlock grader.GradedBlock
 }
 
-func (n *Node) GetHook() <-chan HookStruct {
-	hook := make(chan HookStruct, 10)
+func (n *Node) GetHook() <-chan PegnetdHook {
+	hook := make(chan PegnetdHook, 10)
 	n.AddHook(hook)
 	return hook
 }
 
 // AddHook does not need to be thread safe, as it is called before
 // the node is running
-func (n *Node) AddHook(hook chan<- HookStruct) {
+func (n *Node) AddHook(hook chan<- PegnetdHook) {
 	n.hooks = append(n.hooks, hook)
 }
 

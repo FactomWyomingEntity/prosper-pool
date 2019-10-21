@@ -14,6 +14,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	acctLog = log.WithField("mod", "acct")
+)
+
 const AccountingPrecision = 8
 
 type Accountant struct {
@@ -85,7 +89,7 @@ func (a *Accountant) Listen(ctx context.Context) {
 		case share := <-a.shares:
 			// A new share from a miner that we need to account for
 			if !a.JobExists(share.JobID) {
-				log.WithFields(log.Fields{
+				acctLog.WithFields(log.Fields{
 					"job":     share.JobID,
 					"minerid": share.MinerID,
 					"userid":  share.UserID,
@@ -99,22 +103,29 @@ func (a *Accountant) Listen(ctx context.Context) {
 			a.jobLock.Unlock()
 		case newJob := <-a.newJobs:
 			if a.JobExists(newJob) {
-				log.WithFields(log.Fields{
+				acctLog.WithFields(log.Fields{
 					"job": newJob,
 				}).Warnf("newjob, but already exists")
 				continue
 			}
 			a.NewJob(newJob)
 		case reward := <-a.rewards:
-			rLog := log.WithFields(log.Fields{
+			rLog := acctLog.WithFields(log.Fields{
 				"job": reward.JobID,
 				"peg": reward.PoolReward / 1e8,
 			})
 			// Indication of a block being completed and us earning rewards
 			if !a.JobExists(reward.JobID) {
+				// TODO: We will still do the accounting so our numbers add up.
+				// 		But we should really see if we can do something to
+				//		payout our users if this happens. Like if we reboot
+				//		the pool, and didn't keep the user's pow. We could
+				//		just use the last blocks proportions or something.
 				rLog.Warnf("reward for job that does not exist")
-				continue
+				a.JobsByMiner[reward.JobID] = NewShareMap()
+				a.JobsByUser[reward.JobID] = NewShareMap()
 			}
+
 			a.jobLock.Lock()
 			us := a.JobsByUser[reward.JobID]
 			ms := a.JobsByMiner[reward.JobID]
@@ -141,7 +152,7 @@ func (a *Accountant) Listen(ctx context.Context) {
 				rLog.WithError(dbErr.Error).Error("failed to write payouts to database")
 			}
 
-			rLog.WithFields(log.Fields{"pool": us.TotalDiff}).Infof("pool stats")
+			rLog.WithFields(log.Fields{"pool-diff": us.TotalDiff}).Infof("pool stats")
 			a.jobLock.Unlock()
 		}
 	}
@@ -160,7 +171,4 @@ func (a Accountant) JobExists(jobid string) bool {
 	defer a.jobLock.RUnlock()
 	_, ok := a.JobsByMiner[jobid]
 	return ok
-}
-
-type BlockAccountant struct {
 }
