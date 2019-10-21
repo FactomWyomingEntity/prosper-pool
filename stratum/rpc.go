@@ -257,6 +257,17 @@ func QuickRPCError(id int, errorType int) Response {
 	}
 }
 
+func HelpfulRPCError(id int, errorType int, data interface{}) Response {
+	return Response{
+		ID: id,
+		Error: &RPCError{
+			Code:    errorType,
+			Message: RPCErrorString(errorType),
+			Data:    data,
+		},
+	}
+}
+
 // -1, Unknown exception, error message should contain more specific description
 // -2, “Service not found”
 // -3, “Method not found”

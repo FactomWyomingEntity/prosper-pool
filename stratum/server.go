@@ -3,16 +3,17 @@ package stratum
 import (
 	"bufio"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/pegnet/pegnet/modules/opr"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -22,6 +23,18 @@ type Server struct {
 	Miners     *MinerMap
 	config     *viper.Viper
 	currentJob *Job
+
+	// We forward submissions to any listeners
+	submissionExports []chan<- *ShareSubmission
+}
+
+type ShareSubmission struct {
+	Username string
+	MinerID  string
+	JobID    string
+	OPRHash  []byte // Bytes to ensure valid oprhash
+	Nonce    []byte // Bytes to ensure valid nonce
+	Target   uint64 // Uint64 to ensure valid target
 }
 
 type Job struct {
@@ -125,6 +138,8 @@ type Miner struct {
 	sessionID  string
 	nonce      uint32
 	agent      string // Agent/version from subscribe
+	username   string
+	minerid    string
 	authorized bool
 
 	joined time.Time
@@ -248,14 +263,23 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 
 	switch req.Method {
 	case "mining.authorize":
+		// "params": ["username,minerid", "password"]
 		if len(params) < 1 {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
 			return
 		}
 		// Ignore the session id if provided in the params
-		client.agent = params[0]
+		arr := strings.Split(params[0], ",")
+		if len(arr) != 2 {
+			_ = client.enc.Encode(HelpfulRPCError(req.ID, ErrorInvalidParams, "authorize requires 'username,minerid'"))
+			return
+		}
 
 		// TODO: actually check username/password (if user/pass authentication is desired)
+
+		client.username = arr[0]
+		client.minerid = arr[1]
+
 		if err := client.enc.Encode(AuthorizeResponse(req.ID, true, nil)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		} else {
@@ -266,8 +290,6 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
 			return
 		}
-		// Ignore the session id if provided in the params
-		client.agent = params[0]
 
 		// TODO: actually retrieve OPR hash for the given jobID (for now using dummy data)
 		dummyOPRHash := "00037f39cf870a1f49129f9c82d935665d352ffd25ea3296208f6f7b16fd654f"
@@ -278,8 +300,14 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 			client.authorized = true
 		}
 	case "mining.submit":
-		if len(params) < 1 {
+		// "params": ["username", "jobID", "nonce", "oprHash", "target"]
+		if len(params) < 5 {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
+			return
+		}
+
+		if params[0] != client.username {
+			_ = client.enc.Encode(HelpfulRPCError(req.ID, ErrorInvalidParams, "username not as expected"))
 			return
 		}
 
@@ -322,6 +350,57 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 		client.log.Warnf("unknown method %s", req.Method)
 		_ = client.enc.Encode(QuickRPCError(req.ID, ErrorMethodNotFound))
 	}
+}
+
+// ProcessSubmission will forward the shares and return if the share was accepted
+func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target string) bool {
+	sLog := log.WithFields(log.Fields{"user": miner.username, "miner": miner.minerid, "job": jobID})
+	if s.currentJob == nil {
+		return false // No current job
+	}
+
+	if jobID != s.currentJob.JobID || oprHash != s.currentJob.OPRHash {
+		return false // Only accepts current job
+	}
+
+	// Double check the fields
+	oB, err := hex.DecodeString(oprHash)
+	if err != nil {
+		sLog.WithError(err).Errorf("miner provided bad oprhash")
+		return false
+	}
+
+	nB, err := hex.DecodeString(nonce)
+	if err != nil {
+		sLog.WithError(err).Errorf("miner provided bad nonce")
+		return false
+	}
+
+	tU, err := strconv.ParseUint(target, 16, 64)
+	if err != nil {
+		sLog.WithError(err).Errorf("miner provided bad target")
+		return false
+	}
+
+	submit := &ShareSubmission{
+		Username: miner.username,
+		MinerID:  miner.minerid,
+		JobID:    jobID,
+		OPRHash:  oB,
+		Nonce:    nB,
+		Target:   tU,
+	}
+
+	for _, export := range s.submissionExports {
+		select { // Non blocking
+		case export <- submit:
+		default:
+		}
+	}
+
+	// TODO: Tighten up share acceptance. The current job is not necessarily
+	// 		always valid.
+	return true
 }
 
 func (s *Server) GetVersion(clientName string) error {
@@ -385,4 +464,12 @@ func (s *Server) StopMining(clientName string) error {
 	}
 	err = miner.enc.Encode(StopMiningRequest())
 	return err
+}
+
+// GetSubmissionExport should be called in an init phase, so does not
+// need to be thread safe
+func (s *Server) GetSubmissionExport() <-chan *ShareSubmission {
+	c := make(chan *ShareSubmission, 250)
+	s.submissionExports = append(s.submissionExports, c)
+	return c
 }

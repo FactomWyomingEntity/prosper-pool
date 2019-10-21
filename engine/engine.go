@@ -140,7 +140,15 @@ func (e *PoolEngine) init() error {
 }
 
 func (e *PoolEngine) link() error {
+	// NodeHook hooks all pegnet blocks
 	e.nodeHook = e.PegnetNode.GetHook()
+
+	// Submissions is all stratum miner submissions
+	//	One for accounting
+	submissions := e.StratumServer.GetSubmissionExport()
+	e.Accountant.SetSubmissions(submissions)
+	//	One for factom submit
+	// TODO: Factom submit submissions
 
 	return nil
 }
@@ -171,14 +179,20 @@ func (e *PoolEngine) listenBlocks(ctx context.Context) {
 				continue
 			}
 
-			// Update current job and notify the Miners
-			e.StratumServer.UpdateCurrentJob(job)
-			// Notify Accounting
-			//	Notify of the new job
-			e.Accountant.JobChannel() <- job.JobID
+			// We update the job if it is the latest block
+			if hook.Top {
+				// Update current job and notify the Miners
+				e.StratumServer.UpdateCurrentJob(job)
+				// Notify Accounting
+				//	Notify of the new job
+				e.Accountant.JobChannel() <- job.JobID
+			}
+
+			// Rewards are always processed, even if they are not new.
 			//	Notify of the rewards
 			e.Accountant.RewardChannel() <- e.findRewards(hook)
 			// Notify Submissions
+			// TODO: Notify submission module
 
 		case <-ctx.Done():
 			return

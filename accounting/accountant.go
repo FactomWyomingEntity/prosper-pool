@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/FactomWyomingEntity/private-pool/difficulty"
+
+	"github.com/FactomWyomingEntity/private-pool/stratum"
+
 	"github.com/shopspring/decimal"
 
 	"github.com/FactomWyomingEntity/private-pool/config"
@@ -28,9 +32,13 @@ type Accountant struct {
 	JobsByMiner map[string]*ShareMap
 	JobsByUser  map[string]*ShareMap
 
-	newJobs chan string
-	shares  chan *Share
-	rewards chan *Reward
+	newJobs     chan string
+	rewards     chan *Reward
+	submissions <-chan *stratum.ShareSubmission
+
+	// shares is mainly used for debug/testing. Most submissions come from
+	// Stratum.
+	shares chan *Share
 
 	// Pool Configuration
 	PoolFeeRate decimal.Decimal
@@ -39,7 +47,7 @@ type Accountant struct {
 func NewAccountant(conf *viper.Viper, db *gorm.DB) (*Accountant, error) {
 	a := new(Accountant)
 	a.DB = db
-	a.shares = make(chan *Share, 1000)
+	a.shares = make(chan *Share, 100)
 	a.rewards = make(chan *Reward, 1000)
 	a.newJobs = make(chan string, 100)
 	a.JobsByMiner = make(map[string]*ShareMap)
@@ -80,14 +88,41 @@ func (a Accountant) ShareChannel() chan<- *Share {
 	return a.shares
 }
 
+func (a *Accountant) SetSubmissions(subs <-chan *stratum.ShareSubmission) {
+	a.submissions = subs
+}
+
 // Listen accepts new shares and shares for handling the payout accounting.
 func (a *Accountant) Listen(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case share := <-a.shares:
+		case submit := <-a.submissions:
 			// A new share from a miner that we need to account for
+			if !a.JobExists(submit.JobID) {
+				acctLog.WithFields(log.Fields{
+					"job":     submit.JobID,
+					"minerid": submit.MinerID,
+					"userid":  submit.Username,
+				}).Debugf("share submitted, but no job exits")
+				continue // Nothing to do if the job does not exist
+			}
+
+			share := Share{
+				JobID:      submit.JobID,
+				Nonce:      submit.Nonce,
+				Difficulty: difficulty.Difficulty(submit.Target, difficulty.PDiff),
+				Target:     submit.Target,
+				// The share will be rejected if sealed
+				Accepted: true,
+				MinerID:  submit.MinerID,
+				UserID:   submit.Username,
+			}
+
+			a.AddShare(share)
+		case share := <-a.shares:
+			// A share from somewhere internal (probably a test)
 			if !a.JobExists(share.JobID) {
 				acctLog.WithFields(log.Fields{
 					"job":     share.JobID,
@@ -97,10 +132,8 @@ func (a *Accountant) Listen(ctx context.Context) {
 				continue // Nothing to do if the job does not exist
 			}
 
-			a.jobLock.Lock()
-			a.JobsByMiner[share.JobID].AddShare(share.MinerID, *share)
-			a.JobsByUser[share.JobID].AddShare(share.UserID, *share)
-			a.jobLock.Unlock()
+			a.AddShare(*share)
+
 		case newJob := <-a.newJobs:
 			if a.JobExists(newJob) {
 				acctLog.WithFields(log.Fields{
@@ -156,6 +189,13 @@ func (a *Accountant) Listen(ctx context.Context) {
 			a.jobLock.Unlock()
 		}
 	}
+}
+
+func (a *Accountant) AddShare(share Share) {
+	a.jobLock.Lock()
+	a.JobsByMiner[share.JobID].AddShare(share.MinerID, share)
+	a.JobsByUser[share.JobID].AddShare(share.UserID, share)
+	a.jobLock.Unlock()
 }
 
 // NewJob adds a new job to the maps
