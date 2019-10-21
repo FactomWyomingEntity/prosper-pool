@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/FactomWyomingEntity/private-pool/stratum"
 	"github.com/stretchr/testify/require"
@@ -156,5 +157,6 @@ func TestClient_SuggestTarget(t *testing.T) {
 	require.NoError(err)
 	actualMiner, err := srv.Miners.GetMiner(srv.Miners.ListMiners()[0])
 	require.NoError(err)
+	time.Sleep(1 * time.Second)
 	require.True(strings.Contains(actualMiner.ToString(), "Preferred Target: 268348394"))
 }
