@@ -9,11 +9,9 @@ import (
 	"github.com/FactomWyomingEntity/private-pool/database"
 	"github.com/jinzhu/gorm"
 	"github.com/pegnet/pegnet/modules/grader"
-	log "github.com/sirupsen/logrus"
 )
 
 func InsertGradeBlock(tx *gorm.DB, eblock *factom.EBlock, graded grader.GradedBlock) error {
-	sh := graded.WinnersShortHashes()
 	next := database.PegnetGrade{
 		Height:      int32(eblock.Height),
 		Version:     graded.Version(),
