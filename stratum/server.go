@@ -306,11 +306,6 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 				if err != nil {
 					log.Error(err)
 				}
-				// For some reason, double-notifying seems necessary upon initial connection to pool
-				err = s.SingleClientNotify(client.sessionID, s.currentJob.JobID, s.currentJob.OPRHash, "")
-				if err != nil {
-					log.Error(err)
-				}
 			}
 		}
 	case "mining.suggest_target":

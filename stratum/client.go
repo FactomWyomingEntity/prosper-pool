@@ -57,23 +57,15 @@ func (c *Client) Handshake(conn net.Conn) error {
 
 	// Receive subscribe response
 	data, _, err := c.dec.ReadLine()
-	var resp Response
-	err = json.Unmarshal(data, &resp)
-
-	if c.verbose {
-		log.Printf("CLIENT READ: %s\n", string(data))
-	}
-
+	c.HandleMessage(data)
 	err = c.Authorize("user", "password")
 	if err != nil {
 		return err
 	}
 
 	data, _, err = c.dec.ReadLine()
-	err = json.Unmarshal(data, &resp)
-	if c.verbose {
-		log.Printf("CLIENT READ: %s\n", string(data))
-	}
+	c.HandleMessage(data)
+
 	return nil
 }
 

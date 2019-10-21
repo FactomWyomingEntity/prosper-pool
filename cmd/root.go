@@ -38,7 +38,7 @@ func init() {
 	rootCmd.PersistentFlags().Int("pport", 5432, "Postgres host port")
 	rootCmd.PersistentFlags().Bool("testing", false, "Enable testing mode")
 	rootCmd.PersistentFlags().Int("act", 0, "Enable a custom activation height for testing mode")
-	testMiner.Flags().Bool("v", false, "Verbosity (if enabled, print messages)")
+	testMiner.Flags().BoolP("verbose", "v", false, "Verbosity (if enabled, print messages)")
 }
 
 // Execute is cobra's entry point
@@ -161,7 +161,7 @@ var testMiner = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		exit.GlobalExitHandler.AddCancel(cancel)
 
-		verbosityEnabled, _ := cmd.Flags().GetBool("v")
+		verbosityEnabled, _ := cmd.Flags().GetBool("verbose")
 		client, err := stratum.NewClient(verbosityEnabled)
 		if err != nil {
 			panic(err)
