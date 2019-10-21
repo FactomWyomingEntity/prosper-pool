@@ -140,7 +140,15 @@ func (e *PoolEngine) init() error {
 }
 
 func (e *PoolEngine) link() error {
+	// NodeHook hooks all pegnet blocks
 	e.nodeHook = e.PegnetNode.GetHook()
+
+	// Submissions is all stratum miner submissions
+	//	One for accounting
+	submissions := e.StratumServer.GetSubmissionExport()
+	e.Accountant.SetSubmissions(submissions)
+	//	One for factom submit
+	// TODO: Factom submit submissions
 
 	return nil
 }
