@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pegnet/pegnet/modules/opr"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -24,6 +26,7 @@ type Server struct {
 type Job struct {
 	JobID   string `json:"jobid"`
 	OPRHash string `json:"oprhash"`
+	OPR     opr.V2Content
 }
 
 func NewServer(conf *viper.Viper) (*Server, error) {
