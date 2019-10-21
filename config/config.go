@@ -36,6 +36,10 @@ const (
 	ConfigFreeForexAPIpPriority     = "OracleDataSources.FreeForexAPI"
 	ConfigFixedUSDPriority          = "OracleDataSources.FixedUSD"
 	ConfigAlternativeMePriority     = "OracleDataSources.AlternativeMe"
+
+	ConfigPoolIdentity  = "Pool.OPRIdentity"
+	ConfigPoolCoinbase  = "Pool.OPRCoinbase"
+	ConfigPoolESAddress = "Pool.ESAddress"
 )
 
 func SetDefaults(conf *viper.Viper) {
@@ -66,4 +70,8 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigFreeForexAPIpPriority, -1)
 	conf.SetDefault(ConfigFixedUSDPriority, -1)
 	conf.SetDefault(ConfigAlternativeMePriority, -1)
+
+	conf.SetDefault(ConfigPoolIdentity, "Prosper")
+	conf.SetDefault(ConfigPoolCoinbase, "FA2jK2HcLnRdS94dEcU27rF3meoJfpUcZPSinpb7AwQvPRY6RL1Q")
+	conf.SetDefault(ConfigPoolESAddress, "Es2XT3jSxi1xqrDvS5JERM3W3jh1awRHuyoahn3hbQLyfEi1jvbq")
 }

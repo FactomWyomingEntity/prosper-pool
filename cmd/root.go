@@ -11,6 +11,7 @@ import (
 
 	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/FactomWyomingEntity/private-pool/database"
+	"github.com/FactomWyomingEntity/private-pool/engine"
 	"github.com/FactomWyomingEntity/private-pool/exit"
 	"github.com/FactomWyomingEntity/private-pool/pegnet"
 	"github.com/FactomWyomingEntity/private-pool/stratum"
@@ -22,9 +23,12 @@ import (
 func init() {
 	rootCmd.AddCommand(testMiner)
 	rootCmd.AddCommand(testSync)
+	rootCmd.AddCommand(testStratum)
 	rootCmd.PersistentFlags().String("log", "info", "Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal'")
 	rootCmd.PersistentFlags().String("phost", "192.168.32.2", "Postgres host url")
 	rootCmd.PersistentFlags().Int("pport", 5432, "Postgres host port")
+	rootCmd.PersistentFlags().Bool("testing", false, "Enable testing mode")
+	rootCmd.PersistentFlags().Int("act", 0, "Enable a custom activation height for testing mode")
 	testMiner.Flags().Bool("v", false, "Verbosity (if enabled, print messages)")
 }
 
@@ -41,6 +45,23 @@ var rootCmd = &cobra.Command{
 	Short:            "Launch the private pool",
 	PersistentPreRun: rootPreRunSetup,
 	PreRun:           SoftReadConfig, // TODO: Do a hard read
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, cancel := context.WithCancel(context.Background())
+		exit.GlobalExitHandler.AddCancel(cancel)
+
+		pool, err := engine.Setup(viper.GetViper())
+		if err != nil {
+			log.WithError(err).Fatal("failed to launch pool")
+		}
+
+		pool.Run(ctx)
+	},
+}
+
+var testStratum = &cobra.Command{
+	Use:    "stratum",
+	Short:  "Launch the stratum server",
+	PreRun: SoftReadConfig, // TODO: Do a hard read
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
 		exit.GlobalExitHandler.AddCancel(cancel)
@@ -106,6 +127,15 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 	_ = viper.BindPFlag(config.ConfigSQLHost, cmd.Flags().Lookup("phost"))
 	_ = viper.BindPFlag(config.ConfigSQLPort, cmd.Flags().Lookup("pport"))
 	_ = viper.BindPFlag(config.LoggingLevel, cmd.Flags().Lookup("log"))
+
+	// Handle testing mode
+	if ok, _ := cmd.Flags().GetBool("testing"); ok {
+		act, _ := cmd.Flags().GetUint32("act")
+		pegnet.GradingV2Activation = act
+		pegnet.PegnetActivation = act
+		pegnet.GradingV2Activation = act
+		pegnet.TransactionConversionActivation = act
+	}
 
 }
 

@@ -30,7 +30,7 @@ type Node struct {
 	db   *database.SqlDatabase
 	Sync *database.BlockSync
 
-	hooks []chan<- grader.GradedBlock
+	hooks []chan<- HookStruct
 }
 
 func NewPegnetNode(conf *viper.Viper, db *database.SqlDatabase) (*Node, error) {
@@ -55,7 +55,22 @@ func NewPegnetNode(conf *viper.Viper, db *database.SqlDatabase) (*Node, error) {
 	return n, nil
 }
 
-func (n Node) AddHook(hook chan<- grader.GradedBlock) {
+// HookStruct contains all the info (aside from assets) needed to make
+// and opr for mining
+type HookStruct struct {
+	Height      int32
+	GradedBlock grader.GradedBlock
+}
+
+func (n *Node) GetHook() <-chan HookStruct {
+	hook := make(chan HookStruct, 10)
+	n.AddHook(hook)
+	return hook
+}
+
+// AddHook does not need to be thread safe, as it is called before
+// the node is running
+func (n *Node) AddHook(hook chan<- HookStruct) {
 	n.hooks = append(n.hooks, hook)
 }
 

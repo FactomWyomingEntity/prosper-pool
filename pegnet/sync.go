@@ -56,8 +56,9 @@ OuterSyncLoop:
 
 		begin := time.Now()
 		for n.Sync.Synced < int32(heights.DirectoryBlock) {
+			current := n.Sync.Synced + 1
 			start := time.Now()
-			hLog := log.WithFields(log.Fields{"height": n.Sync.Synced + 1})
+			hLog := log.WithFields(log.Fields{"height": current, "dheight": heights.DirectoryBlock, "hooks": len(n.hooks)})
 			if ctx.Err() != nil {
 				return // ctx is cancelled
 			}
@@ -73,7 +74,7 @@ OuterSyncLoop:
 			// We are not synced, so we need to iterate through the dblocks and sync them
 			// one by one. We can only sync our current synced height +1
 			// TODO: This skips the genesis block. I'm sure that is fine
-			block, err := n.SyncBlock(ctx, tx, uint32(n.Sync.Synced+1))
+			block, err := n.SyncBlock(ctx, tx, uint32(current))
 			if err != nil {
 				hLog.WithError(err).Errorf("failed to sync height")
 				// If we fail, we backout to the outer loop. This allows error handling on factomd state to be a bit
@@ -123,10 +124,10 @@ OuterSyncLoop:
 
 			// Send the new block to anyone listening
 			// TODO: Ensure this logic is correct.
-			if n.Sync.Synced-1 == int32(heights.DirectoryBlock) {
+			if current == int32(heights.DirectoryBlock) {
 				for i := range n.hooks {
 					select {
-					case n.hooks[i] <- block:
+					case n.hooks[i] <- HookStruct{GradedBlock: block, Height: current}:
 					default:
 
 					}
