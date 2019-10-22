@@ -144,10 +144,10 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 	// Handle testing mode
 	if ok, _ := cmd.Flags().GetBool("testing"); ok {
 		act, _ := cmd.Flags().GetUint32("act")
-		pegnet.GradingV2Activation = act
-		pegnet.PegnetActivation = act
-		pegnet.GradingV2Activation = act
-		pegnet.TransactionConversionActivation = act
+		config.GradingV2Activation = act
+		config.PegnetActivation = act
+		config.GradingV2Activation = act
+		config.TransactionConversionActivation = act
 	}
 
 }
