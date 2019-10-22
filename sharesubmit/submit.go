@@ -78,24 +78,35 @@ func (s *Submitter) Run(ctx context.Context) {
 			// A new block indicates a new job
 			s.currentJob = block.Job
 
-			minTarget := difficulty.CalculateMinimumDifficultyFromOPRs(block.Block.GradedBlock.Graded(), 200)
+			set := block.Block.GradedBlock.Graded()
+			last, lastIndex := uint64(0), 0
+			if len(set) > 1 {
+				last, lastIndex = set[len(set)-1].SelfReportedDifficulty, len(set)-1
+			}
+			minTarget := difficulty.CalculateMinimumDifficultyFromOPRs(set, 200)
 			ema := EMA{
-				BlockHeight:   block.Block.Height,
-				JobID:         stratum.JobIDFromHeight(block.Block.Height),
-				Cutoff:        s.configuration.Cutoff,
-				MinimumTarget: minTarget,
-				EMAValue:      ComputeEMA(minTarget, s.currentEMA.EMAValue, s.configuration.EMANumPoints),
-				N:             s.configuration.EMANumPoints,
+				BlockHeight:     block.Block.Height,
+				JobID:           stratum.JobIDFromHeight(block.Block.Height),
+				Cutoff:          s.configuration.Cutoff,
+				MinimumTarget:   minTarget,
+				EMAValue:        ComputeEMA(minTarget, s.currentEMA.EMAValue, s.configuration.EMANumPoints),
+				LastGraded:      last,
+				LastGradedIndex: lastIndex,
+				N:               s.configuration.EMANumPoints,
 			}
 
-			dbErr := s.db.Create(&ema)
-			if dbErr.Error != nil {
-				sLog.WithError(dbErr.Error).WithField("height", block.Block.Height).Errorf("failed to write ema")
+			err := s.saveEMA(ema)
+			if err != nil {
+				sLog.WithError(err).WithField("height", block.Block.Height).Errorf("failed to write ema")
 			}
 
 			// This means there is also a new job
 			if block.Block.Top {
-
+				lastGradedDifficulty.Set(float64(ema.LastGraded))
+				lastGradedIndex.Set(float64(ema.LastGradedIndex))
+				cutoffMinimumDifficulty.Set(float64(ema.MinimumTarget))
+				cutoffMinimumIndex.Set(200)
+				emaDifficulty.Set(float64(ema.EMAValue))
 			}
 
 			var _ = ema
@@ -108,15 +119,23 @@ func (s *Submitter) Run(ctx context.Context) {
 	}
 }
 
+// saveEMA will save a copy of the EMA to the database. It's a copy because
+// uint64s are not always safe to sql
+func (s Submitter) saveEMA(ema EMA) error {
+	return s.db.Create(&ema).Error
+}
+
 // EMA = [Latest Value  - Previous EMA Value] * (2 / N+1) + Previous EMA
 // N is the number of points in the Exponential Moving Average
 type EMA struct {
-	BlockHeight   int32 `gorm:"primary_key"`
-	JobID         string
-	Cutoff        int    // 200
-	MinimumTarget uint64 // 200 Cutoff target
-	EMAValue      uint64 // EMA value
-	N             int
+	BlockHeight     int32 `gorm:"primary_key"`
+	JobID           string
+	Cutoff          int    // 200
+	MinimumTarget   uint64 // 200 Cutoff target
+	EMAValue        uint64 // EMA value
+	LastGraded      uint64 // Last graded diff
+	LastGradedIndex int
+	N               int
 }
 
 func ComputeEMA(latest uint64, previous uint64, nPoints int) uint64 {
@@ -135,14 +154,13 @@ func ComputeEMA(latest uint64, previous uint64, nPoints int) uint64 {
 	return s.Uint64()
 }
 
-type Target uint64
-
 // BeforeCreate
 // uint64's cannot have their highest bit set. The lowest bit doesn't matter
 // so we can shift right, then shift left when reading.
 func (d *EMA) BeforeCreate() (err error) {
 	d.MinimumTarget = d.MinimumTarget >> 1
 	d.EMAValue = d.EMAValue >> 1
+	d.LastGraded = d.LastGraded >> 1
 
 	return
 }
@@ -151,5 +169,6 @@ func (d *EMA) AfterFind() (err error) {
 	// Add back the top bit
 	d.MinimumTarget = d.MinimumTarget << 1
 	d.EMAValue = d.EMAValue << 1
+	d.LastGraded = d.LastGraded << 1
 	return
 }

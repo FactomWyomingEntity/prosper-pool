@@ -256,13 +256,15 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 	record.Height = hook.Height
 	record.ID = e.Identity.Identity
 	record.Address = e.Identity.CoinbaseAddress
-	for _, winner := range hook.GradedBlock.WinnersShortHashes() {
-		data, err := hex.DecodeString(winner)
-		if err != nil {
-			hLog.WithError(err).Errorf("winner hex failed to parse")
-			return nil
+	if hook.GradedBlock != nil {
+		for _, winner := range hook.GradedBlock.WinnersShortHashes() {
+			data, err := hex.DecodeString(winner)
+			if err != nil {
+				hLog.WithError(err).Errorf("winner hex failed to parse")
+				return nil
+			}
+			record.Winners = append(record.Winners, data)
 		}
-		record.Winners = append(record.Winners, data)
 	}
 
 	// Assets need to be set in a specific order

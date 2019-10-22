@@ -17,6 +17,7 @@ func TestComputeEMA(t *testing.T) {
 	vecs := []vec{
 		{prev: 0, current: 10, exp: 10, n: 4},
 		{prev: 18446024746824600000, current: 18446222197702600000, exp: 18446035419845032000, n: 36},
+		{prev: 18443785558926500000, current: 18442051839271800000, exp: 18443691844350500000, n: 36},
 		{prev: 21412451, current: 123, exp: 20255027, n: 36},
 	}
 
