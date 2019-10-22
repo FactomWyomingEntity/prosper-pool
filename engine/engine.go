@@ -172,6 +172,8 @@ func (e *PoolEngine) link() error {
 
 	e.Web.InitPrimary(e.Authenticator)
 
+	e.StratumServer.SetAuthenticator(e.Authenticator)
+
 	return nil
 }
 

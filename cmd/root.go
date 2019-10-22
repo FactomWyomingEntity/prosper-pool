@@ -38,6 +38,7 @@ func init() {
 	rootCmd.PersistentFlags().Int("pport", 5432, "Postgres host port")
 	rootCmd.PersistentFlags().Bool("testing", false, "Enable testing mode")
 	rootCmd.PersistentFlags().Int("act", 0, "Enable a custom activation height for testing mode")
+	rootCmd.PersistentFlags().Bool("rauth", true, "Enable miners to use actual registered usernames")
 	testMiner.Flags().BoolP("verbose", "v", false, "Verbosity (if enabled, print messages)")
 }
 
@@ -140,6 +141,7 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 	_ = viper.BindPFlag(config.ConfigSQLHost, cmd.Flags().Lookup("phost"))
 	_ = viper.BindPFlag(config.ConfigSQLPort, cmd.Flags().Lookup("pport"))
 	_ = viper.BindPFlag(config.LoggingLevel, cmd.Flags().Lookup("log"))
+	_ = viper.BindPFlag(config.ConfigStratumRequireAuth, cmd.Flags().Lookup("rauth"))
 
 	// Handle testing mode
 	if ok, _ := cmd.Flags().GetBool("testing"); ok {

@@ -13,6 +13,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/config"
+
+	"github.com/FactomWyomingEntity/private-pool/authentication"
+
 	"github.com/pegnet/pegnet/modules/opr"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -23,6 +27,13 @@ type Server struct {
 	Miners     *MinerMap
 	config     *viper.Viper
 	currentJob *Job
+
+	// For any user authentication
+	Auth *authentication.Authenticator
+
+	configuration struct {
+		RequireAuth bool // Require actual username from miners
+	}
 
 	// We forward submissions to any listeners
 	submissionExports []chan<- *ShareSubmission
@@ -54,7 +65,14 @@ func NewServer(conf *viper.Viper) (*Server, error) {
 	s := new(Server)
 	s.config = conf
 	s.Miners = NewMinerMap()
+
+	s.configuration.RequireAuth = conf.GetBool(config.ConfigStratumRequireAuth)
+
 	return s, nil
+}
+
+func (s *Server) SetAuthenticator(auth *authentication.Authenticator) {
+	s.Auth = auth
 }
 
 // UpdateCurrentJob sets currently-active job details on the stratum server
@@ -275,10 +293,19 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 			return
 		}
 
-		// TODO: actually check username/password (if user/pass authentication is desired)
-
 		client.username = arr[0]
 		client.minerid = arr[1]
+
+		if s.Auth != nil && s.configuration.RequireAuth {
+			if !s.Auth.Exists(client.username) { // Reject!
+				// TODO: Provide a reason?
+				// TODO: Disconnect them?
+				if err := client.enc.Encode(AuthorizeResponse(req.ID, false, nil)); err != nil {
+					client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+				}
+				return
+			}
+		}
 
 		if err := client.enc.Encode(AuthorizeResponse(req.ID, true, nil)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
