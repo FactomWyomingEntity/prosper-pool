@@ -1,8 +1,10 @@
-package engine
+package web
 
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/jinzhu/gorm"
 
 	"github.com/FactomWyomingEntity/private-pool/authentication"
 	"github.com/FactomWyomingEntity/private-pool/config"
@@ -15,32 +17,27 @@ var (
 )
 
 type HttpServices struct {
+	Auth    *authentication.Authenticator
 	Primary *http.Server
 	conf    *viper.Viper
+	db      *gorm.DB
 }
 
-func NewHttpServices(conf *viper.Viper) *HttpServices {
+func NewHttpServices(conf *viper.Viper, db *gorm.DB) *HttpServices {
 	s := new(HttpServices)
 	s.conf = conf
+	s.db = db
 	return s
 }
 
 func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
 	primaryMux := http.NewServeMux()
+	s.Auth = auth
 
 	// Init a basic "whoami"
-	primaryMux.HandleFunc("/whoami", func(w http.ResponseWriter, r *http.Request) {
-		user := auth.GetCurrentUser(r)
-		if user != nil {
-			if uc, ok := user.(*authentication.User); ok {
-				_, _ = fmt.Fprintf(w, "Hello, %v", uc.UID)
-				return
-			}
-			_, _ = fmt.Fprintf(w, "Unknown")
-			return
-		}
-		_, _ = fmt.Fprintf(w, "Not logged in")
-	})
+	primaryMux.HandleFunc("/whoami", s.WhoAmI)
+	primaryMux.HandleFunc("/user/owed", s.OwedPayouts)
+	primaryMux.HandleFunc("/pool/rewards", s.PoolRewards)
 
 	auth.AddHandler(primaryMux)
 

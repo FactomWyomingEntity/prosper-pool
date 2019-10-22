@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -26,11 +27,11 @@ const (
 //
 //	//fmt.Println(BlocksPerTime(100*K, time.Minute*9))
 //
-//	fmt.Printf("%x\n", ExpectedMinimumTarget(100*K*MiningPeriod, 1))
+//	fmt.Printf("%x\n", ExpectedMinimumTarget(100*K*MiningPeriodSeconds, 1))
 //	fmt.Printf("%x\n", ExpectedMinimumTarget(5*K*2*Minute, 1))
 //	fmt.Printf("%x\n", ExpectedMinimumTarget(5*K*Minute, 1))
-//	fmt.Printf("%x\n", ExpectedMinimumTarget(5*K*MiningPeriod, 1))
-//	fmt.Printf("%x\n", ExpectedMinimumTarget(100*K*MiningPeriod, 1))
+//	fmt.Printf("%x\n", ExpectedMinimumTarget(5*K*MiningPeriodSeconds, 1))
+//	fmt.Printf("%x\n", ExpectedMinimumTarget(100*K*MiningPeriodSeconds, 1))
 //}
 
 func TestPDiffProperties(t *testing.T) {
@@ -54,7 +55,7 @@ func TestDifficulty(t *testing.T) {
 		d := make([]float64, amt)
 		for i := start; i < amt; i++ {
 			target := TargetI(uint64(math.Pow(float64(2), float64(i))))
-			d[i] = Difficulty(target, PDiff)
+			d[i] = DifficultyFromTarget(target, PDiff)
 		}
 
 		for i := start + 1; i < amt; i++ {
@@ -75,7 +76,7 @@ func TestDifficulty(t *testing.T) {
 		for i := float64(0); i < float64(amt); i++ {
 			hr := math.Pow(float64(2), float64(i)) * hashrate
 			fmt.Println(hr)
-			d[int(i)] = Difficulty(bestHash(hr, dur), PDiff)
+			d[int(i)] = DifficultyFromTarget(bestHash(hr, dur), PDiff)
 		}
 
 		for i := 1; i < amt; i++ {
@@ -83,6 +84,36 @@ func TestDifficulty(t *testing.T) {
 				t.Errorf("expect ratio of 2, found %f", d[i]/d[i-1])
 			}
 		}
+	})
+}
+
+func TestTargetFromDifficulty(t *testing.T) {
+	t.Run("test one", func(t *testing.T) {
+		if TargetFromDifficulty(1, PDiff) != PDiff {
+			t.Error("diff 1 should be pDiff")
+		}
+	})
+
+	t.Run("test random", func(t *testing.T) {
+		testDiff := func(from uint64) {
+			for i := 0; i < 1000; i++ {
+				tar := rand.Uint64() | from
+				d := DifficultyFromTarget(tar, PDiff)
+				nT := TargetFromDifficulty(d, PDiff)
+				diff := nT - tar
+				if tar > nT {
+					diff = tar - nT
+				}
+
+				if nT != tar && diff > 1 {
+					t.Errorf("exp %d, found %d. Diff %d", tar, nT, diff)
+				}
+			}
+		}
+		// From pDiff
+		testDiff(PDiff)
+		// From higer
+		testDiff(0xffffff0000000000)
 	})
 }
 

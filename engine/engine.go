@@ -7,22 +7,17 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/FactomWyomingEntity/private-pool/authentication"
-
-	"github.com/FactomWyomingEntity/private-pool/sharesubmit"
-
-	"github.com/FactomWyomingEntity/private-pool/accounting"
-
-	"github.com/FactomWyomingEntity/private-pool/exit"
-
 	"github.com/Factom-Asset-Tokens/factom"
-
+	"github.com/FactomWyomingEntity/private-pool/accounting"
+	"github.com/FactomWyomingEntity/private-pool/authentication"
 	"github.com/FactomWyomingEntity/private-pool/config"
-
 	"github.com/FactomWyomingEntity/private-pool/database"
+	"github.com/FactomWyomingEntity/private-pool/exit"
 	"github.com/FactomWyomingEntity/private-pool/pegnet"
 	"github.com/FactomWyomingEntity/private-pool/polling"
+	"github.com/FactomWyomingEntity/private-pool/sharesubmit"
 	"github.com/FactomWyomingEntity/private-pool/stratum"
+	"github.com/FactomWyomingEntity/private-pool/web"
 	"github.com/pegnet/pegnet/modules/opr"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -42,7 +37,7 @@ type PoolEngine struct {
 	Accountant    *accounting.Accountant
 	Submitter     *sharesubmit.Submitter
 	Authenticator *authentication.Authenticator
-	Web           *HttpServices
+	Web           *web.HttpServices
 
 	Identity IdentityInformation
 
@@ -118,7 +113,7 @@ func (e *PoolEngine) init() error {
 		return err
 	}
 
-	web := NewHttpServices(e.conf)
+	srv := web.NewHttpServices(e.conf, db.DB)
 
 	// Load our identity info for oprs
 	if id := e.conf.GetString(config.ConfigPoolIdentity); id == "" {
@@ -155,7 +150,7 @@ func (e *PoolEngine) init() error {
 	e.Accountant = acc
 	e.Submitter = sub
 	e.Authenticator = auth
-	e.Web = web
+	e.Web = srv
 
 	// Add all closes
 	exit.GlobalExitHandler.AddExit(e.Database.Close)

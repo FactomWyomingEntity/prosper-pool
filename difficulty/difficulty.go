@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	MiningPeriod = 480 // in seconds
+	MiningPeriodDuration = 480 * time.Second
+	MiningPeriodSeconds  = 480 // in seconds
 
 	// Roughly 6.5K h/s for 5s will achieve a pDiff
 	// A raspberry pi is 7.5k h/s
@@ -36,7 +37,6 @@ var (
 //  In Python: m = np.uint64((2**64)-1); 1.0*m/(m-np.uint64(target))
 //
 func TotalHashes(target uint64) *big.Int {
-
 	tF := new(big.Float).SetUint64(target)
 	den := new(big.Float).Sub(BigMaxUint64F, tF)
 	quo := new(big.Float).Quo(BigMaxUint64F, den)
@@ -50,15 +50,15 @@ func TotalHashes(target uint64) *big.Int {
 func TargetFromHashRate(rate float64, duration time.Duration) uint64 {
 	total := new(big.Float).Mul(big.NewFloat(rate), big.NewFloat(duration.Seconds()))
 	i, _ := total.Int(nil)
-	return Target(i)
+	return TargetFromHashes(i)
 }
 
 func TargetI(totalHashes uint64) uint64 {
-	return Target(new(big.Int).SetUint64(totalHashes))
+	return TargetFromHashes(new(big.Int).SetUint64(totalHashes))
 }
 
-// Target returns the expected target for a given number of hashes.
-func Target(totalHashes *big.Int) uint64 {
+// TargetFromHashes returns the expected target for a given number of hashes.
+func TargetFromHashes(totalHashes *big.Int) uint64 {
 	th := new(big.Float).SetInt(totalHashes)
 	sub1 := new(big.Float).Sub(th, oneF)
 	num := new(big.Float).Mul(BigMaxUint64F, sub1)
@@ -67,13 +67,20 @@ func Target(totalHashes *big.Int) uint64 {
 	return target
 }
 
-// Difficulty returns the target difficulty based off of `one`
-func Difficulty(target, one uint64) float64 {
+// DifficultyFromTarget returns the target difficulty based off of `one`
+func DifficultyFromTarget(target, one uint64) float64 {
 	num := new(big.Float).SetUint64(^one)
 	den := new(big.Float).SetUint64(^target)
 	quo := num.Quo(num, den)
 	diff, _ := quo.Float64()
 	return diff
+}
+
+func TargetFromDifficulty(difficulty float64, one uint64) uint64 {
+	d := big.NewFloat(difficulty)
+	t := new(big.Float).Quo(new(big.Float).SetUint64(^one), d)
+	target, _ := t.Uint64()
+	return ^target
 }
 
 // -- TODO: Check below the line
@@ -154,7 +161,7 @@ func EffectiveHashRate(min uint64, spot int) float64 {
 	den := new(big.Float).Sub(space, minF)
 
 	ehr := new(big.Float).Quo(num, den)
-	ehr = ehr.Quo(ehr, big.NewFloat(MiningPeriod))
+	ehr = ehr.Quo(ehr, big.NewFloat(MiningPeriodSeconds))
 	f, _ := ehr.Float64()
 	return f
 }
@@ -165,7 +172,7 @@ func EffectiveHashRate(min uint64, spot int) float64 {
 func ExpectedMinimumDifficulty(hashrate float64, spot int) uint64 {
 	// 2^64
 	space := big.NewFloat(math.MaxUint64)
-	ehrF := big.NewFloat(hashrate * MiningPeriod)
+	ehrF := big.NewFloat(hashrate * MiningPeriodSeconds)
 	spotF := new(big.Float).Sub(ehrF, big.NewFloat(float64(spot)))
 	num := new(big.Float).Mul(space, spotF)
 

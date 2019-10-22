@@ -115,7 +115,7 @@ func (a *Accountant) Listen(ctx context.Context) {
 			share := Share{
 				JobID:      submit.JobID,
 				Nonce:      submit.Nonce,
-				Difficulty: difficulty.Difficulty(submit.Target, difficulty.PDiff),
+				Difficulty: difficulty.DifficultyFromTarget(submit.Target, difficulty.PDiff),
 				Target:     submit.Target,
 				// The share will be rejected if sealed
 				Accepted: true,
