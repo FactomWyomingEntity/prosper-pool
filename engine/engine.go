@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/FactomWyomingEntity/private-pool/authentication"
+
 	"github.com/FactomWyomingEntity/private-pool/sharesubmit"
 
 	"github.com/FactomWyomingEntity/private-pool/accounting"
@@ -39,6 +41,8 @@ type PoolEngine struct {
 	Poller        *polling.DataSources
 	Accountant    *accounting.Accountant
 	Submitter     *sharesubmit.Submitter
+	Authenticator *authentication.Authenticator
+	Web           *HttpServices
 
 	Identity IdentityInformation
 
@@ -109,6 +113,13 @@ func (e *PoolEngine) init() error {
 		return err
 	}
 
+	auth, err := authentication.NewAuthenticator(e.conf, db.DB)
+	if err != nil {
+		return err
+	}
+
+	web := NewHttpServices(e.conf)
+
 	// Load our identity info for oprs
 	if id := e.conf.GetString(config.ConfigPoolIdentity); id == "" {
 		return fmt.Errorf("opr identity must be set")
@@ -143,6 +154,8 @@ func (e *PoolEngine) init() error {
 	e.Poller = pol
 	e.Accountant = acc
 	e.Submitter = sub
+	e.Authenticator = auth
+	e.Web = web
 
 	// Add all closes
 	exit.GlobalExitHandler.AddExit(e.Database.Close)
@@ -162,6 +175,8 @@ func (e *PoolEngine) link() error {
 	subSubmissions := e.StratumServer.GetSubmissionExport()
 	e.Submitter.SetSubmissions(subSubmissions)
 
+	e.Web.InitPrimary(e.Authenticator)
+
 	return nil
 }
 
@@ -179,6 +194,9 @@ func (e *PoolEngine) Run(ctx context.Context) {
 
 	// Submitter takes new blocks, new shares, and new jobs
 	go e.Submitter.Run(ctx)
+
+	// Start api/web
+	go e.Web.Listen()
 
 	// Listen for new jobs
 	e.listenBlocks(ctx)

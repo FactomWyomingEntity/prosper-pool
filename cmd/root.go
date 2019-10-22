@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/FactomWyomingEntity/private-pool/accounting"
-	"github.com/FactomWyomingEntity/private-pool/auth"
+	"github.com/FactomWyomingEntity/private-pool/authentication"
 	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/FactomWyomingEntity/private-pool/database"
 	"github.com/FactomWyomingEntity/private-pool/engine"
@@ -303,7 +303,10 @@ var testAuth = &cobra.Command{
 			return db.Close()
 		})
 
-		a := auth.NewAuthenticator(db.DB)
+		a, err := authentication.NewAuthenticator(viper.GetViper(), db.DB)
+		if err != nil {
+			panic(err)
+		}
 
 		mux := http.NewServeMux()
 

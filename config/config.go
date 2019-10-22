@@ -46,6 +46,8 @@ const (
 
 	ConfigSubmitterCutoff = "Submit.SubmissionCutoff"
 	ConfigSubmitterEMAN   = "Submit.EMA-N"
+
+	ConfigWebPort = "Web.Port"
 )
 
 func SetDefaults(conf *viper.Viper) {
@@ -86,6 +88,8 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigSubmitterCutoff, 200)
 	// 6hrs
 	conf.SetDefault(ConfigSubmitterEMAN, 36)
+
+	conf.SetDefault(ConfigWebPort, 7070)
 }
 
 func FactomClientFromConfig(conf *viper.Viper) *factom.Client {

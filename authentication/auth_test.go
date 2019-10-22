@@ -1,4 +1,4 @@
-package auth_test
+package authentication_test
 
 import (
 	"fmt"
@@ -8,9 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/viper"
+
 	"github.com/qor/mailer"
 
-	. "github.com/FactomWyomingEntity/private-pool/auth"
+	. "github.com/FactomWyomingEntity/private-pool/authentication"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/stretchr/testify/require"
@@ -56,7 +58,7 @@ func AuthForTests(t *testing.T, memory bool) *Authenticator {
 	db, err := gorm.Open("sqlite3", path) //":memory:")
 	require.NoError(err)
 
-	a := NewAuthenticator(db)
+	a, _ := NewAuthenticator(viper.GetViper(), db)
 	// Silence all mail stuff
 	a.Config.Mailer.Sender = &EmptySender{}
 	return a
