@@ -31,7 +31,7 @@ type Server struct {
 type ShareSubmission struct {
 	Username string
 	MinerID  string
-	JobID    string
+	JobID    string `gorm:"index:jobid"`
 	OPRHash  []byte // Bytes to ensure valid oprhash
 	Nonce    []byte // Bytes to ensure valid nonce
 	Target   uint64 // Uint64 to ensure valid target

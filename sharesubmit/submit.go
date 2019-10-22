@@ -2,7 +2,13 @@ package sharesubmit
 
 import (
 	"context"
+	"encoding/binary"
+	"fmt"
 	"math/big"
+
+	"github.com/pegnet/pegnet/modules/opr"
+
+	"github.com/Factom-Asset-Tokens/factom"
 
 	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/FactomWyomingEntity/private-pool/difficulty"
@@ -27,11 +33,18 @@ type Submitter struct {
 	shares <-chan *stratum.ShareSubmission
 	blocks chan SubmissionJob
 
-	currentJob    *stratum.Job
+	FactomClient *factom.Client
+
+	currentJob  *stratum.Job
+	oprCopyData []byte
+	oprCopy     opr.V2Content // Our safe copy
+
 	currentEMA    EMA
 	configuration struct {
 		Cutoff       int
 		EMANumPoints int
+		// ESAddress pays for entries
+		ESAddress factom.EsAddress
 	}
 }
 
@@ -48,6 +61,7 @@ func NewSubmitter(conf *viper.Viper, db *gorm.DB) (*Submitter, error) {
 	s.blocks = make(chan SubmissionJob, 10)
 	s.db = db
 	s.db.AutoMigrate(&EMA{})
+	s.db.AutoMigrate(&EntrySubmission{})
 
 	// Load the latest ema
 	dbErr := s.db.Order("block_height desc").First(&s.currentEMA)
@@ -55,13 +69,25 @@ func NewSubmitter(conf *viper.Viper, db *gorm.DB) (*Submitter, error) {
 		return nil, dbErr.Error
 	}
 
+	s.FactomClient = config.FactomClientFromConfig(conf)
+
 	s.configuration.Cutoff = conf.GetInt(config.ConfigSubmitterCutoff)
 	s.configuration.EMANumPoints = conf.GetInt(config.ConfigSubmitterEMAN)
+
+	if ec := conf.GetString(config.ConfigPoolESAddress); ec == "" {
+		return nil, fmt.Errorf("private entry credit address must be set")
+	} else {
+		adr, err := factom.NewEsAddress(ec)
+		if err != nil {
+			return nil, fmt.Errorf("config entry credit address failed: %s", err.Error())
+		}
+		s.configuration.ESAddress = adr
+	}
 
 	return s, nil
 }
 
-func (s *Submitter) SetShareChannel(shares <-chan *stratum.ShareSubmission) {
+func (s *Submitter) SetSubmissions(shares <-chan *stratum.ShareSubmission) {
 	s.shares = shares
 }
 
@@ -107,20 +133,86 @@ func (s *Submitter) Run(ctx context.Context) {
 				cutoffMinimumDifficulty.Set(float64(ema.MinimumTarget))
 				cutoffMinimumIndex.Set(200)
 				emaDifficulty.Set(float64(ema.EMAValue))
+				s.currentJob = block.Job
+				s.oprCopy = block.Job.OPR
+				s.oprCopyData, err = s.oprCopy.Marshal()
+				if err != nil {
+					sLog.WithError(err).WithField("height", block.Block.Height).Errorf("failed to marshal opr")
+				}
 			}
-
-			var _ = ema
-
+			s.currentEMA = ema
 		case share := <-s.shares:
 			if share.JobID != s.currentJob.JobID {
 				continue // Invalid share
 			}
+
+			// If the target is above the ema target
+			if share.Target > s.currentEMA.EMAValue {
+				buf := make([]byte, 8)
+				binary.BigEndian.PutUint64(buf, share.Target)
+				entry := factom.Entry{
+					ChainID: &config.OPRChain,
+					ExtIDs: []factom.Bytes{
+						//	[0] the nonce for the entry
+						share.Nonce,
+						//	[1] Self reported difficulty
+						buf,
+						//  [2] Version number
+						[]byte{config.OPRVersion},
+					},
+					Content: s.oprCopyData,
+				}
+				txid, err := entry.ComposeCreate(context.Background(), s.FactomClient, s.configuration.ESAddress)
+				if err != nil {
+					sLog.WithError(err).WithField("jobid", share.JobID).Errorf("failed to submit opr")
+				} else {
+					err := s.saveEntrySubmission(EntrySubmission{
+						ShareSubmission: *share,
+						EntryHash:       entry.Hash.String(),
+						CommitTxID:      txid.String(),
+					})
+					if err != nil {
+						sLog.WithError(err).WithField("jobid", share.JobID).Errorf("failed to save entry submission")
+					}
+				}
+			}
+
 		}
 	}
 }
 
+// saveEntrySubmission will save a copy of the EntrySubmission to the database.
+// It's a copy because uint64s are not always safe to sql and we need to modify
+// it before saving
+func (s Submitter) saveEntrySubmission(es EntrySubmission) error {
+	return s.db.Create(&es).Error
+}
+
+// EntrySubmission is a record that we submitted an entry
+type EntrySubmission struct {
+	gorm.Model
+	stratum.ShareSubmission
+	EntryHash  string
+	CommitTxID string
+}
+
+// BeforeCreate
+// uint64's cannot have their highest bit set. The lowest bit doesn't matter
+// so we can shift right, then shift left when reading.
+func (d *EntrySubmission) BeforeCreate() (err error) {
+	d.ShareSubmission.Target = d.ShareSubmission.Target >> 1
+
+	return
+}
+
+func (d *EntrySubmission) AfterFind() (err error) {
+	// Add back the top bit
+	d.ShareSubmission.Target = d.ShareSubmission.Target << 1
+	return
+}
+
 // saveEMA will save a copy of the EMA to the database. It's a copy because
-// uint64s are not always safe to sql
+// uint64s are not always safe to sql  and we need to modify it before saving
 func (s Submitter) saveEMA(ema EMA) error {
 	return s.db.Create(&ema).Error
 }

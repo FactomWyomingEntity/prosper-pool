@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Factom-Asset-Tokens/factom"
+	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/FactomWyomingEntity/private-pool/database"
 	"github.com/jinzhu/gorm"
 	"github.com/pegnet/pegnet/modules/grader"
@@ -32,12 +33,12 @@ func (n *Node) Grade(ctx context.Context, block *factom.EBlock) (grader.GradedBl
 		return nil, nil
 	}
 
-	if *block.ChainID != OPRChain {
+	if *block.ChainID != config.OPRChain {
 		return nil, fmt.Errorf("trying to grade a non-opr chain")
 	}
 
 	ver := uint8(1)
-	if block.Height >= GradingV2Activation {
+	if block.Height >= config.GradingV2Activation {
 		ver = 2
 	}
 
