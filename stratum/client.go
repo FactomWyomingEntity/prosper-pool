@@ -5,8 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -27,12 +30,14 @@ type Client struct {
 	subscriptions []Subscription
 	requestsMade  map[int]func(Response)
 	verbose       bool
+	autoreconnect bool
 	sync.RWMutex
 }
 
 func NewClient(verbose bool) (*Client, error) {
 	c := new(Client)
 	c.verbose = verbose
+	c.autoreconnect = true
 	c.version = "0.0.1"
 	c.requestsMade = make(map[int]func(Response))
 	return c, nil
@@ -76,7 +81,7 @@ func (c *Client) WaitThenConnect(address, waittime string) error {
 }
 
 // Authorize against stratum pool
-func (c Client) Authorize(username, password string) error {
+func (c *Client) Authorize(username, password string) error {
 	req := AuthorizeRequest(username, password)
 	c.Lock()
 	c.requestsMade[req.ID] = func(resp Response) {
@@ -94,8 +99,17 @@ func (c Client) Authorize(username, password string) error {
 }
 
 // Request current OPR hash from server
-func (c Client) GetOPRHash(jobID string) error {
-	err := c.enc.Encode(GetOPRHashRequest(jobID))
+func (c *Client) GetOPRHash(jobID string) error {
+	req := GetOPRHashRequest(jobID)
+	c.Lock()
+	c.requestsMade[req.ID] = func(resp Response) {
+		var result string
+		if err := resp.FitResult(&result); err == nil {
+			log.Infof("OPRHash result: %s\n", result)
+		}
+	}
+	c.Unlock()
+	err := c.enc.Encode(req)
 	if err != nil {
 		return err
 	}
@@ -103,7 +117,7 @@ func (c Client) GetOPRHash(jobID string) error {
 }
 
 // Submit completed work to server
-func (c Client) Submit(username, jobID, nonce, oprHash, target string) error {
+func (c *Client) Submit(username, jobID, nonce, oprHash, target string) error {
 	err := c.enc.Encode(SubmitRequest(username, jobID, nonce, oprHash, target))
 	if err != nil {
 		return err
@@ -112,7 +126,7 @@ func (c Client) Submit(username, jobID, nonce, oprHash, target string) error {
 }
 
 // Subscribe to stratum pool
-func (c Client) Subscribe() error {
+func (c *Client) Subscribe() error {
 	req := SubscribeRequest(c.version)
 	c.Lock()
 	c.requestsMade[req.ID] = func(resp Response) {
@@ -135,7 +149,7 @@ func (c Client) Subscribe() error {
 }
 
 // Suggest preferred mining target to server
-func (c Client) SuggestTarget(preferredTarget string) error {
+func (c *Client) SuggestTarget(preferredTarget string) error {
 	err := c.enc.Encode(SuggestTargetRequest(preferredTarget))
 	if err != nil {
 		return err
@@ -143,14 +157,16 @@ func (c Client) SuggestTarget(preferredTarget string) error {
 	return nil
 }
 
-func (c Client) Close() error {
+func (c *Client) Close() error {
 	log.Infof("shutting down stratum client")
-	err := c.conn.Close()
-	return err
+	c.autoreconnect = false
+	if !reflect.ValueOf(c.conn).IsNil() {
+		return c.conn.Close()
+	}
+	return nil
 }
 
-func (c Client) Listen(ctx context.Context) {
-	defer c.conn.Close()
+func (c *Client) Listen(ctx context.Context) {
 	// Capture a cancel and close the client
 	go func() {
 		select {
@@ -161,20 +177,40 @@ func (c Client) Listen(ctx context.Context) {
 	}()
 
 	log.Printf("Stratum client listening to server at %s\n", c.conn.RemoteAddr().String())
+	originalServerAddress := c.conn.RemoteAddr().String()
 
 	r := bufio.NewReader(c.conn)
 
 	for {
 		readBytes, _, err := r.ReadLine()
 		if err != nil {
-			return
+			if err == io.EOF || (strings.Contains(err.Error(), "use of closed network connection") && c.autoreconnect) {
+				log.Info("Server disconnect detected, attempting reconnect in 5s...")
+				if !reflect.ValueOf(c.conn).IsNil() {
+					c.conn.Close()
+				}
+				reconnectError := c.WaitThenConnect(originalServerAddress, "5")
+				if reconnectError != nil {
+					if strings.Contains(reconnectError.Error(), "connection refused") {
+						continue
+					} else {
+						log.Error(reconnectError)
+						return
+					}
+				} else {
+					c.Handshake()
+					c.Listen(ctx)
+				}
+			} else {
+				return
+			}
 		} else {
 			c.HandleMessage(readBytes)
 		}
 	}
 }
 
-func (c Client) HandleMessage(data []byte) {
+func (c *Client) HandleMessage(data []byte) {
 	var u UnknownRPC
 	err := json.Unmarshal(data, &u)
 	if err != nil {
@@ -193,7 +229,7 @@ func (c Client) HandleMessage(data []byte) {
 	log.Infof(string(data))
 }
 
-func (c Client) HandleRequest(req Request) {
+func (c *Client) HandleRequest(req Request) {
 	var params RPCParams
 	if err := req.FitParams(&params); err != nil {
 		log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
@@ -269,7 +305,7 @@ func (c Client) HandleRequest(req Request) {
 	}
 }
 
-func (c Client) HandleResponse(resp Response) {
+func (c *Client) HandleResponse(resp Response) {
 	c.Lock()
 	if funcToPerform, ok := c.requestsMade[resp.ID]; ok {
 		funcToPerform(resp)
