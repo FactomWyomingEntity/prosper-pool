@@ -129,11 +129,14 @@ OuterSyncLoop:
 				Top:         current == int32(heights.DirectoryBlock),
 				Height:      current,
 			}
-			for i := range n.hooks {
-				select {
-				case n.hooks[i] <- hook:
-				default:
+			// Don't bother nil blocks
+			if hook.GradedBlock != nil {
+				for i := range n.hooks {
+					select {
+					case n.hooks[i] <- hook:
+					default:
 
+					}
 				}
 			}
 

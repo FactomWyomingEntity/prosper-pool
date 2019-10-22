@@ -42,6 +42,9 @@ const (
 	ConfigPoolIdentity  = "Pool.OPRIdentity"
 	ConfigPoolCoinbase  = "Pool.OPRCoinbase"
 	ConfigPoolESAddress = "Pool.ESAddress"
+
+	ConfigSubmitterCutoff = "Submit.SubmissionCutoff"
+	ConfigSubmitterEMAN   = "Submit.EMA-N"
 )
 
 func SetDefaults(conf *viper.Viper) {
@@ -78,4 +81,8 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigPoolIdentity, "Prosper")
 	conf.SetDefault(ConfigPoolCoinbase, "FA2jK2HcLnRdS94dEcU27rF3meoJfpUcZPSinpb7AwQvPRY6RL1Q")
 	conf.SetDefault(ConfigPoolESAddress, "Es2XT3jSxi1xqrDvS5JERM3W3jh1awRHuyoahn3hbQLyfEi1jvbq")
+
+	conf.SetDefault(ConfigSubmitterCutoff, 200)
+	// 6hrs
+	conf.SetDefault(ConfigSubmitterEMAN, 36)
 }

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/FactomWyomingEntity/private-pool/sharesubmit"
+
 	"github.com/FactomWyomingEntity/private-pool/accounting"
 
 	"github.com/FactomWyomingEntity/private-pool/exit"
@@ -36,6 +38,7 @@ type PoolEngine struct {
 	PegnetNode    *pegnet.Node
 	Poller        *polling.DataSources
 	Accountant    *accounting.Accountant
+	Submitter     *sharesubmit.Submitter
 
 	Identity IdentityInformation
 
@@ -99,6 +102,11 @@ func (e *PoolEngine) init() error {
 		return err
 	}
 
+	sub, err := sharesubmit.NewSubmitter(e.conf, db.DB)
+	if err != nil {
+		return err
+	}
+
 	// Load our identity info for oprs
 	if id := e.conf.GetString(config.ConfigPoolIdentity); id == "" {
 		return fmt.Errorf("opr identity must be set")
@@ -132,6 +140,7 @@ func (e *PoolEngine) init() error {
 	e.PegnetNode = p
 	e.Poller = pol
 	e.Accountant = acc
+	e.Submitter = sub
 
 	// Add all closes
 	exit.GlobalExitHandler.AddExit(e.Database.Close)
@@ -165,6 +174,9 @@ func (e *PoolEngine) Run(ctx context.Context) {
 	// Start syncing Blocks - spits out new jobs, new rewards
 	go e.PegnetNode.DBlockSync(ctx)
 
+	// Submitter takes new blocks, new shares, and new jobs
+	go e.Submitter.Run(ctx)
+
 	// Listen for new jobs
 	e.listenBlocks(ctx)
 }
@@ -191,7 +203,13 @@ func (e *PoolEngine) listenBlocks(ctx context.Context) {
 			// Rewards are always processed, even if they are not new.
 			//	Notify of the rewards
 			e.Accountant.RewardChannel() <- e.findRewards(hook)
+
 			// Notify Submissions
+			//	Submissions needs the hook and the job
+			e.Submitter.GetBlocksChannel() <- sharesubmit.SubmissionJob{
+				Block: hook,
+				Job:   job,
+			}
 			// TODO: Notify submission module
 
 		case <-ctx.Done():
@@ -238,13 +256,15 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 	record.Height = hook.Height
 	record.ID = e.Identity.Identity
 	record.Address = e.Identity.CoinbaseAddress
-	for _, winner := range hook.GradedBlock.WinnersShortHashes() {
-		data, err := hex.DecodeString(winner)
-		if err != nil {
-			hLog.WithError(err).Errorf("winner hex failed to parse")
-			return nil
+	if hook.GradedBlock != nil {
+		for _, winner := range hook.GradedBlock.WinnersShortHashes() {
+			data, err := hex.DecodeString(winner)
+			if err != nil {
+				hLog.WithError(err).Errorf("winner hex failed to parse")
+				return nil
+			}
+			record.Winners = append(record.Winners, data)
 		}
-		record.Winners = append(record.Winners, data)
 	}
 
 	// Assets need to be set in a specific order
