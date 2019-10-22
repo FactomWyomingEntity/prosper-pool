@@ -171,6 +171,7 @@ func (e *PoolEngine) link() error {
 	e.Submitter.SetSubmissions(subSubmissions)
 
 	e.Web.InitPrimary(e.Authenticator)
+	e.Web.SetStratumServer(e.StratumServer)
 
 	e.StratumServer.SetAuthenticator(e.Authenticator)
 

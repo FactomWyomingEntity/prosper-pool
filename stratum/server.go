@@ -154,6 +154,7 @@ type Miner struct {
 	// State information
 	subscribed bool
 	sessionID  string
+	ip         string
 	nonce      uint32
 	agent      string // Agent/version from subscribe
 	username   string
@@ -166,6 +167,7 @@ type Miner struct {
 // InitMiner starts a new miner with the needed encoders and channels set up
 func InitMiner(conn net.Conn) *Miner {
 	m := new(Miner)
+	m.ip = conn.RemoteAddr().String()
 	m.conn = conn
 	m.enc = json.NewEncoder(conn)
 	m.log = log.WithFields(log.Fields{"ip": m.conn.RemoteAddr().String()})
@@ -183,7 +185,7 @@ func (m *Miner) Close() {
 
 // ToString returns a string representation of the internal miner client state
 func (m *Miner) ToString() string {
-	return fmt.Sprintf("Session ID: %s\nAgent: %s\nPreferred Target: %d\nSubscribed: %t\nAuthorized: %t\nNonce: %d", m.sessionID, m.agent, m.preferredTarget, m.subscribed, m.authorized, m.nonce)
+	return fmt.Sprintf("Session ID: %s\nIP: %s\nAgent: %s\nPreferred Target: %d\nSubscribed: %t\nAuthorized: %t\nNonce: %d", m.sessionID, m.conn.RemoteAddr().String(), m.agent, m.preferredTarget, m.subscribed, m.authorized, m.nonce)
 }
 
 // Broadcast should accept the already json marshalled msg

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/FactomWyomingEntity/private-pool/stratum"
+
 	"github.com/jinzhu/gorm"
 
 	"github.com/FactomWyomingEntity/private-pool/authentication"
@@ -17,10 +19,11 @@ var (
 )
 
 type HttpServices struct {
-	Auth    *authentication.Authenticator
-	Primary *http.Server
-	conf    *viper.Viper
-	db      *gorm.DB
+	Auth          *authentication.Authenticator
+	StratumServer *stratum.Server
+	Primary       *http.Server
+	conf          *viper.Viper
+	db            *gorm.DB
 }
 
 func NewHttpServices(conf *viper.Viper, db *gorm.DB) *HttpServices {
@@ -28,6 +31,10 @@ func NewHttpServices(conf *viper.Viper, db *gorm.DB) *HttpServices {
 	s.conf = conf
 	s.db = db
 	return s
+}
+
+func (s *HttpServices) SetStratumServer(srv *stratum.Server) {
+	s.StratumServer = srv
 }
 
 func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
@@ -38,6 +45,7 @@ func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
 	primaryMux.HandleFunc("/whoami", s.WhoAmI)
 	primaryMux.HandleFunc("/user/owed", s.OwedPayouts)
 	primaryMux.HandleFunc("/pool/rewards", s.PoolRewards)
+	primaryMux.HandleFunc("/admin/miners", s.PoolMiners)
 
 	auth.AddHandler(primaryMux)
 

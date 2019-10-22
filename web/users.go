@@ -18,7 +18,7 @@ import (
 
 // Functions to give details about a given user
 
-func (s HttpServices) WhoAmI(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServices) WhoAmI(w http.ResponseWriter, r *http.Request) {
 	user, err := s.GetCurrentUser(r)
 	if err != nil {
 		_, _ = fmt.Fprintf(w, "Error:%s", err.Error())
@@ -27,7 +27,7 @@ func (s HttpServices) WhoAmI(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, "Hello %s", user.UID)
 }
 
-func (s HttpServices) GetCurrentUser(r *http.Request) (*authentication.User, error) {
+func (s *HttpServices) GetCurrentUser(r *http.Request) (*authentication.User, error) {
 	user := s.Auth.GetCurrentUser(r)
 	if user != nil {
 		if uc, ok := user.(*authentication.User); ok {
@@ -38,7 +38,7 @@ func (s HttpServices) GetCurrentUser(r *http.Request) (*authentication.User, err
 	return nil, fmt.Errorf("not logged in")
 }
 
-func (s HttpServices) OwedPayouts(w http.ResponseWriter, r *http.Request) {
+func (s *HttpServices) OwedPayouts(w http.ResponseWriter, r *http.Request) {
 	user, err := s.GetCurrentUser(r)
 	if err != nil {
 		_, _ = fmt.Fprintf(w, "Error:%s", err.Error())
@@ -60,8 +60,7 @@ func (s HttpServices) OwedPayouts(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(buf.Bytes())
 }
 
-func (s HttpServices) PoolRewards(w http.ResponseWriter, r *http.Request) {
-
+func (s *HttpServices) PoolRewards(w http.ResponseWriter, r *http.Request) {
 	// Only grab last 100 blocks
 	var rewards []accounting.Payouts
 	s.db.Order("job_id desc").Limit(100).Find(&rewards)
@@ -74,6 +73,30 @@ func (s HttpServices) PoolRewards(w http.ResponseWriter, r *http.Request) {
 		buf.WriteString(fmt.Sprintf("\t%d -> JobID: %s, PEG: %s, Difficulty: %.2f, HashRate: %.2f h\\s\n",
 			i, rew.JobID, FactoshiToFactoid(uint64(rew.PoolReward)),
 			rew.PoolDifficuty, hashRate))
+	}
+	_, _ = w.Write(buf.Bytes())
+}
+
+func (s *HttpServices) PoolMiners(w http.ResponseWriter, r *http.Request) {
+	// TODO: Add auth protection
+	if s.StratumServer == nil {
+		_, _ = w.Write([]byte("No stratum server hooked up"))
+		return
+	}
+
+	miners := s.StratumServer.MinersSnapShot()
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("This page displays all connected miners\n"))
+	buf.WriteString(fmt.Sprintf("  %d total miners\n", len(miners)))
+	for i, miner := range miners {
+		buf.WriteString(fmt.Sprintf("-------- %d:  Miner %s/%s --------\n", i, miner.Username, miner.Minerid))
+		buf.WriteString(fmt.Sprintf("\t%10s: %s\n", "Agent", miner.Agent))
+		buf.WriteString(fmt.Sprintf("\t%10s: %s\n", "IP", miner.IP))
+		buf.WriteString(fmt.Sprintf("\t%10s: %s\n", "Session", miner.SessionID))
+		buf.WriteString(fmt.Sprintf("\t%10s: %t\n", "Auth", miner.Authorized))
+		buf.WriteString(fmt.Sprintf("\t%10s: %t\n", "Sub", miner.Subscribed))
+		buf.WriteString(fmt.Sprintf("\t%10s: %x\n", "PrefTarget", miner.PrefferedTarget))
+		buf.WriteString(fmt.Sprintf("\t%10s: %d\n", "Nonce", miner.Nonce))
 	}
 	_, _ = w.Write(buf.Bytes())
 }

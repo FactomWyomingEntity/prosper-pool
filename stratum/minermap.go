@@ -86,3 +86,17 @@ func (m *MinerMap) ListMiners() []string {
 	m.Unlock()
 	return names
 }
+
+func (m *MinerMap) SnapShot() []MinerSnapShot {
+	m.Lock()
+	defer m.Unlock()
+
+	snaps := make([]MinerSnapShot, len(m.miners))
+	var c int
+	for _, v := range m.miners {
+		snaps[c] = v.SnapShot()
+		c++
+	}
+
+	return snaps
+}
