@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -26,6 +27,7 @@ type Client struct {
 	subscriptions []Subscription
 	requestsMade  map[int]func(Response)
 	verbose       bool
+	sync.RWMutex
 }
 
 func NewClient(verbose bool) (*Client, error) {
@@ -76,12 +78,14 @@ func (c *Client) WaitThenConnect(address, waittime string) error {
 // Authorize against stratum pool
 func (c Client) Authorize(username, password string) error {
 	req := AuthorizeRequest(username, password)
+	c.Lock()
 	c.requestsMade[req.ID] = func(resp Response) {
 		var result bool
 		if err := resp.FitResult(&result); err == nil {
 			log.Infof("AuthorizeResponse result: %t\n", result)
 		}
 	}
+	c.Unlock()
 	err := c.enc.Encode(req)
 	if err != nil {
 		return err
@@ -110,6 +114,7 @@ func (c Client) Submit(username, jobID, nonce, oprHash, target string) error {
 // Subscribe to stratum pool
 func (c Client) Subscribe() error {
 	req := SubscribeRequest(c.version)
+	c.Lock()
 	c.requestsMade[req.ID] = func(resp Response) {
 		var subscriptions []Subscription
 		if err := resp.FitResult(&subscriptions); err == nil {
@@ -121,6 +126,7 @@ func (c Client) Subscribe() error {
 			log.Error(err)
 		}
 	}
+	c.Unlock()
 	err := c.enc.Encode(req)
 	if err != nil {
 		return err
@@ -264,7 +270,12 @@ func (c Client) HandleRequest(req Request) {
 }
 
 func (c Client) HandleResponse(resp Response) {
-	if val, ok := c.requestsMade[resp.ID]; ok {
-		val(resp)
+	c.Lock()
+	if funcToPerform, ok := c.requestsMade[resp.ID]; ok {
+		funcToPerform(resp)
+		delete(c.requestsMade, resp.ID)
+	} else {
+		log.Errorf("Response received for unrecognized request ID: %d (ignoring)\n", resp.ID)
 	}
+	c.Unlock()
 }

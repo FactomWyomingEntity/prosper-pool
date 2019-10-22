@@ -23,7 +23,7 @@ func TestClient_Authorize(t *testing.T) {
 	require.NoError(err)
 	require.False(isPrefix)
 
-	err = miner.Authorize("user", "password")
+	err = miner.Authorize("user,miner", "password")
 	require.NoError(err)
 
 	data, isPrefix, err = r.ReadLine()
@@ -87,6 +87,13 @@ func TestClient_Submit(t *testing.T) {
 
 	r := bufio.NewReader(cli)
 	data, isPrefix, err := r.ReadLine()
+	require.NoError(err)
+	require.False(isPrefix)
+
+	err = miner.Authorize("user,miner", "password")
+	require.NoError(err)
+
+	data, isPrefix, err = r.ReadLine()
 	require.NoError(err)
 	require.False(isPrefix)
 
