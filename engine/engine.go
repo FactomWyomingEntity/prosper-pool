@@ -49,9 +49,11 @@ type PoolEngine struct {
 
 // IdentityInformation contains all the info needed to make OPRs
 type IdentityInformation struct {
+	// Identity and CoinbaseAddress is used for OPR creation
 	Identity        string
 	CoinbaseAddress string
-	ECAddress       factom.EsAddress
+	// ESAddress can be used for monitoring funds
+	ESAddress factom.EsAddress
 }
 
 // Sets up all the module connections and serves as an an overview
@@ -121,7 +123,7 @@ func (e *PoolEngine) init() error {
 		if err != nil {
 			return fmt.Errorf("config entry credit address failed: %s", err.Error())
 		}
-		e.Identity.ECAddress = adr
+		e.Identity.ESAddress = adr
 	}
 
 	if fa := e.conf.GetString(config.ConfigPoolCoinbase); fa == "" {
@@ -154,10 +156,11 @@ func (e *PoolEngine) link() error {
 
 	// Submissions is all stratum miner submissions
 	//	One for accounting
-	submissions := e.StratumServer.GetSubmissionExport()
-	e.Accountant.SetSubmissions(submissions)
+	acctSubmissions := e.StratumServer.GetSubmissionExport()
+	e.Accountant.SetSubmissions(acctSubmissions)
 	//	One for factom submit
-	// TODO: Factom submit submissions
+	subSubmissions := e.StratumServer.GetSubmissionExport()
+	e.Submitter.SetSubmissions(subSubmissions)
 
 	return nil
 }

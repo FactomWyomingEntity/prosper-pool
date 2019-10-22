@@ -3,6 +3,7 @@ package config
 import (
 	"time"
 
+	"github.com/Factom-Asset-Tokens/factom"
 	"github.com/spf13/viper"
 )
 
@@ -85,4 +86,13 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigSubmitterCutoff, 200)
 	// 6hrs
 	conf.SetDefault(ConfigSubmitterEMAN, 36)
+}
+
+func FactomClientFromConfig(conf *viper.Viper) *factom.Client {
+	cl := factom.NewClient()
+	cl.FactomdServer = conf.GetString(ConfigFactomdLocation)
+	// We don't use walletd
+	cl.WalletdServer = conf.GetString("http://localhost:8089/v2")
+
+	return cl
 }
