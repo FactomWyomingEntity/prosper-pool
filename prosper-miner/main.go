@@ -102,14 +102,19 @@ var rootCmd = &cobra.Command{
 
 		invitecode, _ := cmd.Flags().GetString("invitecode")
 
-		// TODO: Add version number
-		log.Infof("Initiated Prosper Miner")
-		log.Infof("Username: %s, MinerID: %s", username, minerid)
-
 		client, err := stratum.NewClient(username, minerid, password, invitecode, "0.0.1")
 		if err != nil {
 			panic(err)
 		}
+
+		miners := viper.GetInt(ConfigNumGoRountines)
+		client.InitMiners(miners)
+		client.RunMiners(ctx)
+
+		// TODO: Add version number
+		log.Infof("Initiated Prosper Miner")
+		log.Infof("Username: %s, MinerID: %s", username, minerid)
+		log.Infof("Using %d threads", miners)
 
 		exit.GlobalExitHandler.AddExit(func() error {
 			return client.Close()

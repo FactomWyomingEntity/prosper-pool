@@ -284,7 +284,7 @@ func (s *Server) HandleMessage(client *Miner, data []byte) {
 	}
 
 	// TODO: Don't just print everything
-	client.log.Infof(string(data))
+	//client.log.Infof(string(data))
 }
 
 func (s *Server) HandleRequest(client *Miner, req Request) {

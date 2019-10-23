@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go v1.25.12 // indirect
 	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/disintegration/imaging v1.6.1 // indirect
+	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/gorilla/sessions v1.2.0 // indirect
 	github.com/gosimple/slug v1.8.0 // indirect

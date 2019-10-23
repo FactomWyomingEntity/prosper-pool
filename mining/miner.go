@@ -5,10 +5,12 @@ package mining
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	lxr "github.com/pegnet/LXRHash"
 	log "github.com/sirupsen/logrus"
@@ -40,6 +42,7 @@ const (
 	NewOPRHash
 	ResetRecords
 	MinimumAccept
+	SubmitStats
 	PauseMining
 	ResumeMining
 )
@@ -58,7 +61,8 @@ type Winner struct {
 // PegnetMiner mines an OPRhash
 type PegnetMiner struct {
 	// ID is the miner number, starting with "1".
-	ID int `json:"id"`
+	ID         uint32 // The process id to the pool
+	PersonalID uint32 // The miner thread id
 
 	// Miner commands
 	commands chan *MinerCommand
@@ -79,19 +83,28 @@ type oprMiningState struct {
 	// Used to track noncing
 	*NonceIncrementer
 
+	stats *SingleMinerStats
+
 	// Used to return hashes
 	minimumDifficulty uint64
 }
 
 // NonceIncrementer is just simple to increment nonces
 type NonceIncrementer struct {
-	Nonce         []byte
-	lastNonceByte int
+	Nonce          []byte
+	lastNonceByte  int
+	lastPrefixByte int
 }
 
-func NewNonceIncrementer(id int) *NonceIncrementer {
+func NewNonceIncrementer(id uint32, personalid uint32) *NonceIncrementer {
 	n := new(NonceIncrementer)
-	n.Nonce = []byte{byte(id), 0}
+
+	buf := make([]byte, 4)
+	binary.BigEndian.PutUint32(buf, id)
+	buf = append(buf, byte(personalid))
+
+	n.lastPrefixByte = len(buf) - 1
+	n.Nonce = append(buf, 0)
 	n.lastNonceByte = 1
 	return n
 }
@@ -100,14 +113,14 @@ func NewNonceIncrementer(id int) *NonceIncrementer {
 // the first byte, as that is our ID and give us our nonce space
 //	So []byte(ID, 255) -> []byte(ID, 1, 0) -> []byte(ID, 1, 1)
 func (i *NonceIncrementer) NextNonce() {
-	idx := len(i.Nonce) - 1
+	idx := len(i.Nonce) - i.lastNonceByte
 	for {
 		i.Nonce[idx]++
 		if i.Nonce[idx] == 0 {
 			idx--
-			if idx == 0 { // This is my prefix, don't touch it!
-				rest := append([]byte{1}, i.Nonce[1:]...)
-				i.Nonce = append([]byte{i.Nonce[0]}, rest...)
+			if idx == i.lastPrefixByte { // This is my prefix, don't touch it!
+				rest := append([]byte{1}, i.Nonce[i.lastPrefixByte+1:]...)
+				i.Nonce = append(i.Nonce[:i.lastPrefixByte+1], rest...)
 				break
 			}
 		} else {
@@ -118,19 +131,21 @@ func (i *NonceIncrementer) NextNonce() {
 }
 
 func (p *PegnetMiner) ResetNonce() {
-	p.MiningState.NonceIncrementer = NewNonceIncrementer(p.ID)
+	p.MiningState.NonceIncrementer = NewNonceIncrementer(p.ID, p.PersonalID)
 }
 
-func NewPegnetMiner(id int, commands chan *MinerCommand, successes chan *Winner) *PegnetMiner {
+func NewPegnetMiner(id uint32, commands chan *MinerCommand, successes chan *Winner) *PegnetMiner {
 	p := new(PegnetMiner)
 	InitLX()
 	p.ID = id
+	p.PersonalID = id
 	p.commands = commands
 	p.successes = successes
 
 	// Some inits
-	p.MiningState.NonceIncrementer = NewNonceIncrementer(p.ID)
+	p.MiningState.NonceIncrementer = NewNonceIncrementer(p.ID, p.PersonalID)
 	p.ResetNonce()
+	p.MiningState.stats = NewSingleMinerStats(p.PersonalID)
 
 	return p
 }
@@ -173,12 +188,15 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 		p.MiningState.NextNonce()
 
 		diff := ComputeDifficulty(p.MiningState.oprhash, p.MiningState.Nonce)
+		p.MiningState.stats.TotalHashes++
+		p.MiningState.stats.NewDifficulty(diff)
 		if diff > p.MiningState.minimumDifficulty {
 			success := &Winner{
 				OPRHash: fmt.Sprintf("%x", p.MiningState.oprhash),
 				Nonce:   fmt.Sprintf("%x", p.MiningState.Nonce),
 				Target:  fmt.Sprintf("%x", diff),
 			}
+			p.MiningState.stats.TotalSubmissions++
 			p.successes <- success
 		}
 	}
@@ -197,12 +215,33 @@ func (p *PegnetMiner) HandleCommand(c *MinerCommand) {
 			p.HandleCommand(c)
 		}
 	case NewNoncePrefix:
-		p.ID = c.Data.(int)
+		p.ID = c.Data.(uint32)
 		p.ResetNonce()
 	case NewOPRHash:
 		p.MiningState.oprhash = c.Data.([]byte)
 	case ResetRecords:
 		p.ResetNonce()
+		p.MiningState.stats = NewSingleMinerStats(p.PersonalID)
+		// Log our last hashrate
+		//if p.MiningState.stats.TotalHashes > 0 {
+		//	h := new(big.Float).SetUint64(p.MiningState.hashes)
+		//	d := time.Since(p.MiningState.start)
+		//	rate := h.Quo(h, big.NewFloat(d.Seconds()))
+		//	r, _ := rate.Float64()
+		//	log.WithFields(log.Fields{
+		//		"hashrate":    fmt.Sprintf("%.2f h/s", r),
+		//		"duration":    d,
+		//		"submissions": p.MiningState.submissions,
+		//	}).Infof("previous mining job closed")
+		//}
+		p.MiningState.stats.Start = time.Now()
+	case SubmitStats:
+		p.MiningState.stats.Stop = time.Now()
+		w := c.Data.(chan *SingleMinerStats)
+		select {
+		case w <- p.MiningState.stats:
+		default:
+		}
 	case MinimumAccept:
 		p.MiningState.minimumDifficulty = c.Data.(uint64)
 	case PauseMining:
@@ -240,12 +279,16 @@ func BuildCommand() *CommandBuilder {
 	return c
 }
 
+func (b *CommandBuilder) SubmitStats(w chan *SingleMinerStats) *CommandBuilder {
+	b.commands = append(b.commands, &MinerCommand{Command: SubmitStats, Data: w})
+	return b
+}
 func (b *CommandBuilder) NewOPRHash(oprhash []byte) *CommandBuilder {
 	b.commands = append(b.commands, &MinerCommand{Command: NewOPRHash, Data: oprhash})
 	return b
 }
 
-func (b *CommandBuilder) NewNoncePrefix(prefix int) *CommandBuilder {
+func (b *CommandBuilder) NewNoncePrefix(prefix uint32) *CommandBuilder {
 	b.commands = append(b.commands, &MinerCommand{Command: NewNoncePrefix, Data: prefix})
 	return b
 }
