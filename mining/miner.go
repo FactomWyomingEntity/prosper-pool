@@ -28,7 +28,7 @@ type MinerCommand struct {
 
 type Winner struct {
 	OPRHash string
-	Nonce    string
+	Nonce   string
 }
 
 // PegnetMiner mines an OPRhash
@@ -110,6 +110,10 @@ func NewPegnetMiner(id int, commands chan *MinerCommand, successes chan *Winner)
 	return p
 }
 
+func (p *PegnetMiner) IsPaused() bool {
+	return p.paused
+}
+
 func (p *PegnetMiner) Mine(ctx context.Context) {
 	mineLog := log.WithFields(log.Fields{"miner": p.ID})
 	var _ = mineLog
@@ -131,18 +135,23 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 		default:
 		}
 
+		if len(p.MiningState.oprhash) == 0 {
+			p.paused = true
+		}
+
 		if p.paused {
 			// Waiting on a resume command
 			p.waitForResume(ctx)
 			continue
 		}
+
 		p.MiningState.NextNonce()
 
 		diff := opr.ComputeDifficulty(p.MiningState.oprhash, p.MiningState.Nonce)
 		if diff > p.MiningState.minimumDifficulty {
 			success := &Winner{
 				OPRHash: fmt.Sprintf("%x", p.MiningState.oprhash),
-				Nonce: fmt.Sprintf("%x", p.MiningState.Nonce),
+				Nonce:   fmt.Sprintf("%x", p.MiningState.Nonce),
 			}
 			p.successes <- success
 		}
@@ -188,7 +197,6 @@ func (p *PegnetMiner) waitForResume(ctx context.Context) {
 		}
 	}
 }
-
 
 // CommandBuilder just let's me use building syntax to build commands
 type CommandBuilder struct {
