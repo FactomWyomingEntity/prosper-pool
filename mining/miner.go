@@ -33,6 +33,10 @@ func InitLX() {
 	})
 }
 
+func init() {
+	InitLX()
+}
+
 const (
 	_ = iota
 	BatchCommand
