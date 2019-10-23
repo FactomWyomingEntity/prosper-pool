@@ -330,7 +330,7 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 		}
 
 		// TODO: actually retrieve OPR hash for the given jobID (for now using dummy data)
-		dummyOPRHash := "00037f39cf870a1f49129f9c82d935665d352ffd25ea3296208f6f7b16fd654f"
+		dummyOPRHash := "00011111af870a1f49129f9c82d935665d352fffffea3296208f6f7b16faaabc"
 
 		if err := client.enc.Encode(GetOPRHashResponse(req.ID, dummyOPRHash)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")

@@ -3,6 +3,7 @@ package stratum
 import (
 	"bufio"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/FactomWyomingEntity/private-pool/mining"
+	"github.com/pegnet/pegnet/opr"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -25,7 +29,15 @@ type Client struct {
 	dec  *bufio.Reader
 	conn net.Conn
 
-	version string
+	version        string
+	username       string
+	minername      string
+	currentJobID   string
+	currentOPRHash string
+	currentTarget  uint64
+
+	miner     *mining.PegnetMiner
+	successes chan *mining.Winner
 
 	subscriptions []Subscription
 	requestsMade  map[int]func(Response)
@@ -39,7 +51,21 @@ func NewClient(verbose bool) (*Client, error) {
 	c.verbose = verbose
 	c.autoreconnect = true
 	c.version = "0.0.1"
+	c.username = "user"
+	c.minername = "miner"
+	c.currentJobID = "1"
+	c.currentOPRHash = "00037f39cf870a1f49129f9c82d935665d352ffd25ea3296208f6f7b16fd654f"
+	c.currentTarget = 0xfffe000000000000
 	c.requestsMade = make(map[int]func(Response))
+
+	commandChannel := make(chan *mining.MinerCommand, 10)
+	successChannel := make(chan *mining.Winner, 10)
+	c.successes = successChannel
+
+	go c.ListenForSuccess()
+
+	opr.InitLX()
+	c.miner = mining.NewPegnetMiner(1, commandChannel, successChannel)
 	return c, nil
 }
 
@@ -60,7 +86,7 @@ func (c *Client) Handshake() error {
 		return err
 	}
 
-	return c.Authorize("user,miner", "password")
+	return c.Authorize(fmt.Sprintf("%s,%s", c.username, c.minername), "password")
 }
 
 // InitConn will not start the handshake process. Good for unit tests
@@ -95,6 +121,21 @@ func (c *Client) Authorize(username, password string) error {
 	if err != nil {
 		return err
 	}
+
+	myHexBytes, err := hex.DecodeString(c.currentOPRHash)
+	if err != nil {
+		return err
+	}
+	command := mining.BuildCommand().
+		ResetRecords().                     // Reset the miner's stats/difficulty/etc
+		NewOPRHash(myHexBytes).             // New OPR hash to mine
+		MinimumDifficulty(c.currentTarget). // Floor difficulty to use
+		ResumeMining().                     // Start mining
+		Build()
+
+	go c.miner.Mine(context.Background())
+	c.miner.SendCommand(command)
+
 	return nil
 }
 
@@ -106,6 +147,19 @@ func (c *Client) GetOPRHash(jobID string) error {
 		var result string
 		if err := resp.FitResult(&result); err == nil {
 			log.Infof("OPRHash result: %s\n", result)
+			if jobID == c.currentJobID {
+				newOPRHash, err := hex.DecodeString(result)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+				command := mining.BuildCommand().
+					NewOPRHash(newOPRHash). // New OPR hash to mine
+					ResumeMining().         // Start mining
+					Build()
+				c.miner.SendCommand(command)
+
+			}
 		}
 	}
 	c.Unlock()
@@ -118,7 +172,16 @@ func (c *Client) GetOPRHash(jobID string) error {
 
 // Submit completed work to server
 func (c *Client) Submit(username, jobID, nonce, oprHash, target string) error {
-	err := c.enc.Encode(SubmitRequest(username, jobID, nonce, oprHash, target))
+	req := SubmitRequest(username, jobID, nonce, oprHash, target)
+	c.Lock()
+	c.requestsMade[req.ID] = func(resp Response) {
+		var result bool
+		if err := resp.FitResult(&result); err == nil {
+			log.Infof("Submission result: %t\n", result)
+		}
+	}
+	c.Unlock()
+	err := c.enc.Encode(req)
 	if err != nil {
 		return err
 	}
@@ -276,17 +339,33 @@ func (c *Client) HandleRequest(req Request) {
 		oprHash := params[1]
 
 		log.Printf("JobID: %s ... OPR Hash: %s\n", jobID, oprHash)
-		// TODO: do more than just log the notification details (actually update miner)
+		if jobID == c.currentJobID {
+			c.currentOPRHash = oprHash
+			myHexBytes, err := hex.DecodeString(oprHash)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			command := mining.BuildCommand().
+				NewOPRHash(myHexBytes).
+				Build()
+			c.miner.SendCommand(command)
+		}
 	case "mining.set_target":
 		if len(params) < 1 {
 			log.Errorf("Not enough parameters from set_target: %s\n", params)
 			return
 		}
 
-		newTarget := params[0]
+		result, _ := strconv.ParseUint(strings.Replace(params[0], "0x", "", -1), 16, 64)
+		c.currentTarget = uint64(result)
 
-		log.Printf("New Target: %s\n", newTarget)
-		// TODO: do more than just log the newTarget details (actually update miner)
+		log.Printf("New Target: %x\n", c.currentTarget)
+
+		command := mining.BuildCommand().
+			MinimumDifficulty(c.currentTarget).
+			Build()
+		c.miner.SendCommand(command)
 	case "mining.set_nonce":
 		if len(params) < 1 {
 			log.Errorf("Not enough parameters from set_nonce: %s\n", params)
@@ -299,7 +378,10 @@ func (c *Client) HandleRequest(req Request) {
 		// TODO: do more than just log the nonce details (actually update miner job)
 	case "mining.stop_mining":
 		log.Println("Request to stop mining received")
-		// TODO: actually pause mining until new job is received
+		command := mining.BuildCommand().
+			PauseMining().
+			Build()
+		c.miner.SendCommand(command)
 	default:
 		log.Warnf("unknown method %s", req.Method)
 	}
@@ -314,4 +396,13 @@ func (c *Client) HandleResponse(resp Response) {
 		log.Errorf("Response received for unrecognized request ID: %d (ignoring)\n", resp.ID)
 	}
 	c.Unlock()
+}
+
+func (c *Client) ListenForSuccess() {
+	for {
+		select {
+		case winner := <-c.successes:
+			c.Submit(c.username, c.currentJobID, winner.Nonce, winner.OPRHash, fmt.Sprintf("%x", c.currentTarget))
+		}
+	}
 }
