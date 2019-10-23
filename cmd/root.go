@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -32,7 +33,9 @@ func init() {
 	rootCmd.AddCommand(testAccountant)
 	rootCmd.AddCommand(testAuth)
 	rootCmd.AddCommand(testStratum)
+	rootCmd.AddCommand(getConfig)
 
+	rootCmd.PersistentFlags().String("config", "$HOME/.prosper/prosper-pool.toml", "Location to config")
 	rootCmd.PersistentFlags().String("log", "info", "Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal'")
 	rootCmd.PersistentFlags().String("phost", "192.168.32.2", "Postgres host url")
 	rootCmd.PersistentFlags().Int("pport", 5432, "Postgres host port")
@@ -53,7 +56,7 @@ var rootCmd = &cobra.Command{
 	Use:              "private-pool",
 	Short:            "Launch the private pool",
 	PersistentPreRun: rootPreRunSetup,
-	PreRun:           SoftReadConfig, // TODO: Do a hard read
+	PreRunE:          HardReadConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
 		exit.GlobalExitHandler.AddCancel(cancel)
@@ -64,6 +67,16 @@ var rootCmd = &cobra.Command{
 		}
 
 		pool.Run(ctx)
+	},
+}
+
+var getConfig = &cobra.Command{
+	Use:    "config",
+	Short:  "Write a example config with defaults",
+	PreRun: SoftReadConfig,
+	Args:   cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(viper.WriteConfigAs(args[0]))
 	},
 }
 
@@ -336,15 +349,46 @@ var testAuth = &cobra.Command{
 	},
 }
 
+func setConfigLoc(cmd *cobra.Command, args []string) (string, bool) {
+	configPath, _ := cmd.Flags().GetString("config")
+	path := os.ExpandEnv(configPath)
+
+	dir := filepath.Dir(path)
+	name := filepath.Base(path)
+	viper.AddConfigPath(dir)
+
+	ext := filepath.Ext(name)
+	viper.SetConfigName(strings.TrimSuffix(name, ext))
+
+	info, err := os.Stat(path)
+	exists := info != nil && !os.IsNotExist(err)
+	return path, exists
+}
+
 // SoftReadConfig will not fail. It can be used for a command that needs the config,
 // but is happy with the defaults
 func SoftReadConfig(cmd *cobra.Command, args []string) {
+	path, exists := setConfigLoc(cmd, args)
+	var _, _ = path, exists
+
 	err := viper.ReadInConfig()
 	if err != nil {
 		log.WithError(err).Debugf("failed to load config")
 	}
 
 	initLogger()
+}
+
+// HardReadConfig requires a config file
+func HardReadConfig(cmd *cobra.Command, args []string) error {
+	path, exists := setConfigLoc(cmd, args)
+	if !exists {
+		return fmt.Errorf("config does not exist at %s", path)
+	}
+
+	initLogger()
+
+	return viper.ReadInConfig()
 }
 
 func initLogger() {

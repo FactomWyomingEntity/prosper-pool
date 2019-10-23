@@ -116,6 +116,7 @@ OuterSyncLoop:
 			}
 
 			elapsed := time.Since(start)
+
 			hLog.WithFields(log.Fields{"took": elapsed}).Debugf("synced")
 
 			// TODO: Insert hook for mining

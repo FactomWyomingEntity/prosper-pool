@@ -272,6 +272,15 @@ func (e *PoolEngine) findRewards(hook pegnet.PegnetdHook) *accounting.Reward {
 // createJob returns the job to send to the stratum miners.
 func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 	hLog := engLog.WithFields(log.Fields{"height": hook.Height})
+	if !hook.Top {
+		// Don't bother populating the fields
+		return &stratum.Job{
+			JobID:   stratum.JobIDFromHeight(hook.Height + 1),
+			OPRHash: hex.EncodeToString(make([]byte, 32)),
+			OPR:     opr.V2Content{},
+		}
+	}
+
 	// New block, let's construct the job
 	assets, err := e.Poller.PullAllPEGAssets(2)
 	if err != nil {
@@ -283,7 +292,7 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 	// Construct the OPR
 	// TODO: Modules should have a constructor for us
 	record := opr.V2Content{}
-	record.Height = hook.Height
+	record.Height = hook.Height + 1
 	record.ID = e.Identity.Identity
 	record.Address = e.Identity.CoinbaseAddress
 	if hook.GradedBlock != nil {
@@ -312,7 +321,7 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 	}
 	oprHash := sha256.Sum256(data)
 	oprHashHex := fmt.Sprintf("%x", oprHash[:])
-	hLog.WithFields(log.Fields{"oprhash": oprHashHex}).Debugf("new job")
+	hLog.WithFields(log.Fields{"oprhash": oprHashHex, "top": hook.Top}).Debugf("new job")
 
 	// The job is for the height + 1. The synced block is wrapping up the last
 	// job
