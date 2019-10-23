@@ -244,6 +244,7 @@ func (s *Server) HandleBroadcasts(client *Miner) {
 func (s *Server) HandleClient(client *Miner) {
 	// Register this new miner
 	s.Miners.AddMiner(client)
+	defer s.Miners.DisconnectMiner(client)
 
 	reader := bufio.NewReader(client.conn)
 	for {
