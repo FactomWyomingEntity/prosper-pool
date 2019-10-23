@@ -45,23 +45,27 @@ type Server struct {
 type ShareSubmission struct {
 	Username string
 	MinerID  string
-	JobID    string `gorm:"index:jobid"`
+	JobID    int32  `gorm:"index:jobid"`
 	OPRHash  []byte // Bytes to ensure valid oprhash
 	Nonce    []byte // Bytes to ensure valid nonce
 	Target   uint64 // Uint64 to ensure valid target
 }
 
 type Job struct {
-	JobID   string `json:"jobid"`
+	JobID   int32  `json:"jobid"`
 	OPRHash string `json:"oprhash"`
 	OPR     opr.V2Content
+}
+
+func (j Job) JobIDString() string {
+	return fmt.Sprintf("%d", j.JobID)
 }
 
 // JobIDFromHeight is just a standard function to get the jobid for a height.
 // If we decide to extend the jobids, we can more easily control it with a
 // function.
-func JobIDFromHeight(height int32) string {
-	return fmt.Sprintf("%d", height)
+func JobIDFromHeight(height int32) int32 {
+	return height
 }
 
 func NewServer(conf *viper.Viper) (*Server, error) {
@@ -93,7 +97,7 @@ func (s *Server) UpdateCurrentJob(job *Job) {
 
 // Notify will notify all miners of a new block to mine
 func (s *Server) Notify(job *Job) {
-	jobReq := NotifyRequest(job.JobID, job.OPRHash, "")
+	jobReq := NotifyRequest(job.JobIDString(), job.OPRHash, "")
 	data, _ := json.Marshal(jobReq)
 	errs := s.Miners.Notify(json.RawMessage(data))
 	var _ = errs
@@ -374,7 +378,7 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 
 			// Notify newly-subscribed client with current job details
 			if s.currentJob != nil {
-				err = s.SingleClientNotify(client.sessionID, s.currentJob.JobID, s.currentJob.OPRHash, "")
+				err = s.SingleClientNotify(client.sessionID, s.currentJob.JobIDString(), s.currentJob.OPRHash, "")
 				if err != nil {
 					log.Error(err)
 				}
@@ -403,7 +407,7 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 		return false // No current job
 	}
 
-	if jobID != s.currentJob.JobID || oprHash != s.currentJob.OPRHash {
+	if jobID != s.currentJob.JobIDString() || oprHash != s.currentJob.OPRHash {
 		return false // Only accepts current job
 	}
 
@@ -426,6 +430,12 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 		return false
 	}
 
+	jobHeight, err := strconv.ParseInt(jobID, 10, 32)
+	if err != nil {
+		sLog.WithError(err).Errorf("miner provided bad jobid")
+		return false
+	}
+
 	// Check if we can accept shares right now
 	// E.g: If we are between minute 0 and minute 1, the job is
 	// stale
@@ -436,7 +446,7 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 	submit := &ShareSubmission{
 		Username: miner.username,
 		MinerID:  miner.minerid,
-		JobID:    jobID,
+		JobID:    int32(jobHeight),
 		OPRHash:  oB,
 		Nonce:    nB,
 		Target:   tU,

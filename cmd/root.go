@@ -274,7 +274,7 @@ var testAccountant = &cobra.Command{
 					return
 				}
 
-				job := fmt.Sprintf("%d", i)
+				job := int32(i)
 				a.NewJob(job) // Force the new job
 				for u := 0; u < users; u++ {
 					for w := 0; w < 3; w++ {

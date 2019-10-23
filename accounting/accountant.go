@@ -29,10 +29,10 @@ type Accountant struct {
 
 	// Jobs are indexed by job id
 	jobLock     sync.RWMutex
-	JobsByMiner map[string]*ShareMap
-	JobsByUser  map[string]*ShareMap
+	JobsByMiner map[int32]*ShareMap
+	JobsByUser  map[int32]*ShareMap
 
-	newJobs     chan string
+	newJobs     chan int32
 	rewards     chan *Reward
 	submissions <-chan *stratum.ShareSubmission
 
@@ -49,9 +49,9 @@ func NewAccountant(conf *viper.Viper, db *gorm.DB) (*Accountant, error) {
 	a.DB = db
 	a.shares = make(chan *Share, 100)
 	a.rewards = make(chan *Reward, 1000)
-	a.newJobs = make(chan string, 100)
-	a.JobsByMiner = make(map[string]*ShareMap)
-	a.JobsByUser = make(map[string]*ShareMap)
+	a.newJobs = make(chan int32, 100)
+	a.JobsByMiner = make(map[int32]*ShareMap)
+	a.JobsByUser = make(map[int32]*ShareMap)
 
 	a.DB.AutoMigrate(&UserPayout{})
 	a.DB.AutoMigrate(&Payouts{})
@@ -79,7 +79,7 @@ func NewAccountant(conf *viper.Viper, db *gorm.DB) (*Accountant, error) {
 	return a, nil
 }
 
-func (a Accountant) JobChannel() chan<- string {
+func (a Accountant) JobChannel() chan<- int32 {
 	return a.newJobs
 }
 
@@ -202,14 +202,14 @@ func (a *Accountant) AddShare(share Share) {
 }
 
 // NewJob adds a new job to the maps
-func (a *Accountant) NewJob(jobid string) {
+func (a *Accountant) NewJob(jobid int32) {
 	a.jobLock.Lock()
 	defer a.jobLock.Unlock()
 	a.JobsByMiner[jobid] = NewShareMap()
 	a.JobsByUser[jobid] = NewShareMap()
 }
 
-func (a Accountant) JobExists(jobid string) bool {
+func (a Accountant) JobExists(jobid int32) bool {
 	a.jobLock.RLock()
 	defer a.jobLock.RUnlock()
 	_, ok := a.JobsByMiner[jobid]

@@ -66,7 +66,7 @@ func cut(total int64, prop decimal.Decimal) int64 {
 }
 
 type UserPayout struct {
-	JobID         string `gorm:"primary_key"`
+	JobID         int32  `gorm:"primary_key"`
 	UserID        string `gorm:"primary_key"`
 	UserDifficuty float64
 
@@ -76,8 +76,8 @@ type UserPayout struct {
 }
 
 type Reward struct {
-	JobID      string `gorm:"primary_key"` // Block height of reward payout
-	PoolReward int64  // PEG reward for block
+	JobID      int32 `gorm:"primary_key"` // Block height of reward payout
+	PoolReward int64 // PEG reward for block
 
 	Winning int // Number of oprs in the winning set
 	Graded  int // Number of oprs in the graded set
@@ -85,7 +85,7 @@ type Reward struct {
 
 // Share is an accepted piece of work done by a miner.
 type Share struct {
-	JobID      string // JobID's are always a block height
+	JobID      int32  // JobID's are always a block height
 	Nonce      []byte // Nonce is the work computed by the miner
 	Difficulty float64
 	Target     uint64
