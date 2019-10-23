@@ -103,6 +103,10 @@ var testStratum = &cobra.Command{
 						if len(words) > 3 {
 							s.SingleClientNotify(words[1], words[2], words[3], "")
 						}
+					case "settarget":
+						if len(words) > 2 {
+							s.SetTarget(words[1], words[2])
+						}
 					case "reconnect":
 						if len(words) > 4 {
 							s.ReconnectClient(words[1], words[2], words[3], words[4])
