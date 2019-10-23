@@ -19,6 +19,7 @@ require (
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
+	github.com/pegnet/LXRHash v0.0.0-20190913134745-ca3b8b65a729
 	github.com/pegnet/pegnet v0.1.0-rc4.0.20191002204629-5a6fd621ca60
 	github.com/prometheus/client_golang v1.0.0
 	github.com/qor/admin v0.0.0-20190906081516-5593fc33b920 // indirect
