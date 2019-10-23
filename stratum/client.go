@@ -41,18 +41,16 @@ type Client struct {
 
 	subscriptions []Subscription
 	requestsMade  map[int]func(Response)
-	verbose       bool
 	autoreconnect bool
 	sync.RWMutex
 }
 
-func NewClient(verbose bool) (*Client, error) {
+func NewClient(username, minername, password, version string) (*Client, error) {
 	c := new(Client)
-	c.verbose = verbose
 	c.autoreconnect = true
-	c.version = "0.0.1"
-	c.username = "user"
-	c.minername = "miner"
+	c.version = version
+	c.username = username
+	c.minername = minername
 	c.currentJobID = "1"
 	c.currentOPRHash = "00037f39cf870a1f49129f9c82d935665d352ffd25ea3296208f6f7b16fd654f"
 	c.currentTarget = 0xfffe000000000000

@@ -79,7 +79,7 @@ func (a Authenticator) Confirm(userid string) {
 }
 
 func (a Authenticator) Exists(uid string) bool {
-	dbErr := a.DB.Where("uid = ?", uid).First(&HotfixedAuthIdentity{})
+	dbErr := a.DB.Debug().Where("uid = ?", uid).First(&User{})
 	if dbErr.Error == nil {
 		return true
 	}

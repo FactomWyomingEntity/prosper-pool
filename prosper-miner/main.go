@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/FactomWyomingEntity/private-pool/exit"
+	"github.com/FactomWyomingEntity/private-pool/stratum"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -61,7 +63,45 @@ var rootCmd = &cobra.Command{
 		log.Infof("Username: %s, MinerID: %s", username, minerid)
 		var _ = ctx
 
-		// TODO: Call miner
+		client, err := stratum.NewClient(username, minerid, "password", "0.0.1")
+		if err != nil {
+			panic(err)
+		}
+
+		exit.GlobalExitHandler.AddExit(func() error {
+			return client.Close()
+		})
+
+		err = client.Connect("localhost:1234")
+		if err != nil {
+			panic(err)
+		}
+
+		client.Handshake()
+
+		keyboardReader := bufio.NewReader(os.Stdin)
+		go func() {
+			for {
+				userCommand, _ := keyboardReader.ReadString('\n')
+				words := strings.Fields(userCommand)
+				if len(words) > 0 {
+					switch words[0] {
+					case "getopr":
+						if len(words) > 1 {
+							client.GetOPRHash(words[1])
+						}
+					case "suggesttarget":
+						if len(words) > 1 {
+							client.SuggestTarget(words[1])
+						}
+					default:
+						fmt.Println("Client command not supported: ", words[0])
+					}
+				}
+			}
+		}()
+
+		client.Listen(ctx)
 	},
 }
 
