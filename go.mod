@@ -51,4 +51,5 @@ require (
 	github.com/theplant/testingutils v0.0.0-20190603093022-26d8b4d95c61 // indirect
 	github.com/yosssi/gohtml v0.0.0-20190915184251-7ff6f235ecaf // indirect
 	go.uber.org/atomic v1.4.0
+	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 )

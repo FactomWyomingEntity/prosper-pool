@@ -34,6 +34,9 @@ type Client struct {
 	currentOPRHash string
 	currentTarget  uint64
 
+	password   string // password and invitecode are only needed for initial user registration
+	invitecode string
+
 	miner     *mining.PegnetMiner
 	successes chan *mining.Winner
 
@@ -43,12 +46,14 @@ type Client struct {
 	sync.RWMutex
 }
 
-func NewClient(username, minername, password, version string) (*Client, error) {
+func NewClient(username, minername, password, invitecode, version string) (*Client, error) {
 	c := new(Client)
 	c.autoreconnect = true
 	c.version = version
 	c.username = username
 	c.minername = minername
+	c.password = password
+	c.invitecode = invitecode
 	c.currentJobID = "1"
 	c.currentOPRHash = "00037f39cf870a1f49129f9c82d935665d352ffd25ea3296208f6f7b16fd654f"
 	c.currentTarget = 0xfffe000000000000
@@ -94,7 +99,7 @@ func (c *Client) Handshake() error {
 		return err
 	}
 
-	return c.Authorize(fmt.Sprintf("%s,%s", c.username, c.minername), "password")
+	return c.Authorize(fmt.Sprintf("%s,%s", c.username, c.minername), c.password, c.invitecode)
 }
 
 // InitConn will not start the handshake process. Good for unit tests
@@ -115,8 +120,8 @@ func (c *Client) WaitThenConnect(address, waittime string) error {
 }
 
 // Authorize against stratum pool
-func (c *Client) Authorize(username, password string) error {
-	req := AuthorizeRequest(username, password)
+func (c *Client) Authorize(username, password, invitecode string) error {
+	req := AuthorizeRequest(username, password, invitecode)
 	c.Lock()
 	c.requestsMade[req.ID] = func(resp Response) {
 		var result bool

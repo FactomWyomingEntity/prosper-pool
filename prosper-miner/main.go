@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/FactomWyomingEntity/private-pool/exit"
@@ -15,6 +17,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 const (
@@ -25,12 +29,17 @@ const (
 	ConfigMinerName      = "miner.minerid"
 )
 
+var rxEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+
 func init() {
 	rootCmd.Flags().StringP("config", "c", "", "config path location")
 
 	// Should be set by the user
 	rootCmd.Flags().StringP("user", "u", "", "Username to log into the mining pool")
 	rootCmd.Flags().StringP("minerid", "m", GenerateMinerID(), "Minerid should be unique per mining machine")
+	rootCmd.Flags().StringP("invitecode", "i", "", "Invite code for initial user registration")
+
+	rootCmd.Flags().BoolP("password", "p", false, "Enable password prompt for user registration")
 
 	// Defaults
 	rootCmd.Flags().StringP("poolhost", "s", "localhost:1234", "URL to connect to the pool")
@@ -56,14 +65,48 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
 		exit.GlobalExitHandler.AddCancel(cancel)
+		keyboardReader := bufio.NewReader(os.Stdin)
 
 		username, minerid := viper.GetString(ConfigUserName), viper.GetString(ConfigMinerName)
+
+		password := ""
+
+		promptForPassword, _ := cmd.Flags().GetBool("password")
+		if promptForPassword {
+			fmt.Print("Enter Password: ")
+			bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+			if err != nil {
+				log.Error("Problem with password parsing")
+				return
+			}
+			password = strings.TrimSpace(string(bytePassword))
+
+			fmt.Printf("\nConfirm Password: ")
+			bytePasswordConfirmation, err := terminal.ReadPassword(int(syscall.Stdin))
+			if err != nil {
+				log.Error("Problem with password confirmation parsing")
+				return
+			}
+			passwordConfirmation := strings.TrimSpace(string(bytePasswordConfirmation))
+			fmt.Printf("\n")
+			if strings.Compare(password, passwordConfirmation) != 0 {
+				log.Error("Error: password doesn't match")
+				return
+			}
+		}
+
+		if len(username) > 254 || !rxEmail.MatchString(username) {
+			log.Error("Username must be a valid email address")
+			return
+		}
+
+		invitecode, _ := cmd.Flags().GetString("invitecode")
+
 		// TODO: Add version number
 		log.Infof("Initiated Prosper Miner")
 		log.Infof("Username: %s, MinerID: %s", username, minerid)
-		var _ = ctx
 
-		client, err := stratum.NewClient(username, minerid, "password", "0.0.1")
+		client, err := stratum.NewClient(username, minerid, password, invitecode, "0.0.1")
 		if err != nil {
 			panic(err)
 		}
@@ -72,14 +115,15 @@ var rootCmd = &cobra.Command{
 			return client.Close()
 		})
 
-		err = client.Connect("localhost:1234")
+		poolhost := viper.GetString(ConfigHost)
+
+		err = client.Connect(poolhost)
 		if err != nil {
 			panic(err)
 		}
 
 		client.Handshake()
 
-		keyboardReader := bufio.NewReader(os.Stdin)
 		go func() {
 			for {
 				userCommand, _ := keyboardReader.ReadString('\n')

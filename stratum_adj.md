@@ -21,7 +21,7 @@ request
 {
   "method" : "mining.authorize",
   "id": 0,
-  "params": ["username,minerid", "password"]
+  "params": ["username,minerid", "password", "invite-code"]
 }
 ```
 
@@ -33,7 +33,7 @@ response
   "error": null
 }
 ```
-The result from an authorize request is usually true (successful), or false. The password may be omitted if the server does not require passwords.
+The result from an authorize request is usually true (successful), or false. The password may be omitted if the server does not require passwords. Invite code and password should typically only be provided upon the very first authentication for a given username.
 
 
 ## mining.get_oprhash

@@ -21,7 +21,7 @@ func serverAndClient(t *testing.T) (s *Server, miner *Client, srv net.Conn, cli 
 	require.NoError(err)
 
 	srv, cli = net.Pipe()
-	miner, err = NewClient("user", "miner", "password", "0.0.1")
+	miner, err = NewClient("user", "miner", "password", "invitecode", "0.0.1")
 	require.NoError(err)
 
 	miner.InitConn(cli)
