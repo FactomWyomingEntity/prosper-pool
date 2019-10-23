@@ -139,6 +139,10 @@ func (s *Submitter) Run(ctx context.Context) {
 				if err != nil {
 					sLog.WithError(err).WithField("height", block.Block.Height).Errorf("failed to marshal opr")
 				}
+				sLog.WithFields(log.Fields{
+					"job": block.Job.JobID,
+					"ema": fmt.Sprintf("%x", ema.EMAValue),
+				}).Infof("ema share submit set")
 			}
 			s.currentEMA = ema
 		case share := <-s.shares:
@@ -164,7 +168,7 @@ func (s *Submitter) Run(ctx context.Context) {
 				}
 				txid, err := entry.ComposeCreate(context.Background(), s.FactomClient, s.configuration.ESAddress)
 				if err != nil {
-					sLog.WithError(err).WithField("jobid", share.JobID).Errorf("failed to submit opr")
+					sLog.WithError(err).WithField("job", share.JobID).Errorf("failed to submit opr")
 				} else {
 					err := s.saveEntrySubmission(EntrySubmission{
 						ShareSubmission: *share,
@@ -173,6 +177,12 @@ func (s *Submitter) Run(ctx context.Context) {
 					})
 					if err != nil {
 						sLog.WithError(err).WithField("jobid", share.JobID).Errorf("failed to save entry submission")
+					} else {
+						sLog.WithFields(log.Fields{
+							"job":       share.JobID,
+							"entryhash": fmt.Sprintf("%x", entry.Hash.String()),
+							"target":    share.Target,
+						}).Debug("share submitted to factomd")
 					}
 				}
 			}
