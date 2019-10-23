@@ -55,7 +55,7 @@ func (s *HttpServices) OwedPayouts(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("This page displays the last 100 owed payouts for %s\n", user.UID))
 	for i, iou := range ious {
-		buf.WriteString(fmt.Sprintf("\t%d -> JobID: %s, PEG: %s, Proportion: %s, Shares: %.2f, HashRate: %.2f h\\s\n",
+		buf.WriteString(fmt.Sprintf("\t%d -> JobID: %d, PEG: %s, Proportion: %s, Shares: %.2f, HashRate: %.2f h\\s\n",
 			i, iou.JobID, FactoshiToFactoid(uint64(iou.Payout)),
 			iou.Proportion.Truncate(3).String(), iou.UserDifficuty,
 			difficulty.Difficulty(iou.UserDifficuty).HashRate()))
@@ -73,7 +73,7 @@ func (s *HttpServices) PoolRewards(w http.ResponseWriter, r *http.Request) {
 	for i, rew := range rewards {
 		hashRate := difficulty.Difficulty(rew.PoolDifficuty).HashRate()
 
-		buf.WriteString(fmt.Sprintf("\t%d -> JobID: %s, PEG: %s, Difficulty: %.2f, HashRate: %.2f h\\s\n",
+		buf.WriteString(fmt.Sprintf("\t%d -> JobID: %d, PEG: %s, Difficulty: %.2f, HashRate: %.2f h\\s\n",
 			i, rew.JobID, FactoshiToFactoid(uint64(rew.PoolReward)),
 			rew.PoolDifficuty, hashRate))
 	}

@@ -108,12 +108,12 @@ func TestNewPayout(t *testing.T) {
 				users = 1
 			}
 			pays := NewPayout(Reward{
-				JobID:      "test",
+				JobID:      100,
 				PoolReward: rand.Int63() % (1e6 * 1e8), // 100K max PEG
 				Winning:    10,
 				Graded:     15,
 			}, randomRate(),
-				*randomShareMap("test", users))
+				*randomShareMap(100, users))
 
 			var totalProp decimal.Decimal
 			var totalPay int64
@@ -150,12 +150,12 @@ func TestNewPayout(t *testing.T) {
 	t.Run("test the 0 user case", func(t *testing.T) {
 		// Idk how we could have 0 users, and a winner, but things should not panic
 		pays := NewPayout(Reward{
-			JobID:      "test",
+			JobID:      100,
 			PoolReward: rand.Int63() % (1e6 * 1e8), // 100K max PEG
 			Winning:    10,
 			Graded:     15,
 		}, randomRate(),
-			*randomShareMap("test", 0))
+			*randomShareMap(100, 0))
 
 		if pays.PoolFee == 0 {
 			t.Errorf("pool always takes a cut")
@@ -166,7 +166,7 @@ func TestNewPayout(t *testing.T) {
 	})
 }
 
-func randomShareMap(jobid string, users int) *ShareMap {
+func randomShareMap(jobid int32, users int) *ShareMap {
 	s := NewShareMap()
 	for i := 0; i < users; i++ {
 		buf := make([]byte, 8)

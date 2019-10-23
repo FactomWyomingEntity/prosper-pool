@@ -221,7 +221,7 @@ func (s Submitter) saveEMA(ema EMA) error {
 // N is the number of points in the Exponential Moving Average
 type EMA struct {
 	BlockHeight     int32 `gorm:"primary_key"`
-	JobID           string
+	JobID           int32
 	Cutoff          int    // 200
 	MinimumTarget   uint64 // 200 Cutoff target
 	EMAValue        uint64 // EMA value
