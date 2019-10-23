@@ -102,6 +102,8 @@ func (s *HttpServices) PoolMiners(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(buf.Bytes())
 }
 
+// MinuteKeeperInfo has the json endpoint to indicate if submissions are being
+// accepted.
 func (s *HttpServices) MinuteKeeperInfo(w http.ResponseWriter, r *http.Request) {
 	if s.MinuteKeeper == nil {
 		_, _ = w.Write([]byte(`{"error":"no minute keeper hook up"}`))

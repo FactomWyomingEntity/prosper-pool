@@ -113,8 +113,7 @@ func (k *MinuteKeeper) Run(ctx context.Context) {
 			"dht":  cr.Directoryblockheight,
 			"lht":  cr.Leaderheight,
 			"lnz":  k.lastNoneZeroHeight,
-		}).
-			Tracef("new min")
+		}).Tracef("new min")
 		time.Sleep(PollInterval)
 	}
 }
@@ -142,6 +141,7 @@ func (k *MinuteKeeper) CanSubmitHeight(h int32) bool {
 	return k.CanSubmit()
 }
 
+// CurrentMinute is the factomd api struct
 type CurrentMinute struct {
 	Leaderheight            int32 `json:"leaderheight"`
 	Directoryblockheight    int32 `json:"directoryblockheight"`

@@ -427,6 +427,8 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 	}
 
 	// Check if we can accept shares right now
+	// E.g: If we are between minute 0 and minute 1, the job is
+	// stale
 	if !s.ShareGate.CanSubmit() {
 		return false
 	}
@@ -447,8 +449,6 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 		}
 	}
 
-	// TODO: Tighten up share acceptance. The current job is not necessarily
-	// 		always valid.
 	return true
 }
 
