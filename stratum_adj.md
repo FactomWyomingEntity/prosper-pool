@@ -21,7 +21,7 @@ request
 {
   "method" : "mining.authorize",
   "id": 0,
-  "params": ["username,minerid", "password"]
+  "params": ["username,minerid", "password", "invite-code"]
 }
 ```
 

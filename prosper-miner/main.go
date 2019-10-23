@@ -72,7 +72,7 @@ var rootCmd = &cobra.Command{
 			return client.Close()
 		})
 
-		err = client.Connect("localhost:1234")
+		err = client.Connect(viper.GetString(ConfigHost))
 		if err != nil {
 			panic(err)
 		}

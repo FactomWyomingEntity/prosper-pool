@@ -44,6 +44,23 @@ func (s *HttpServices) SetMinuteKeeper(mk *minutekeeper.MinuteKeeper) {
 	s.MinuteKeeper = mk
 }
 
+// MiddleWare acts as a middleware for all requests to the web/api
+func (s *HttpServices) MiddleWare() func(http.Handler) http.Handler {
+	f := func(h http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/auth/register" {
+				_, _ = w.Write([]byte("You cannot register"))
+				return
+			}
+			h.ServeHTTP(w, r)
+		}
+
+		return http.HandlerFunc(fn)
+	}
+
+	return f
+}
+
 func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
 	primaryMux := http.NewServeMux()
 	s.Auth = auth
@@ -63,7 +80,7 @@ func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
 	auth.AddHandler(primaryMux)
 
 	s.Primary = &http.Server{
-		Handler: auth.GetSessionManager(primaryMux),
+		Handler: s.MiddleWare()(auth.GetSessionManager(primaryMux)),
 		Addr:    fmt.Sprintf("0.0.0.0:%d", s.conf.GetInt(config.ConfigWebPort)),
 	}
 }
