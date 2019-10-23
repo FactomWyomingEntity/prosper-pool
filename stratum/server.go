@@ -13,6 +13,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/config"
+
+	"github.com/FactomWyomingEntity/private-pool/authentication"
+
 	"github.com/pegnet/pegnet/modules/opr"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -23,6 +27,16 @@ type Server struct {
 	Miners     *MinerMap
 	config     *viper.Viper
 	currentJob *Job
+
+	// For any user authentication
+	Auth *authentication.Authenticator
+
+	// Will assist in rejecting stale shares
+	ShareGate ShareCheck
+
+	configuration struct {
+		RequireAuth bool // Require actual username from miners
+	}
 
 	// We forward submissions to any listeners
 	submissionExports []chan<- *ShareSubmission
@@ -54,7 +68,20 @@ func NewServer(conf *viper.Viper) (*Server, error) {
 	s := new(Server)
 	s.config = conf
 	s.Miners = NewMinerMap()
+
+	s.configuration.RequireAuth = conf.GetBool(config.ConfigStratumRequireAuth)
+	// Stub this out so we don't get a nil dereference
+	s.ShareGate = new(AlwaysYesShareCheck)
+
 	return s, nil
+}
+
+func (s *Server) SetShareCheck(sc ShareCheck) {
+	s.ShareGate = sc
+}
+
+func (s *Server) SetAuthenticator(auth *authentication.Authenticator) {
+	s.Auth = auth
 }
 
 // UpdateCurrentJob sets currently-active job details on the stratum server
@@ -136,6 +163,7 @@ type Miner struct {
 	// State information
 	subscribed bool
 	sessionID  string
+	ip         string
 	nonce      uint32
 	agent      string // Agent/version from subscribe
 	username   string
@@ -148,6 +176,7 @@ type Miner struct {
 // InitMiner starts a new miner with the needed encoders and channels set up
 func InitMiner(conn net.Conn) *Miner {
 	m := new(Miner)
+	m.ip = conn.RemoteAddr().String()
 	m.conn = conn
 	m.enc = json.NewEncoder(conn)
 	m.log = log.WithFields(log.Fields{"ip": m.conn.RemoteAddr().String()})
@@ -165,7 +194,7 @@ func (m *Miner) Close() {
 
 // ToString returns a string representation of the internal miner client state
 func (m *Miner) ToString() string {
-	return fmt.Sprintf("Session ID: %s\nAgent: %s\nPreferred Target: %d\nSubscribed: %t\nAuthorized: %t\nNonce: %d", m.sessionID, m.agent, m.preferredTarget, m.subscribed, m.authorized, m.nonce)
+	return fmt.Sprintf("Session ID: %s\nIP: %s\nAgent: %s\nPreferred Target: %d\nSubscribed: %t\nAuthorized: %t\nNonce: %d", m.sessionID, m.conn.RemoteAddr().String(), m.agent, m.preferredTarget, m.subscribed, m.authorized, m.nonce)
 }
 
 // Broadcast should accept the already json marshalled msg
@@ -275,10 +304,19 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 			return
 		}
 
-		// TODO: actually check username/password (if user/pass authentication is desired)
-
 		client.username = arr[0]
 		client.minerid = arr[1]
+
+		if s.Auth != nil && s.configuration.RequireAuth {
+			if !s.Auth.Exists(client.username) { // Reject!
+				// TODO: Provide a reason?
+				// TODO: Disconnect them?
+				if err := client.enc.Encode(AuthorizeResponse(req.ID, false, nil)); err != nil {
+					client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+				}
+				return
+			}
+		}
 
 		if err := client.enc.Encode(AuthorizeResponse(req.ID, true, nil)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
@@ -311,7 +349,13 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 			return
 		}
 
-		// TODO: actually process the submission (ProcessSubmission); for now just pretend success
+		if !s.ProcessSubmission(client, params[1], params[2], params[3], params[4]) {
+			// Rejected share
+			// ignore errors on reject shares
+			_ = client.enc.Encode(SubmitResponse(req.ID, true, nil))
+			return
+		}
+
 		if err := client.enc.Encode(SubmitResponse(req.ID, true, nil)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		}
@@ -382,6 +426,13 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 		return false
 	}
 
+	// Check if we can accept shares right now
+	// E.g: If we are between minute 0 and minute 1, the job is
+	// stale
+	if !s.ShareGate.CanSubmit() {
+		return false
+	}
+
 	submit := &ShareSubmission{
 		Username: miner.username,
 		MinerID:  miner.minerid,
@@ -398,8 +449,6 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 		}
 	}
 
-	// TODO: Tighten up share acceptance. The current job is not necessarily
-	// 		always valid.
 	return true
 }
 
