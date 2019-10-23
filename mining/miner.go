@@ -29,6 +29,7 @@ type MinerCommand struct {
 type Winner struct {
 	OPRHash string
 	Nonce   string
+	Target  string
 }
 
 // PegnetMiner mines an OPRhash
@@ -152,6 +153,7 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 			success := &Winner{
 				OPRHash: fmt.Sprintf("%x", p.MiningState.oprhash),
 				Nonce:   fmt.Sprintf("%x", p.MiningState.Nonce),
+				Target:  fmt.Sprintf("%x", diff),
 			}
 			p.successes <- success
 		}

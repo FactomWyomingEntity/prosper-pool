@@ -398,7 +398,7 @@ func (c *Client) ListenForSuccess() {
 	for {
 		select {
 		case winner := <-c.successes:
-			c.Submit(c.username, c.currentJobID, winner.Nonce, winner.OPRHash, fmt.Sprintf("%x", c.currentTarget))
+			c.Submit(c.username, c.currentJobID, winner.Nonce, winner.OPRHash, winner.Target)
 		}
 	}
 }
