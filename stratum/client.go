@@ -365,7 +365,11 @@ func (c *Client) HandleRequest(req Request) {
 			return
 		}
 
-		result, _ := strconv.ParseUint(strings.Replace(params[0], "0x", "", -1), 16, 64)
+		result, err := strconv.ParseUint(strings.Replace(params[0], "0x", "", -1), 16, 64)
+		if err != nil {
+			log.Errorln("Target unable to be converted to uint: ", err)
+			return
+		}
 		c.currentTarget = uint64(result)
 
 		log.Printf("New Target: %x\n", c.currentTarget)
@@ -380,10 +384,18 @@ func (c *Client) HandleRequest(req Request) {
 			return
 		}
 
-		nonce := params[0]
+		nonceString := params[0]
+		nonce, err := strconv.Atoi(nonceString)
+		if err != nil {
+			log.Errorln("Nonce unable to be converted to integer: ", err)
+			return
+		}
 
-		log.Printf("New Nonce: %s\n", nonce)
-		// TODO: do more than just log the nonce details (actually update miner job)
+		log.Printf("New Nonce: %d\n", nonce)
+		command := mining.BuildCommand().
+			NewNoncePrefix(nonce).
+			Build()
+		c.miner.SendCommand(command)
 	case "mining.stop_mining":
 		log.Println("Request to stop mining received")
 		command := mining.BuildCommand().

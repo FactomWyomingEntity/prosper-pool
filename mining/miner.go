@@ -14,6 +14,7 @@ import (
 const (
 	_ = iota
 	BatchCommand
+	NewNoncePrefix
 	NewOPRHash
 	ResetRecords
 	MinimumAccept
@@ -172,6 +173,9 @@ func (p *PegnetMiner) HandleCommand(c *MinerCommand) {
 		for _, c := range commands {
 			p.HandleCommand(c)
 		}
+	case NewNoncePrefix:
+		p.ID = c.Data.(int)
+		p.ResetNonce()
 	case NewOPRHash:
 		p.MiningState.oprhash = c.Data.([]byte)
 	case ResetRecords:
@@ -215,6 +219,11 @@ func BuildCommand() *CommandBuilder {
 
 func (b *CommandBuilder) NewOPRHash(oprhash []byte) *CommandBuilder {
 	b.commands = append(b.commands, &MinerCommand{Command: NewOPRHash, Data: oprhash})
+	return b
+}
+
+func (b *CommandBuilder) NewNoncePrefix(prefix int) *CommandBuilder {
+	b.commands = append(b.commands, &MinerCommand{Command: NewNoncePrefix, Data: prefix})
 	return b
 }
 
