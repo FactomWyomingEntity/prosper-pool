@@ -10,10 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	mLog = log.WithField("mod", "minkeep")
-)
-
 const (
 	PollInterval = time.Second * 2
 )
@@ -24,20 +20,46 @@ const (
 type MinuteKeeper struct {
 	FactomClient *factom.Client
 
-	submit atomic.Bool
+	submit       atomic.Bool
+	submitHeight atomic.Int32
 
 	lastNoneZeroHeight int32
-	lastZero           time.Time
 	syncing            bool
+
+	// Has it's own logger to not be noisy
+	Logger *log.Logger
+	logE   *log.Entry
+}
+
+type MinuteKeeperStatus struct {
+	Submit             bool  `json:"submitting"`
+	SubmitHeight       int32 `json:"submitheight"`
+	Syncing            bool  `json:"syncing"`
+	LastNoneZeroHeight int32 `json:"lastnonzero"`
 }
 
 func NewMinuteKeeper(cl *factom.Client) *MinuteKeeper {
 	k := new(MinuteKeeper)
 	k.FactomClient = cl
 	k.setSubmit(true)
-	k.lastZero = time.Now()
+	k.Logger = log.New()
+	k.Logger.SetLevel(log.FatalLevel)
+	k.logE = k.Logger.WithField("mod", "minkeep")
 
 	return k
+}
+
+func (k *MinuteKeeper) Status() MinuteKeeperStatus {
+	return MinuteKeeperStatus{
+		Submit:             k.submit.Load(),
+		SubmitHeight:       k.submitHeight.Load(),
+		Syncing:            k.syncing,
+		LastNoneZeroHeight: k.lastNoneZeroHeight,
+	}
+}
+
+func (k *MinuteKeeper) log() *log.Entry {
+	return k.logE
 }
 
 // Run is supposed to detect minute 0-1. This is hard as if we sync
@@ -45,12 +67,15 @@ func NewMinuteKeeper(cl *factom.Client) *MinuteKeeper {
 func (k *MinuteKeeper) Run(ctx context.Context) {
 	// Start watching minutes
 	for {
+		if ctx.Err() != nil {
+			return // Cancelled
+		}
 		var cr CurrentMinute
 		err := k.FactomClient.FactomdRequest(ctx, "current-minute", nil, &cr)
 		if err != nil {
 			// Any error? We use rolling submits, and just eat the 1min problem
 			k.setSubmit(true)
-			mLog.WithError(err).Error("failed to get minute")
+			k.log().WithError(err).Error("failed to get minute")
 			time.Sleep(PollInterval)
 			continue
 		}
@@ -67,6 +92,7 @@ func (k *MinuteKeeper) Run(ctx context.Context) {
 		// Record the current syncing block
 		if cr.Minute != 0 {
 			k.setSubmit(true)
+			k.setSubmitHeight(cr.Directoryblockheight + 1)
 			k.syncing = true
 			k.lastNoneZeroHeight = cr.Directoryblockheight
 		} else if cr.Minute == 0 && cr.Directoryblockheight != k.lastNoneZeroHeight {
@@ -74,16 +100,16 @@ func (k *MinuteKeeper) Run(ctx context.Context) {
 			// we are dbstate syncing
 			k.syncing = false
 			k.setSubmit(true)
+			k.setSubmitHeight(cr.Directoryblockheight + 1)
 		} else if k.syncing && cr.Minute == 0 && cr.Directoryblockheight == cr.Leaderheight-1 {
 			// On minute 0
 			k.setSubmit(false)
 		}
 
-		mLog.WithFields(log.Fields{
+		k.log().WithFields(log.Fields{
 			"sub":  k.submit.Load(),
 			"min":  cr.Minute,
 			"sync": k.syncing,
-			"sin":  time.Since(k.lastZero),
 			"dht":  cr.Directoryblockheight,
 			"lht":  cr.Leaderheight,
 			"lnz":  k.lastNoneZeroHeight,
@@ -93,8 +119,27 @@ func (k *MinuteKeeper) Run(ctx context.Context) {
 	}
 }
 
+func (k *MinuteKeeper) setSubmitHeight(h int32) {
+	k.submitHeight.Store(h)
+}
+
 func (k *MinuteKeeper) setSubmit(b bool) {
 	k.submit.Store(b)
+}
+
+// CanSubmit will return if we are in a can submit mode. It does not indicate
+// if the height you are asking about is the correct height to submit for.
+func (k *MinuteKeeper) CanSubmit() bool {
+	return k.submit.Load()
+}
+
+// CanSubmitHeight will ensure not only are we in a submit mode, but also
+// if we are submitting for the latest height.
+func (k *MinuteKeeper) CanSubmitHeight(h int32) bool {
+	if h != k.submitHeight.Load() {
+		return false
+	}
+	return k.CanSubmit()
 }
 
 type CurrentMinute struct {

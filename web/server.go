@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/FactomWyomingEntity/private-pool/minutekeeper"
+
 	"github.com/FactomWyomingEntity/private-pool/stratum"
 
 	"github.com/jinzhu/gorm"
@@ -21,6 +23,7 @@ var (
 type HttpServices struct {
 	Auth          *authentication.Authenticator
 	StratumServer *stratum.Server
+	MinuteKeeper  *minutekeeper.MinuteKeeper
 	Primary       *http.Server
 	conf          *viper.Viper
 	db            *gorm.DB
@@ -37,6 +40,10 @@ func (s *HttpServices) SetStratumServer(srv *stratum.Server) {
 	s.StratumServer = srv
 }
 
+func (s *HttpServices) SetMinuteKeeper(mk *minutekeeper.MinuteKeeper) {
+	s.MinuteKeeper = mk
+}
+
 func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
 	primaryMux := http.NewServeMux()
 	s.Auth = auth
@@ -46,6 +53,7 @@ func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
 	primaryMux.HandleFunc("/user/owed", s.OwedPayouts)
 	primaryMux.HandleFunc("/pool/rewards", s.PoolRewards)
 	primaryMux.HandleFunc("/admin/miners", s.PoolMiners)
+	primaryMux.HandleFunc("/api/v1/submitsync", s.MinuteKeeperInfo)
 
 	auth.AddHandler(primaryMux)
 

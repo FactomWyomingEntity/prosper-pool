@@ -31,6 +31,9 @@ type Server struct {
 	// For any user authentication
 	Auth *authentication.Authenticator
 
+	// Will assist in rejecting stale shares
+	ShareGate ShareCheck
+
 	configuration struct {
 		RequireAuth bool // Require actual username from miners
 	}
@@ -67,8 +70,14 @@ func NewServer(conf *viper.Viper) (*Server, error) {
 	s.Miners = NewMinerMap()
 
 	s.configuration.RequireAuth = conf.GetBool(config.ConfigStratumRequireAuth)
+	// Stub this out so we don't get a nil dereference
+	s.ShareGate = new(AlwaysYesShareCheck)
 
 	return s, nil
+}
+
+func (s *Server) SetShareCheck(sc ShareCheck) {
+	s.ShareGate = sc
 }
 
 func (s *Server) SetAuthenticator(auth *authentication.Authenticator) {
@@ -408,6 +417,11 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 	tU, err := strconv.ParseUint(target, 16, 64)
 	if err != nil {
 		sLog.WithError(err).Errorf("miner provided bad target")
+		return false
+	}
+
+	// Check if we can accept shares right now
+	if !s.ShareGate.CanSubmit() {
 		return false
 	}
 

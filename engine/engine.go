@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/FactomWyomingEntity/private-pool/minutekeeper"
+
 	"github.com/Factom-Asset-Tokens/factom"
 	"github.com/FactomWyomingEntity/private-pool/accounting"
 	"github.com/FactomWyomingEntity/private-pool/authentication"
@@ -38,6 +40,7 @@ type PoolEngine struct {
 	Submitter     *sharesubmit.Submitter
 	Authenticator *authentication.Authenticator
 	Web           *web.HttpServices
+	MinuteKeeper  *minutekeeper.MinuteKeeper
 
 	Identity IdentityInformation
 
@@ -115,6 +118,8 @@ func (e *PoolEngine) init() error {
 
 	srv := web.NewHttpServices(e.conf, db.DB)
 
+	mk := minutekeeper.NewMinuteKeeper(config.FactomClientFromConfig(e.conf))
+
 	// Load our identity info for oprs
 	if id := e.conf.GetString(config.ConfigPoolIdentity); id == "" {
 		return fmt.Errorf("opr identity must be set")
@@ -151,6 +156,7 @@ func (e *PoolEngine) init() error {
 	e.Submitter = sub
 	e.Authenticator = auth
 	e.Web = srv
+	e.MinuteKeeper = mk
 
 	// Add all closes
 	exit.GlobalExitHandler.AddExit(e.Database.Close)
@@ -172,14 +178,19 @@ func (e *PoolEngine) link() error {
 
 	e.Web.InitPrimary(e.Authenticator)
 	e.Web.SetStratumServer(e.StratumServer)
+	e.Web.SetMinuteKeeper(e.MinuteKeeper)
 
 	e.StratumServer.SetAuthenticator(e.Authenticator)
+	e.StratumServer.SetShareCheck(e.MinuteKeeper)
 
 	return nil
 }
 
 func (e *PoolEngine) Run(ctx context.Context) {
 	// TODO: Spin off all threads
+
+	// MinuteKeeper watches for the min 0 to 1 problem
+	go e.MinuteKeeper.Run(ctx)
 
 	// Stratum server listens to new jobs - spits out new shares
 	go e.StratumServer.Listen(ctx)

@@ -6,14 +6,14 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Factom-Asset-Tokens/factom"
-	"github.com/FactomWyomingEntity/private-pool/sharesubmit/minutekeeper"
+	"github.com/FactomWyomingEntity/private-pool/minutekeeper"
 )
 
 func main() {
 
-	logrus.SetLevel(logrus.TraceLevel)
 	cl := factom.NewClient()
 	mn := minutekeeper.NewMinuteKeeper(cl)
+	mn.Logger.SetLevel(logrus.TraceLevel)
 
 	mn.Run(context.Background())
 }

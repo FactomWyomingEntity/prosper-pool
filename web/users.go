@@ -2,6 +2,7 @@ package web
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -99,6 +100,16 @@ func (s *HttpServices) PoolMiners(w http.ResponseWriter, r *http.Request) {
 		buf.WriteString(fmt.Sprintf("\t%10s: %d\n", "Nonce", miner.Nonce))
 	}
 	_, _ = w.Write(buf.Bytes())
+}
+
+func (s *HttpServices) MinuteKeeperInfo(w http.ResponseWriter, r *http.Request) {
+	if s.MinuteKeeper == nil {
+		_, _ = w.Write([]byte(`{"error":"no minute keeper hook up"}`))
+		return
+	}
+
+	info, _ := json.Marshal(s.MinuteKeeper.Status())
+	_, _ = w.Write(info)
 }
 
 // FactoshiToFactoid converts a uint64 factoshi ammount into a fixed point
