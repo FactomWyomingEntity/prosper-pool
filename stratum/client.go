@@ -66,6 +66,7 @@ func NewClient(verbose bool) (*Client, error) {
 
 	opr.InitLX()
 	c.miner = mining.NewPegnetMiner(1, commandChannel, successChannel)
+	go c.miner.Mine(context.Background())
 	return c, nil
 }
 
@@ -121,20 +122,6 @@ func (c *Client) Authorize(username, password string) error {
 	if err != nil {
 		return err
 	}
-
-	myHexBytes, err := hex.DecodeString(c.currentOPRHash)
-	if err != nil {
-		return err
-	}
-	command := mining.BuildCommand().
-		ResetRecords().                     // Reset the miner's stats/difficulty/etc
-		NewOPRHash(myHexBytes).             // New OPR hash to mine
-		MinimumDifficulty(c.currentTarget). // Floor difficulty to use
-		ResumeMining().                     // Start mining
-		Build()
-
-	go c.miner.Mine(context.Background())
-	c.miner.SendCommand(command)
 
 	return nil
 }
@@ -339,15 +326,26 @@ func (c *Client) HandleRequest(req Request) {
 		oprHash := params[1]
 
 		log.Printf("JobID: %s ... OPR Hash: %s\n", jobID, oprHash)
-		if jobID == c.currentJobID {
-			c.currentOPRHash = oprHash
+		newJobID, err := strconv.ParseInt(jobID, 10, 64)
+		if err != nil {
+			log.Error("Not a valid new JobID")
+			return
+		}
+		existingJobID, _ := strconv.ParseInt(c.currentJobID, 10, 64)
+		if newJobID >= existingJobID {
 			myHexBytes, err := hex.DecodeString(oprHash)
 			if err != nil {
 				log.Error(err)
 				return
 			}
+			if newJobID > existingJobID {
+				c.currentJobID = jobID
+			}
+			c.currentOPRHash = oprHash
 			command := mining.BuildCommand().
 				NewOPRHash(myHexBytes).
+				MinimumDifficulty(c.currentTarget).
+				ResumeMining().
 				Build()
 			c.miner.SendCommand(command)
 		}
