@@ -68,6 +68,18 @@ func NewClient(username, minername, password, version string) (*Client, error) {
 	return c, nil
 }
 
+func (c Client) Encode(x interface{}) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("Connection issues (possibly dropped)\n")
+		}
+	}()
+	c.Lock()
+	err = c.enc.Encode(x)
+	c.Unlock()
+	return
+}
+
 func (c *Client) Connect(address string) error {
 	addr, err := net.ResolveTCPAddr("tcp", address)
 	if err != nil {
@@ -116,7 +128,7 @@ func (c *Client) Authorize(username, password string) error {
 		}
 	}
 	c.Unlock()
-	err := c.enc.Encode(req)
+	err := c.Encode(req)
 	if err != nil {
 		return err
 	}
@@ -148,7 +160,7 @@ func (c *Client) GetOPRHash(jobID string) error {
 		}
 	}
 	c.Unlock()
-	err := c.enc.Encode(req)
+	err := c.Encode(req)
 	if err != nil {
 		return err
 	}
@@ -166,7 +178,7 @@ func (c *Client) Submit(username, jobID, nonce, oprHash, target string) error {
 		}
 	}
 	c.Unlock()
-	err := c.enc.Encode(req)
+	err := c.Encode(req)
 	if err != nil {
 		return err
 	}
@@ -189,7 +201,7 @@ func (c *Client) Subscribe() error {
 		}
 	}
 	c.Unlock()
-	err := c.enc.Encode(req)
+	err := c.Encode(req)
 	if err != nil {
 		return err
 	}
@@ -198,7 +210,7 @@ func (c *Client) Subscribe() error {
 
 // Suggest preferred mining target to server
 func (c *Client) SuggestTarget(preferredTarget string) error {
-	err := c.enc.Encode(SuggestTargetRequest(preferredTarget))
+	err := c.Encode(SuggestTargetRequest(preferredTarget))
 	if err != nil {
 		return err
 	}
@@ -286,7 +298,7 @@ func (c *Client) HandleRequest(req Request) {
 
 	switch req.Method {
 	case "client.get_version":
-		if err := c.enc.Encode(GetVersionResponse(req.ID, c.version)); err != nil {
+		if err := c.Encode(GetVersionResponse(req.ID, c.version)); err != nil {
 			log.WithField("method", req.Method).WithError(err).Error("failed to respond to get_version")
 		}
 	case "client.reconnect":
