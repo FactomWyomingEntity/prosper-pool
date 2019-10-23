@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	crand "crypto/rand"
 	"fmt"
 
+	"github.com/Factom-Asset-Tokens/base58"
 	"github.com/FactomWyomingEntity/private-pool/authentication"
 	"github.com/FactomWyomingEntity/private-pool/database"
 	"github.com/spf13/cobra"
@@ -11,6 +13,7 @@ import (
 
 func init() {
 	db.AddCommand(makeAdmin)
+	db.AddCommand(makeCode)
 	rootCmd.AddCommand(db)
 }
 
@@ -39,5 +42,34 @@ var makeAdmin = &cobra.Command{
 		}
 
 		fmt.Printf("%d rows affected\n", dbErr.RowsAffected)
+	},
+}
+
+var makeCode = &cobra.Command{
+	Use:     "code",
+	Short:   "Makes a new invite code",
+	Example: "prosper db code",
+	PreRun:  SoftReadConfig, // TODO: Do a hard read
+	Run: func(cmd *cobra.Command, args []string) {
+		db, err := database.New(viper.GetViper())
+		if err != nil {
+			panic(err)
+		}
+
+		data := make([]byte, 20)
+		_, _ = crand.Read(data)
+		code := base58.Encode(data)
+
+		a, err := authentication.NewAuthenticator(viper.GetViper(), db.DB)
+		if err != nil {
+			panic(err)
+		}
+
+		err = a.NewCode(code)
+		if err != nil {
+			fmt.Println("failed to make code")
+		}
+
+		fmt.Printf("New Code: %s\n", code)
 	},
 }

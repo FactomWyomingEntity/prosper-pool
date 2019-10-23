@@ -3,6 +3,7 @@ module github.com/FactomWyomingEntity/private-pool
 go 1.13
 
 require (
+	github.com/Factom-Asset-Tokens/base58 v0.0.0-20181227014902-61655c4dd885
 	github.com/Factom-Asset-Tokens/factom v0.0.0-20191010221444-510331319e8d
 	github.com/andybalholm/cascadia v1.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect

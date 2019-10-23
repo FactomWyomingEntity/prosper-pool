@@ -66,16 +66,13 @@ func NewAuthenticator(conf *viper.Viper, db *gorm.DB) (*Authenticator, error) {
 
 	db.AutoMigrate(&HotfixedAuthIdentity{})
 	db.AutoMigrate(&User{})
+	db.AutoMigrate(&InviteCode{})
 
 	// Register Auth providers
 	// Allow use username/password
 	//a.RegisterProvider(password.New(&password.Config{}))
 
 	return a, nil
-}
-
-func (a Authenticator) Confirm(userid string) {
-	//a.DB.Model(&HotfixedAuthIdentity{}).Where()
 }
 
 func (a Authenticator) Exists(uid string) bool {

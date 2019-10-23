@@ -313,13 +313,20 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 		client.minerid = arr[1]
 
 		if s.Auth != nil && s.configuration.RequireAuth {
-			if !s.Auth.Exists(client.username) { // Reject!
-				// TODO: Provide a reason?
-				// TODO: Disconnect them?
-				if err := client.enc.Encode(AuthorizeResponse(req.ID, false, nil)); err != nil {
-					client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+			if !s.Auth.Exists(client.username) {
+				// Did they provide a password and code?
+				if len(params) >= 3 && s.Auth.RegisterUser(client.username, params[1], params[2]) {
+					// User registered! Let them through by falling out of this if statement
+				} else {
+
+					// User rejected
+					// TODO: Provide a reason?
+					// TODO: Disconnect them?
+					if err := client.enc.Encode(AuthorizeResponse(req.ID, false, nil)); err != nil {
+						client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+					}
+					return
 				}
-				return
 			}
 		}
 

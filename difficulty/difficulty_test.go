@@ -68,7 +68,7 @@ func TestDifficulty(t *testing.T) {
 	// This is a bit all over the place
 	t.Run("hashrate doubling using rand generator", func(t *testing.T) {
 		hashrate := 25 * K
-		dur := time.Second * 2
+		dur := time.Second * 50
 		amt := 5
 
 		d := make([]float64, amt)

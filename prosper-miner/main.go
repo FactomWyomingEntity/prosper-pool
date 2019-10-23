@@ -115,9 +115,7 @@ var rootCmd = &cobra.Command{
 			return client.Close()
 		})
 
-		poolhost := viper.GetString(ConfigHost)
-
-		err = client.Connect(poolhost)
+		err = client.Connect(viper.GetString(ConfigHost))
 		if err != nil {
 			panic(err)
 		}

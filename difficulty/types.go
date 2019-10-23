@@ -28,6 +28,7 @@ func (t Target) HashRateFromCustom(dur time.Duration) float64 {
 	th := new(big.Float).SetInt(totalHashes)
 	hashrate := th.Quo(th, big.NewFloat(dur.Seconds()))
 	rate, _ := hashrate.Float64()
+
 	return rate
 }
 

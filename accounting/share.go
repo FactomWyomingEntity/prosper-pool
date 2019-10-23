@@ -36,10 +36,11 @@ func (p *Payouts) Payouts(work ShareMap, remaining int64) {
 		prop := decimal.NewFromFloat(work.TotalDifficulty).Div(decimal.NewFromFloat(p.PoolDifficuty))
 		prop = prop.Truncate(AccountingPrecision)
 		pay := UserPayout{
-			UserID:        user,
-			UserDifficuty: work.TotalDifficulty,
-			Proportion:    prop,
-			Payout:        cut(remaining, prop),
+			UserID:           user,
+			UserDifficuty:    work.TotalDifficulty,
+			TotalSubmissions: work.TotalShares,
+			Proportion:       prop,
+			Payout:           cut(remaining, prop),
 		}
 		p.UserPayouts = append(p.UserPayouts, pay)
 		totalPayout += pay.Payout
@@ -66,9 +67,10 @@ func cut(total int64, prop decimal.Decimal) int64 {
 }
 
 type UserPayout struct {
-	JobID         int32  `gorm:"primary_key"`
-	UserID        string `gorm:"primary_key"`
-	UserDifficuty float64
+	JobID            int32  `gorm:"primary_key"`
+	UserID           string `gorm:"primary_key"`
+	UserDifficuty    float64
+	TotalSubmissions int
 
 	// Proportion denoted with 10000 being 100% and 1 being 0.01%
 	Proportion decimal.Decimal `sql:"type:decimal(20,8);"`
