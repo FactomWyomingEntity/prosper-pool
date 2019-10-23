@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/FactomWyomingEntity/private-pool/sharesubmit"
+
 	"github.com/FactomWyomingEntity/private-pool/difficulty"
 
 	"github.com/FactomWyomingEntity/private-pool/accounting"
@@ -74,6 +76,34 @@ func (s *HttpServices) PoolRewards(w http.ResponseWriter, r *http.Request) {
 		buf.WriteString(fmt.Sprintf("\t%d -> JobID: %s, PEG: %s, Difficulty: %.2f, HashRate: %.2f h\\s\n",
 			i, rew.JobID, FactoshiToFactoid(uint64(rew.PoolReward)),
 			rew.PoolDifficuty, hashRate))
+	}
+	_, _ = w.Write(buf.Bytes())
+}
+
+func (s *HttpServices) PoolSubmissions(w http.ResponseWriter, r *http.Request) {
+	jobid := r.FormValue("jobid")
+	if jobid == "" {
+		_, _ = w.Write([]byte("no jobid provided"))
+		return
+	}
+
+	var entries []sharesubmit.EntrySubmission
+
+	// TODO: Verify no sql injection possibility
+	dbErr := s.db.Model(&sharesubmit.EntrySubmission{}).
+		Where("job_id = ?", jobid).
+		Order("created_at desc").
+		Find(&entries)
+	if dbErr.Error != nil {
+		_, _ = w.Write([]byte(dbErr.Error.Error()))
+		return
+	}
+
+	var buf bytes.Buffer
+	buf.WriteString(fmt.Sprintf("This page displays the %d entry submissions for the job '%s'\n", len(entries), jobid))
+	for i, entry := range entries {
+		buf.WriteString(fmt.Sprintf("\t%d -> EntryHash: %s, Target: %x, Time: %s\n",
+			i, entry.EntryHash, entry.Target, entry.CreatedAt.UTC()))
 	}
 	_, _ = w.Write(buf.Bytes())
 }

@@ -52,6 +52,7 @@ func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
 	primaryMux.HandleFunc("/whoami", s.WhoAmI)
 	primaryMux.HandleFunc("/user/owed", s.OwedPayouts)
 	primaryMux.HandleFunc("/pool/rewards", s.PoolRewards)
+	primaryMux.HandleFunc("/pool/submissions", s.PoolSubmissions)
 	primaryMux.HandleFunc("/admin/miners", s.PoolMiners)
 	primaryMux.HandleFunc("/api/v1/submitsync", s.MinuteKeeperInfo)
 
