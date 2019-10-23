@@ -349,7 +349,13 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 			return
 		}
 
-		// TODO: actually process the submission (ProcessSubmission); for now just pretend success
+		if !s.ProcessSubmission(client, params[1], params[2], params[3], params[4]) {
+			// Rejected share
+			// ignore errors on reject shares
+			_ = client.enc.Encode(SubmitResponse(req.ID, true, nil))
+			return
+		}
+
 		if err := client.enc.Encode(SubmitResponse(req.ID, true, nil)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		}
