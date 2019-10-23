@@ -126,7 +126,11 @@ func (c *Client) Authorize(username, password, invitecode string) error {
 	c.requestsMade[req.ID] = func(resp Response) {
 		var result bool
 		if err := resp.FitResult(&result); err == nil {
-			log.Infof("AuthorizeResponse result: %t\n", result)
+			if result == false {
+				log.Errorf("AuthorizeResponse is false. You may not be mining for your account!")
+			} else {
+				log.Infof("AuthorizeResponse result: %t\n", result)
+			}
 		}
 	}
 	c.Unlock()

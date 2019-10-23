@@ -318,7 +318,6 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 				if len(params) >= 3 && s.Auth.RegisterUser(client.username, params[1], params[2]) {
 					// User registered! Let them through by falling out of this if statement
 				} else {
-
 					// User rejected
 					// TODO: Provide a reason?
 					// TODO: Disconnect them?

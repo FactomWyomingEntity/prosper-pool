@@ -33,10 +33,6 @@ func InitLX() {
 	})
 }
 
-func init() {
-	InitLX()
-}
-
 const (
 	_ = iota
 	BatchCommand
@@ -127,6 +123,7 @@ func (p *PegnetMiner) ResetNonce() {
 
 func NewPegnetMiner(id int, commands chan *MinerCommand, successes chan *Winner) *PegnetMiner {
 	p := new(PegnetMiner)
+	InitLX()
 	p.ID = id
 	p.commands = commands
 	p.successes = successes
