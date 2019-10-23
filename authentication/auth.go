@@ -4,9 +4,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/qor/roles"
+
 	"github.com/jinzhu/gorm"
 	"github.com/qor/auth"
 	"github.com/qor/auth/auth_identity"
+	"github.com/qor/auth/authority"
 	"github.com/qor/auth_themes/clean"
 	"github.com/qor/session/manager"
 	log "github.com/sirupsen/logrus"
@@ -22,6 +25,8 @@ var (
 type Authenticator struct {
 	*auth.Auth
 	localMux *http.ServeMux
+
+	Authority *authority.Authority
 }
 
 type User struct {
@@ -48,6 +53,16 @@ func NewAuthenticator(conf *viper.Viper, db *gorm.DB) (*Authenticator, error) {
 		AuthIdentityModel: &HotfixedAuthIdentity{},
 		UserModel:         User{},
 	})
+
+	au := authority.New(&authority.Config{
+		Auth: a.Auth,
+		Role: roles.Global,
+		AccessDeniedHandler: func(w http.ResponseWriter, req *http.Request) { // redirect to home page by default
+			http.Redirect(w, req, "/", http.StatusSeeOther)
+		},
+	})
+	a.Authority = au
+	a.RegisterRoles()
 
 	db.AutoMigrate(&HotfixedAuthIdentity{})
 	db.AutoMigrate(&User{})
@@ -79,4 +94,14 @@ func (a Authenticator) AddHandler(mux *http.ServeMux) {
 	// Mount Auth to Router
 	mux.Handle("/auth/", a.NewServeMux())
 	a.localMux = mux // So we can make requests without http
+}
+
+func (a *Authenticator) RegisterRoles() {
+	// Register admin role
+	roles.Register("admin", func(req *http.Request, currentUser interface{}) bool {
+		if currentUser == nil {
+			return false
+		}
+		return currentUser.(*User) != nil && currentUser.(*User).Role == "admin"
+	})
 }
