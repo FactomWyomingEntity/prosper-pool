@@ -6,10 +6,36 @@ package mining
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
+	"sync"
 
-	"github.com/pegnet/pegnet/opr"
+	lxr "github.com/pegnet/LXRHash"
 	log "github.com/sirupsen/logrus"
 )
+
+// LX holds an instance of lxrhash
+var LX lxr.LXRHash
+var lxInitializer sync.Once
+
+// The init function for LX is expensive. So we should explicitly call the init if we intend
+// to use it. Make the init call idempotent
+func InitLX() {
+	lxInitializer.Do(func() {
+		// This code will only be executed ONCE, no matter how often you call it
+		LX.Verbose(true)
+		if size, err := strconv.Atoi(os.Getenv("LXRBITSIZE")); err == nil && size >= 8 && size <= 30 {
+			LX.Init(0xfafaececfafaecec, uint64(size), 256, 5)
+		} else {
+			LX.Init(0xfafaececfafaecec, 30, 256, 5)
+		}
+
+	})
+}
+
+func init() {
+	InitLX()
+}
 
 const (
 	_ = iota
@@ -149,7 +175,7 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 
 		p.MiningState.NextNonce()
 
-		diff := opr.ComputeDifficulty(p.MiningState.oprhash, p.MiningState.Nonce)
+		diff := ComputeDifficulty(p.MiningState.oprhash, p.MiningState.Nonce)
 		if diff > p.MiningState.minimumDifficulty {
 			success := &Winner{
 				OPRHash: fmt.Sprintf("%x", p.MiningState.oprhash),
@@ -250,4 +276,18 @@ func (b *CommandBuilder) ResumeMining() *CommandBuilder {
 func (b *CommandBuilder) Build() *MinerCommand {
 	b.command.Data = b.commands
 	return b.command
+}
+
+func ComputeDifficulty(oprhash, nonce []byte) (difficulty uint64) {
+	no := append(oprhash, nonce...)
+	h := LX.Hash(no)
+
+	// The high eight bytes of the hash(hash(entry.Content) + nonce) is the difficulty.
+	// Because we don't have a difficulty bar, we can define difficulty as the greatest
+	// value, rather than the minimum value.  Our bar is the greatest difficulty found
+	// within a 10 minute period.  We compute difficulty as Big Endian.
+	for i := uint64(0); i < 8; i++ {
+		difficulty = difficulty<<8 + uint64(h[i])
+	}
+	return difficulty
 }

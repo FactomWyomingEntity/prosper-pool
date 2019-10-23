@@ -15,8 +15,6 @@ import (
 	"time"
 
 	"github.com/FactomWyomingEntity/private-pool/mining"
-	"github.com/pegnet/pegnet/opr"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -62,7 +60,6 @@ func NewClient(username, minername, password, version string) (*Client, error) {
 
 	go c.ListenForSuccess()
 
-	opr.InitLX()
 	c.miner = mining.NewPegnetMiner(1, commandChannel, successChannel)
 	go c.miner.Mine(context.Background())
 	return c, nil
