@@ -76,6 +76,9 @@ var rootCmd = &cobra.Command{
 		password := ""
 
 		promptForPassword, _ := cmd.Flags().GetBool("password")
+		invitecode, _ := cmd.Flags().GetString("invitecode")
+		payoutaddress, _ := cmd.Flags().GetString("payoutaddress")
+
 		if promptForPassword {
 			fmt.Print("Enter Password: ")
 			bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
@@ -97,19 +100,17 @@ var rootCmd = &cobra.Command{
 				log.Error("Error: password doesn't match")
 				return
 			}
+
+			_, err = factom.NewFAAddress(payoutaddress)
+			if err != nil {
+				fmt.Printf("%s is not a valid FA address: %s", payoutaddress, err.Error())
+				os.Exit(1)
+			}
 		}
 
 		if len(username) > 254 || !rxEmail.MatchString(username) {
 			log.Error("Username must be a valid email address")
 			return
-		}
-
-		invitecode, _ := cmd.Flags().GetString("invitecode")
-		payoutaddress, _ := cmd.Flags().GetString("payoutaddress")
-		_, err := factom.NewFAAddress(payoutaddress)
-		if err != nil {
-			fmt.Printf("%s is not a valid FA address: %s", payoutaddress, err.Error())
-			os.Exit(1)
 		}
 
 		client, err := stratum.NewClient(username, minerid, password, invitecode, payoutaddress, "0.0.1")
