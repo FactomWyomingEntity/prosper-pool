@@ -155,7 +155,7 @@ func (s *Submitter) Run(ctx context.Context) {
 				buf := make([]byte, 8)
 				binary.BigEndian.PutUint64(buf, share.Target)
 				entry := factom.Entry{
-					ChainID: &config.OPRChain,
+					ChainID: config.OPRChain,
 					ExtIDs: []factom.Bytes{
 						//	[0] the nonce for the entry
 						share.Nonce,
@@ -166,7 +166,7 @@ func (s *Submitter) Run(ctx context.Context) {
 					},
 					Content: s.oprCopyData,
 				}
-				txid, err := entry.ComposeCreate(context.Background(), s.FactomClient, s.configuration.ESAddress)
+				txid, err := entry.ComposeCreate(s.FactomClient, s.configuration.ESAddress)
 				if err != nil {
 					sLog.WithError(err).WithField("job", share.JobID).Errorf("failed to submit opr")
 				} else {

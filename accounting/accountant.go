@@ -49,8 +49,9 @@ func NewAccountant(conf *viper.Viper, db *gorm.DB) (*Accountant, error) {
 	a.JobsByMiner = make(map[int32]*ShareMap)
 	a.JobsByUser = make(map[int32]*ShareMap)
 
-	a.DB.AutoMigrate(&UserPayout{})
-	a.DB.AutoMigrate(&Payouts{})
+	a.DB.AutoMigrate(&UserOwedPayouts{})
+	a.DB.AutoMigrate(&OwedPayouts{})
+	a.DB.AutoMigrate(&Paid{})
 
 	cut := conf.GetString(config.ConfigPoolCut)
 

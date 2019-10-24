@@ -53,7 +53,7 @@ func TestPayouts_TakePoolCut(t *testing.T) {
 			if err != nil {
 				t.Error(err)
 			}
-			pays := Payouts{
+			pays := OwedPayouts{
 				PoolFeeRate: r,
 			}
 
@@ -76,7 +76,7 @@ func TestPayouts_TakePoolCut(t *testing.T) {
 			cutF := decimal.NewFromFloat(float64(reward)).Mul(r).IntPart()
 			remainingF := reward - cutF
 
-			pays := Payouts{
+			pays := OwedPayouts{
 				PoolFeeRate: r,
 			}
 			remainingI := pays.TakePoolCut(reward)

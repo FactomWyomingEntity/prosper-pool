@@ -72,7 +72,7 @@ var rootCmd = &cobra.Command{
 }
 
 var getConfig = &cobra.Command{
-	Use:    "config",
+	Use:    "config <file-to-write>",
 	Short:  "Write a example config with defaults",
 	PreRun: SoftReadConfig,
 	Args:   cobra.ExactArgs(1),
@@ -84,6 +84,7 @@ var getConfig = &cobra.Command{
 var testStratum = &cobra.Command{
 	Use:    "stratum",
 	Short:  "Launch the stratum server",
+	Hidden: true,
 	PreRun: SoftReadConfig, // TODO: Do a hard read
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -176,6 +177,7 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 var testMiner = &cobra.Command{
 	Use:    "miner",
 	Short:  "Launch a miner",
+	Hidden: true,
 	PreRun: SoftReadConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -226,6 +228,7 @@ var testMiner = &cobra.Command{
 var testSync = &cobra.Command{
 	Use:    "sync",
 	Short:  "Run the pegnet sync",
+	Hidden: true,
 	PreRun: SoftReadConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -253,6 +256,7 @@ var testSync = &cobra.Command{
 var testAccountant = &cobra.Command{
 	Use:    "accountant",
 	Short:  "Run the pool accountant",
+	Hidden: true,
 	PreRun: SoftReadConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
@@ -308,6 +312,7 @@ var testAccountant = &cobra.Command{
 var testAuth = &cobra.Command{
 	Use:    "auth",
 	Short:  "Run the pegnet authenticator",
+	Hidden: true,
 	PreRun: SoftReadConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())

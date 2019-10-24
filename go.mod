@@ -3,12 +3,14 @@ module github.com/FactomWyomingEntity/private-pool
 go 1.13
 
 require (
+	github.com/AdamSLevy/jsonrpc2/v12 v12.0.2-0.20191005213732-3b0dfc9c5f77 // indirect
 	github.com/Factom-Asset-Tokens/base58 v0.0.0-20181227014902-61655c4dd885
-	github.com/Factom-Asset-Tokens/factom v0.0.0-20191021172540-f9e30125a179
+	github.com/Factom-Asset-Tokens/factom v0.0.0-20190911201853-7b283996f02a
 	github.com/andybalholm/cascadia v1.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
 	github.com/aws/aws-sdk-go v1.25.12 // indirect
 	github.com/cenkalti/backoff v2.1.1+incompatible
+	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/disintegration/imaging v1.6.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0 // indirect
@@ -17,12 +19,12 @@ require (
 	github.com/jinzhu/configor v1.1.1 // indirect
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a // indirect
 	github.com/jinzhu/gorm v1.9.11
-	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
 	github.com/pegnet/LXRHash v0.0.0-20190913134745-ca3b8b65a729
 	github.com/pegnet/pegnet v0.1.0-rc4.0.20191003204103-bada247196d7
+	github.com/pegnet/pegnetd v0.1.2-0.20191011183044-5eca2d08a5e8
 	github.com/prometheus/client_golang v1.0.0
 	github.com/qor/admin v0.0.0-20190906081516-5593fc33b920 // indirect
 	github.com/qor/assetfs v0.0.0-20170713023933-ff57fdc13a14 // indirect
