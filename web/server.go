@@ -65,6 +65,8 @@ func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
 	primaryMux := http.NewServeMux()
 	s.Auth = auth
 
+	primaryMux.HandleFunc("/", s.Index)
+
 	// Init a basic "whoami"
 	primaryMux.HandleFunc("/whoami", s.WhoAmI)
 	primaryMux.HandleFunc("/user/owed", s.OwedPayouts)
@@ -72,8 +74,13 @@ func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
 	primaryMux.HandleFunc("/pool/submissions", s.PoolSubmissions)
 	primaryMux.HandleFunc("/api/v1/submitsync", s.MinuteKeeperInfo)
 
+	// Links
+	primaryMux.HandleFunc("/pool", s.PoolLinks)
+	primaryMux.HandleFunc("/users", s.UserLinks)
+
 	// Admin only
 	adminMux := http.NewServeMux()
+	adminMux.HandleFunc("/admin/links", s.AdminLinks)
 	adminMux.HandleFunc("/admin/miners", s.PoolMiners)
 	primaryMux.Handle("/admin/", s.Auth.Authority.Authorize("admin")(adminMux))
 

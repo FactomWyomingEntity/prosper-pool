@@ -14,6 +14,7 @@ var (
 		"bold", "little", "morning", "muddy", "old", "red", "rough", "still", "small",
 		"sparkling", "throbbing", "shy", "wandering", "withered", "wild", "black",
 		"young", "holy", "solitary", "fragrant", "aged", "snowy", "proud", "floral",
+		"tough", "lucky", "evil", "bold", "little", "adament", "boorish", "zealous",
 		"restless", "divine", "polished", "ancient", "purple", "lively", "nameless"}
 	NOUNS = []string{"waterfall", "river", "breeze", "moon", "rain", "wind", "sea", "morning",
 		"snow", "lake", "sunset", "pine", "shadow", "leaf", "dawn", "glitter", "forest",
@@ -22,7 +23,8 @@ var (
 		"haze", "mountain", "night", "pond", "darkness", "snowflake", "silence",
 		"sound", "sky", "shape", "surf", "thunder", "violet", "water", "wildflower",
 		"wave", "water", "resonance", "sun", "wood", "dream", "cherry", "tree", "fog",
-		"frost", "voice", "paper", "frog", "smoke", "star", "dog"}
+		"frost", "voice", "paper", "frog", "smoke", "star", "dog", "cat",
+		"ocean", "book"}
 )
 
 type Name interface {
@@ -38,7 +40,7 @@ func (r RandomName) Haikunate() string {
 }
 
 func NewRandomName(seed int64) Name {
-	name := RandomName{rand.New(rand.New(rand.NewSource(99)))}
+	name := RandomName{rand.New(rand.New(rand.NewSource(seed)))}
 	name.r.Seed(seed)
 	return name
 }

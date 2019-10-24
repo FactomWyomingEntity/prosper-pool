@@ -15,9 +15,54 @@ import (
 	"github.com/FactomWyomingEntity/private-pool/sharesubmit"
 )
 
-// Functions to give details about a given user
+func (s *HttpServices) Nav() []byte {
+	return []byte(`<a href="/users">Users</a> ` +
+		`<a href="/pool">Pool</a> ` +
+		`<a href="/admin/links">Admin</a><br />`)
+}
+
+func (s *HttpServices) Index(w http.ResponseWriter, r *http.Request) {
+	w.Write(s.Nav())
+}
+
+func (s *HttpServices) AdminLinks(w http.ResponseWriter, r *http.Request) {
+	w.Write(s.Nav())
+
+	w.Write([]byte(`
+	<ul>
+		<li><a href="/admin/miners">Miners</a></li>
+	</ul>
+	`))
+}
+
+func (s *HttpServices) UserLinks(w http.ResponseWriter, r *http.Request) {
+	w.Write(s.Nav())
+
+	w.Write([]byte(`
+	<ul>
+		<li><a href="/whoami">WhoAmI?</a></li>
+		<li><a href="/user/owed">Owed</a></li>
+		<li><a href="/auth/login">Login</a></li>
+		<li><a href="/auth/logout">Logout</a></li>
+	</ul>
+	`))
+}
+
+func (s *HttpServices) PoolLinks(w http.ResponseWriter, r *http.Request) {
+	w.Write(s.Nav())
+
+	w.Write([]byte(`
+	<ul>
+		<li><a href="/pool/submissions">Submissions</a></li>
+		<li><a href="/pool/rewards">Rewards</a></li>
+	</ul>
+	`))
+}
 
 func (s *HttpServices) WhoAmI(w http.ResponseWriter, r *http.Request) {
+	w.Write(s.Nav())
+	w.Write([]byte("<pre>"))
+	defer w.Write([]byte("</pre>"))
 	user, err := s.GetCurrentUser(r)
 	if err != nil {
 		_, _ = fmt.Fprintf(w, "Error:%s", err.Error())
@@ -38,6 +83,10 @@ func (s *HttpServices) GetCurrentUser(r *http.Request) (*authentication.User, er
 }
 
 func (s *HttpServices) OwedPayouts(w http.ResponseWriter, r *http.Request) {
+	w.Write(s.Nav())
+	w.Write([]byte("<pre>"))
+	defer w.Write([]byte("</pre>"))
+
 	user, err := s.GetCurrentUser(r)
 	if err != nil {
 		_, _ = fmt.Fprintf(w, "Error:%s", err.Error())
@@ -50,9 +99,9 @@ func (s *HttpServices) OwedPayouts(w http.ResponseWriter, r *http.Request) {
 
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("This page displays the last 100 owed payouts for %s\n", user.UID))
-	for i, iou := range ious {
-		buf.WriteString(fmt.Sprintf("\t%d -> JobID: %d, PEG: %s, Proportion: %s, Shares: %.2f, HashRate: %.2f h\\s\n",
-			i, iou.JobID, FactoshiToFactoid(uint64(iou.Payout)),
+	for _, iou := range ious {
+		buf.WriteString(fmt.Sprintf("\tHeight: %d, PEG: %s, Proportion: %s, Shares: %.2f, HashRate: %.2f h\\s\n",
+			iou.JobID, FactoshiToFactoid(uint64(iou.Payout)),
 			iou.Proportion.Truncate(3).String(), iou.UserDifficuty,
 			iou.HashRate))
 	}
@@ -60,21 +109,27 @@ func (s *HttpServices) OwedPayouts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HttpServices) PoolRewards(w http.ResponseWriter, r *http.Request) {
+	w.Write(s.Nav())
+	w.Write([]byte("<pre>"))
+	defer w.Write([]byte("</pre>"))
 	// Only grab last 100 blocks
 	var rewards []accounting.Payouts
 	s.db.Order("job_id desc").Limit(100).Find(&rewards)
 
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("This page displays the last 100 pool rewards\n"))
-	for i, rew := range rewards {
-		buf.WriteString(fmt.Sprintf("\t%d -> JobID: %d, PEG: %s, Difficulty: %.2f, HashRate: %.2f h\\s\n",
-			i, rew.JobID, FactoshiToFactoid(uint64(rew.PoolReward)),
+	for _, rew := range rewards {
+		buf.WriteString(fmt.Sprintf("\tHeight: %d, PEG: %s, Difficulty: %.2f, HashRate: %.2f h\\s\n",
+			rew.JobID, FactoshiToFactoid(uint64(rew.PoolReward)),
 			rew.PoolDifficuty, rew.TotalHashrate))
 	}
 	_, _ = w.Write(buf.Bytes())
 }
 
 func (s *HttpServices) PoolSubmissions(w http.ResponseWriter, r *http.Request) {
+	w.Write(s.Nav())
+	w.Write([]byte("<pre>"))
+	defer w.Write([]byte("</pre>"))
 	jobid := r.FormValue("jobid")
 	if jobid == "" {
 		_, _ = w.Write([]byte("no jobid provided"))
@@ -103,6 +158,9 @@ func (s *HttpServices) PoolSubmissions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HttpServices) PoolMiners(w http.ResponseWriter, r *http.Request) {
+	w.Write(s.Nav())
+	w.Write([]byte("<pre>"))
+	defer w.Write([]byte("</pre>"))
 	// TODO: Add auth protection
 	if s.StratumServer == nil {
 		_, _ = w.Write([]byte("No stratum server hooked up"))
