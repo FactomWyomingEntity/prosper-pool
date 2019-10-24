@@ -49,7 +49,9 @@ const (
 
 	ConfigWebPort = "Web.Port"
 
-	ConfigStratumRequireAuth = "Stratum.RequireAuth"
+	ConfigStratumRequireAuth    = "Stratum.RequireAuth"
+	ConfigStratumPort           = "Stratum.StratumPort"
+	ConfigStratumWelcomeMessage = "Stratum.WelcomeMessage"
 )
 
 func SetDefaults(conf *viper.Viper) {
@@ -94,6 +96,8 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigWebPort, 7070)
 
 	conf.SetDefault(ConfigStratumRequireAuth, true)
+	conf.SetDefault(ConfigStratumPort, 1234)
+	conf.SetDefault(ConfigStratumWelcomeMessage, "Welcome to Prosper pool! Please visit http://my.pool.url:port for more information.")
 }
 
 func FactomClientFromConfig(conf *viper.Viper) *factom.Client {
