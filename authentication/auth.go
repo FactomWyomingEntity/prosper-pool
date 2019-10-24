@@ -31,8 +31,9 @@ type Authenticator struct {
 
 type User struct {
 	gorm.Model
-	UID  string `gorm:"column:uid"`
-	Role string
+	UID           string `gorm:"column:uid"`
+	Role          string
+	PayoutAddress string `gorm:"default:''"`
 }
 
 type HotfixedAuthIdentity auth_identity.AuthIdentity

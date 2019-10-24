@@ -1,6 +1,7 @@
 package authentication
 
 import (
+	"fmt"
 	"net/http/httptest"
 	"net/url"
 	"time"
@@ -13,7 +14,7 @@ type InviteCode struct {
 	ClaimedBy   string    `gorm:"not null"`
 }
 
-func (a *Authenticator) RegisterUser(username, password, invitecode string) bool {
+func (a *Authenticator) RegisterUser(username, password, invitecode, payoutAddress string) bool {
 	if !a.Claim(invitecode, username) {
 		return false
 	}
@@ -28,6 +29,8 @@ func (a *Authenticator) RegisterUser(username, password, invitecode string) bool
 	mux := a.NewServeMux()
 	resp := httptest.NewRecorder()
 	mux.ServeHTTP(resp, req)
+
+	fmt.Println(a.DB.Model(&User{}).Where("uid = ?", username).Update("payout_address", payoutAddress).Error)
 
 	return true
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type Payouts struct {
+type OwedPayouts struct {
 	Reward // All the reward info
 
 	// PoolFeeRate is the pool cut
@@ -21,11 +21,11 @@ type Payouts struct {
 	PoolDifficuty float64
 	TotalHashrate float64 `gorm:"default:0"`
 
-	UserPayouts []UserPayout `gorm:"foreignkey:JobID"`
+	UserPayouts []UserOwedPayouts `gorm:"foreignkey:JobID"`
 }
 
-func NewPayout(r Reward, poolFeeRate decimal.Decimal, work ShareMap) *Payouts {
-	p := new(Payouts)
+func NewPayout(r Reward, poolFeeRate decimal.Decimal, work ShareMap) *OwedPayouts {
+	p := new(OwedPayouts)
 	p.PoolFeeRate = poolFeeRate
 	p.Reward = r
 	remaining := p.TakePoolCut(p.Reward.PoolReward)
@@ -34,7 +34,7 @@ func NewPayout(r Reward, poolFeeRate decimal.Decimal, work ShareMap) *Payouts {
 	return p
 }
 
-func (p *Payouts) Payouts(work ShareMap, remaining int64) {
+func (p *OwedPayouts) Payouts(work ShareMap, remaining int64) {
 	p.PoolDifficuty = work.TotalDiff
 	var totalPayout int64
 	for user, work := range work.Sums {
@@ -50,7 +50,7 @@ func (p *Payouts) Payouts(work ShareMap, remaining int64) {
 		target := work.Targets[last-1]
 		hashrate := difficulty.EffectiveHashRate(target, last, work.LastShare.Sub(work.FirstShare).Seconds())
 
-		pay := UserPayout{
+		pay := UserOwedPayouts{
 			UserID:           user,
 			UserDifficuty:    work.TotalDifficulty,
 			TotalSubmissions: work.TotalShares,
@@ -71,7 +71,7 @@ func (p *Payouts) Payouts(work ShareMap, remaining int64) {
 
 // TakePoolCut will take the amount owed the pool, and return the
 // remaining rewards to be distributed
-func (p *Payouts) TakePoolCut(remaining int64) int64 {
+func (p *OwedPayouts) TakePoolCut(remaining int64) int64 {
 	if p.PoolFeeRate.IsZero() {
 		return remaining
 	}
@@ -87,7 +87,7 @@ func cut(total int64, prop decimal.Decimal) int64 {
 	return cut.IntPart()
 }
 
-type UserPayout struct {
+type UserOwedPayouts struct {
 	JobID            int32  `gorm:"primary_key"`
 	UserID           string `gorm:"primary_key"`
 	UserDifficuty    float64

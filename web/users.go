@@ -94,7 +94,7 @@ func (s *HttpServices) OwedPayouts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Only grab last 100 blocks
-	var ious []accounting.UserPayout
+	var ious []accounting.UserOwedPayouts
 	s.db.Order("job_id desc").Where("user_id = ?", user.UID).Limit(100).Find(&ious)
 
 	var buf bytes.Buffer
@@ -113,7 +113,7 @@ func (s *HttpServices) PoolRewards(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("<pre>"))
 	defer w.Write([]byte("</pre>"))
 	// Only grab last 100 blocks
-	var rewards []accounting.Payouts
+	var rewards []accounting.OwedPayouts
 	s.db.Order("job_id desc").Limit(100).Find(&rewards)
 
 	var buf bytes.Buffer
