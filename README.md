@@ -48,7 +48,7 @@ https://github.com/qor/auth is used for user management and authentication
 # Usage
 
 ## Example setup
-First, make sure that a postgresql database is running (`docker-compose up -d`), and that `factomd`, `factom-walletd`, and `pegnet` are each running locally. Start the compiled prosper server binary with:
+First, make sure that a postgresql database is running (`docker-compose up -d`), and that `factomd`, is running locally. Start the compiled prosper server binary with:
 
 ```
 ./private-pool
@@ -78,7 +78,6 @@ Available Commands:
   sync        Run the pegnet sync
 
 Flags:
-      --act int         Enable a custom activation height for testing mode
       --config string   Location to config (default "$HOME/.prosper/prosper-pool.toml")
   -h, --help            help for private-pool
       --log string      Change the logging level. Options: 

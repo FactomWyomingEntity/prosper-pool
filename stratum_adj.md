@@ -21,10 +21,10 @@ request
 {
   "method" : "mining.authorize",
   "id": 0,
-  "params": ["username,minerid", "password", "invite-code"]
+  "params": ["username,minerid", "password", "invite-code", "payout-address"]
 }
 ```
-Note: password and invite-code can be empty strings once the username has already been successfully authorized by the pool.
+Note: password, invite-code, and payout addresses are optional once the username has already been successfully authorized by the pool.
 
 response
 ```json
@@ -34,7 +34,7 @@ response
   "error": null
 }
 ```
-The result from an authorize request is usually true (successful), or false. The password may be omitted if the server does not require passwords. Invite code and password should typically only be provided upon the very first authentication for a given username.
+The result from an authorize request is usually true (successful), or false. The password may be omitted if the server does not require passwords. Invite code, password, and payout address should typically only be provided upon the very first authentication for a given username, as they are ignored on subsequent authorize calls.
 
 
 ## mining.get_oprhash
