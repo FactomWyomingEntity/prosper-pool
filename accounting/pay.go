@@ -30,11 +30,12 @@ func (a *Accountant) CalculatePayments() ([]Paid, error) {
 	}
 
 	// Entryhash will not be filled out, since we don't know it yet
-	payments := make([]Paid, len(users))
+	var payments []Paid
 
-	for i, u := range users {
-		payments[i].UserID = u.UID
-		payments[i].PayoutAddress = u.PayoutAddress
+	for _, u := range users {
+		var p Paid
+		p.UserID = u.UID
+		p.PayoutAddress = u.PayoutAddress
 		// Sum up what we paid
 		var paid sql.NullInt64
 		paidRow := a.DB.Table("paids").
@@ -43,7 +44,7 @@ func (a *Accountant) CalculatePayments() ([]Paid, error) {
 		if err != nil {
 			return nil, err
 		}
-		payments[i].TotalPaid = paid.Int64
+		p.TotalPaid = paid.Int64
 
 		// Sum up what we owe
 		var owed sql.NullInt64
@@ -53,9 +54,12 @@ func (a *Accountant) CalculatePayments() ([]Paid, error) {
 		if err != nil {
 			return nil, err
 		}
-		payments[i].TotalOwed = owed.Int64
+		p.TotalOwed = owed.Int64
 
-		payments[i].PaymentAmount = payments[i].TotalOwed - payments[i].TotalPaid
+		p.PaymentAmount = p.TotalOwed - p.TotalPaid
+		if p.PaymentAmount != 0 { // Don't include 0 payments
+			payments = append(payments, p)
+		}
 	}
 
 	return payments, nil

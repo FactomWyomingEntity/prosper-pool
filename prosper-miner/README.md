@@ -17,12 +17,12 @@ First, make sure that [a prosper pool server is running](../README.md#Usage). Th
 ## Notes
 
 * The username provided must be a valid email address.
-* The first time you authenticate a particular username, you must provide an invite code (with `--invitecode` or `-i`) and use the `--password` (or `-p`) flag to enable a password prompt upon startup. *Note: the password should not be provided on the command-line; the `-p` flag is simply a boolean to enable the prompt.*
+* The first time you authenticate a particular username, you must provide an invite code (with `--invitecode` or `-i`) and use the `--password` (or `-p`) flag to enable a password prompt upon startup. You will also need to provide a payout address (`-a`) *Note: the password should not be provided on the command-line; the `-p` flag is simply a boolean to enable the prompt.*
 
-An example of someone connecting to the pool for the first time using the invite-code "invite-EAXPRO" and mining with 4 threads might be:
+An example of someone connecting to the pool for the first time using the invite-code "invite-EAXPRO" and mining with 4 threads might be like below. Once you are registered, you will only need to provide the user field.
 
 ```
-./prosper-miner -s 123.45.67.89:1234 -u user@example.com -t 4 -i invite-EAXPRO -p
+./prosper-miner -s 123.45.67.89:1234 -u user@example.com -t 4 -i invite-EAXPRO -p -a FA2jK2HcLnRdS94dEcU27rF3meoJfpUcZPSinpb7AwQvPRY6RL1Q
 ```
 The password would then be entered and confirmed at the ensuing prompt.
 

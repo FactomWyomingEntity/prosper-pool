@@ -42,7 +42,7 @@ docker-compose up -d
 
 ## User Authentication
 
-https://github.com/qor/auth is used for user management and authentication
+https://github.com/qor/auth is used for user management and authentication. All user registration must be done through a miner and the stratum server.
 
 
 # Usage

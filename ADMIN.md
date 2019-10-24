@@ -47,4 +47,14 @@ The EC address must have some ecs and the FA address must have enough PEG to cov
 ```
 payout-cli pay payments.json FA2jK2HcLnRdS94dEcU27rF3meoJfpUcZPSinpb7AwQvPRY6RL1Q EC3TsJHUs8bzbbVnratBafub6toRYdgzgbR7kWwCW4tqbmyySRmg receipt.json
 
+
+# To ensure the payout worked, wait for the block to complete, then
+pegnetd get tx <entry-hash>
+
+# If the result is the transaction body in json, then the tx was executed by pegnet.
+# If you get back :
+#    'jsonrpc2.Error{Code:-32803, Message:"Transaction Not Found", Data:"no matching tx-id was found"}'
+# Then the tx could have been rejected by pegnet, or the entry did not make
+# it into the blockchain.
+
 ```

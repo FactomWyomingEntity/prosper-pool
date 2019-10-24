@@ -113,6 +113,11 @@ var pay = &cobra.Command{
 			return fmt.Errorf("failed to marshal tx: %s", err.Error())
 		}
 
+		if _, err := batch.Entry.Cost(); err != nil {
+			fmt.Println("If your entry is over 10KB, you can split the pay.json into parts manually.")
+			return fmt.Errorf("error with entry: %s", err.Error())
+		}
+
 		priv, err := poolAddr.GetFsAddress(cl)
 		if err != nil {
 			return fmt.Errorf("unable to get private key: %s\n", err.Error())
