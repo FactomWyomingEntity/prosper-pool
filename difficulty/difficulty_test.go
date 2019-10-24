@@ -117,14 +117,10 @@ func TestTargetFromDifficulty(t *testing.T) {
 	})
 }
 
-//func TestTotalHashes(t *testing.T) {
-//	hashrate := 100 * K
-//	d := time.Second * 5
-//
-//	o := bestHash(hashrate, time.Second*5)
-//	target := bestHash(hashrate, time.Second*5)
-//	doubleTarget :=
-//}
+func TestTotalHashes(t *testing.T) {
+	tar := Target(18446490372542540769)
+	fmt.Println(tar.HashRateFromCustom(time.Second*2 + time.Millisecond*680))
+}
 
 func bestHash(hashrate float64, duration time.Duration) uint64 {
 	var best uint64

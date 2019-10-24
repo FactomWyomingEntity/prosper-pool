@@ -10,13 +10,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/FactomWyomingEntity/private-pool/sharesubmit"
-
-	"github.com/FactomWyomingEntity/private-pool/difficulty"
-
 	"github.com/FactomWyomingEntity/private-pool/accounting"
-
 	"github.com/FactomWyomingEntity/private-pool/authentication"
+	"github.com/FactomWyomingEntity/private-pool/sharesubmit"
 )
 
 // Functions to give details about a given user
@@ -58,7 +54,7 @@ func (s *HttpServices) OwedPayouts(w http.ResponseWriter, r *http.Request) {
 		buf.WriteString(fmt.Sprintf("\t%d -> JobID: %d, PEG: %s, Proportion: %s, Shares: %.2f, HashRate: %.2f h\\s\n",
 			i, iou.JobID, FactoshiToFactoid(uint64(iou.Payout)),
 			iou.Proportion.Truncate(3).String(), iou.UserDifficuty,
-			difficulty.Difficulty(iou.UserDifficuty).HashRate()))
+			iou.HashRate))
 	}
 	_, _ = w.Write(buf.Bytes())
 }
@@ -71,11 +67,9 @@ func (s *HttpServices) PoolRewards(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("This page displays the last 100 pool rewards\n"))
 	for i, rew := range rewards {
-		hashRate := difficulty.Difficulty(rew.PoolDifficuty).HashRate()
-
 		buf.WriteString(fmt.Sprintf("\t%d -> JobID: %d, PEG: %s, Difficulty: %.2f, HashRate: %.2f h\\s\n",
 			i, rew.JobID, FactoshiToFactoid(uint64(rew.PoolReward)),
-			rew.PoolDifficuty, hashRate))
+			rew.PoolDifficuty, rew.TotalHashrate))
 	}
 	_, _ = w.Write(buf.Bytes())
 }

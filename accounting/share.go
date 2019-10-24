@@ -1,6 +1,10 @@
 package accounting
 
 import (
+	"sort"
+	"time"
+
+	"github.com/FactomWyomingEntity/private-pool/difficulty"
 	"github.com/shopspring/decimal"
 )
 
@@ -15,6 +19,7 @@ type Payouts struct {
 	Dust int64
 
 	PoolDifficuty float64
+	TotalHashrate float64 `gorm:"default:0"`
 
 	UserPayouts []UserPayout `gorm:"foreignkey:JobID"`
 }
@@ -35,15 +40,31 @@ func (p *Payouts) Payouts(work ShareMap, remaining int64) {
 	for user, work := range work.Sums {
 		prop := decimal.NewFromFloat(work.TotalDifficulty).Div(decimal.NewFromFloat(p.PoolDifficuty))
 		prop = prop.Truncate(AccountingPrecision)
+
+		// Estimate user hashrate
+		last := 20
+		if work.TotalShares < 20 {
+			last = work.TotalShares
+		}
+
+		target := work.Targets[last-1]
+		hashrate := difficulty.EffectiveHashRate(target, last, work.LastShare.Sub(work.FirstShare).Seconds())
+
 		pay := UserPayout{
 			UserID:           user,
 			UserDifficuty:    work.TotalDifficulty,
 			TotalSubmissions: work.TotalShares,
 			Proportion:       prop,
 			Payout:           cut(remaining, prop),
+			HashRate:         hashrate,
 		}
 		p.UserPayouts = append(p.UserPayouts, pay)
 		totalPayout += pay.Payout
+
+		// Only if a miner mines for at least 20s
+		if work.LastShare.Sub(work.FirstShare) > time.Second*20 {
+			p.TotalHashrate += pay.HashRate
+		}
 	}
 	p.Dust = remaining - totalPayout
 }
@@ -75,6 +96,8 @@ type UserPayout struct {
 	// Proportion denoted with 10000 being 100% and 1 being 0.01%
 	Proportion decimal.Decimal `sql:"type:decimal(20,8);"`
 	Payout     int64           // In PEG
+
+	HashRate float64 `gorm:"default:0"` // Hashrate in h/s
 }
 
 type Reward struct {
@@ -133,11 +156,43 @@ func (m *ShareMap) AddShare(key string, s Share) {
 type ShareSum struct {
 	TotalDifficulty float64
 	TotalShares     int
+
+	FirstShare time.Time
+	LastShare  time.Time
+	Targets    [20]uint64
 }
 
 func (sum *ShareSum) AddShare(s Share) {
+	if sum.FirstShare.IsZero() {
+		sum.FirstShare = time.Now()
+	}
+	sum.LastShare = time.Now()
+
 	sum.TotalDifficulty += s.Difficulty
 	sum.TotalShares++
+	InsertTarget(s.Target, &sum.Targets, sum.TotalShares)
+}
+
+func InsertTarget(t uint64, a *[20]uint64, total int) {
+	if total > 20 {
+		total = 20
+	}
+	index := sort.Search(total, func(i int) bool { return a[i] < t })
+	if index == 20 {
+		return
+	}
+	// Move things down
+	copy(a[index+1:], a[index:])
+	// Insert at index
+	a[index] = t
+}
+
+func InsertSorted(s []int, e int) []int {
+	s = append(s, 0)
+	i := sort.Search(len(s), func(i int) bool { return s[i] > e })
+	copy(s[i+1:], s[i:])
+	s[i] = e
+	return s
 }
 
 // some utils

@@ -3,6 +3,7 @@ package accounting_test
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"testing"
 
 	"github.com/shopspring/decimal"
@@ -164,6 +165,21 @@ func TestNewPayout(t *testing.T) {
 			t.Errorf("dust + pool cut should equal reward")
 		}
 	})
+}
+
+func TestInsertTarget(t *testing.T) {
+	var a [20]uint64
+	for i := 0; i < 10000; i++ {
+		InsertTarget(rand.Uint64(), &a, i)
+	}
+
+	if !sort.SliceIsSorted(a, func(i, j int) bool { return a[i] > a[j] }) {
+		t.Errorf("Not sorted")
+	}
+
+	if a[0] < a[19] {
+		t.Errorf("not sorted")
+	}
 }
 
 func randomShareMap(jobid int32, users int) *ShareMap {
