@@ -24,6 +24,10 @@ What we owe miners is recorded, but no payouts actually occur. This is to be imp
 
 All miner work is stored in memory and saved to postgres at the start of the next block. If the pool is shut down, the miner work for that block is lost and the pool will receive the full payout.
 
+### Stratum RPCs
+
+The RPC documentation, including the PegNet-oriented modifications and additions, can be found [here](stratum_adj.md). To run the Stratum server only (for experimentation and/or debugging purposes) you can run things with the `stratum` command included: `private-pool stratum` and then run a client/miner to connect with it normally (the server will disable strict authentication requirements in this state). This also enables a simControl-esque environment, where server-side commands like `listclients`, `getversion <client-id>`, or `showmessage <client-id> <message>` or client-side commands like `getopr <job-id>` can be entered directly by the user.
+
 
 # Development enviroment
 
