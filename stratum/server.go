@@ -40,6 +40,9 @@ type Server struct {
 
 	// We forward submissions to any listeners
 	submissionExports []chan<- *ShareSubmission
+
+	stratumPort    int
+	welcomeMessage string
 }
 
 type ShareSubmission struct {
@@ -76,6 +79,8 @@ func NewServer(conf *viper.Viper) (*Server, error) {
 	s.configuration.RequireAuth = conf.GetBool(config.ConfigStratumRequireAuth)
 	// Stub this out so we don't get a nil dereference
 	s.ShareGate = new(AlwaysYesShareCheck)
+	s.stratumPort = conf.GetInt(config.ConfigStratumPort)
+	s.welcomeMessage = conf.GetString(config.ConfigStratumWelcomeMessage)
 
 	return s, nil
 }
@@ -106,7 +111,7 @@ func (s *Server) Notify(job *Job) {
 
 func (s *Server) Listen(ctx context.Context) {
 	// TODO: Change this with config file
-	host := fmt.Sprintf("0.0.0.0:1234")
+	host := fmt.Sprintf("0.0.0.0:%d", s.stratumPort)
 	addr, err := net.ResolveTCPAddr("tcp", host)
 	if err != nil {
 		log.WithError(err).Fatal("failed to launch stratum server")
@@ -297,7 +302,7 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 
 	switch req.Method {
 	case "mining.authorize":
-		// "params": ["username,minerid", "password"]
+		// "params": ["username,minerid", "password", "invitecode", "payoutaddress"]
 		if len(params) < 1 {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
 			return
@@ -315,6 +320,7 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 		if s.Auth != nil && s.configuration.RequireAuth {
 			if !s.Auth.Exists(client.username) {
 				// Did they provide a password and code?
+				// TODO: check for payout address, as well (params[3])
 				if len(params) >= 3 && s.Auth.RegisterUser(client.username, params[1], params[2]) {
 					// User registered! Let them through by falling out of this if statement
 				} else {
@@ -333,6 +339,7 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		} else {
 			client.authorized = true
+			s.ShowMessage(client.sessionID, s.welcomeMessage)
 		}
 	case "mining.get_oprhash":
 		if len(params) < 1 {
@@ -345,8 +352,6 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 
 		if err := client.enc.Encode(GetOPRHashResponse(req.ID, dummyOPRHash)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
-		} else {
-			client.authorized = true
 		}
 	case "mining.submit":
 		// "params": ["username", "jobID", "nonce", "oprHash", "target"]

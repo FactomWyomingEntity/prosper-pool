@@ -42,6 +42,7 @@ func init() {
 	rootCmd.PersistentFlags().Bool("testing", false, "Enable testing mode")
 	rootCmd.PersistentFlags().Int("act", 0, "Enable a custom activation height for testing mode")
 	rootCmd.PersistentFlags().Bool("rauth", true, "Enable miners to use actual registered usernames")
+	rootCmd.PersistentFlags().Int("sport", 1234, "Stratum server host port")
 }
 
 // Execute is cobra's entry point
@@ -158,6 +159,7 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 	_ = viper.BindPFlag(config.ConfigSQLPort, cmd.Flags().Lookup("pport"))
 	_ = viper.BindPFlag(config.LoggingLevel, cmd.Flags().Lookup("log"))
 	_ = viper.BindPFlag(config.ConfigStratumRequireAuth, cmd.Flags().Lookup("rauth"))
+	_ = viper.BindPFlag(config.ConfigStratumPort, cmd.Flags().Lookup("sport"))
 
 	// Handle testing mode
 	if ok, _ := cmd.Flags().GetBool("testing"); ok {
@@ -179,7 +181,7 @@ var testMiner = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		exit.GlobalExitHandler.AddCancel(cancel)
 
-		client, err := stratum.NewClient("user", "miner", "password", "invitecode", "0.0.1")
+		client, err := stratum.NewClient("user", "miner", "password", "invitecode", "payoutaddress", "0.0.1")
 		if err != nil {
 			panic(err)
 		}

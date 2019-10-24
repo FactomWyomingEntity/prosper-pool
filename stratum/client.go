@@ -34,8 +34,9 @@ type Client struct {
 	currentOPRHash string
 	currentTarget  uint64
 
-	password   string // password and invitecode are only needed for initial user registration
-	invitecode string
+	password      string // only needed for initial user registration
+	invitecode    string // only needed for initial user registration
+	payoutaddress string // only needed for initial user registration
 
 	miners    []*ControlledMiner
 	successes chan *mining.Winner
@@ -60,7 +61,7 @@ func (c *ControlledMiner) SendCommand(command *mining.MinerCommand) bool {
 	}
 }
 
-func NewClient(username, minername, password, invitecode, version string) (*Client, error) {
+func NewClient(username, minername, password, invitecode, payoutaddress, version string) (*Client, error) {
 	c := new(Client)
 	c.autoreconnect = true
 	c.version = version
@@ -68,6 +69,7 @@ func NewClient(username, minername, password, invitecode, version string) (*Clie
 	c.minername = minername
 	c.password = password
 	c.invitecode = invitecode
+	c.payoutaddress = payoutaddress
 	c.currentJobID = "1"
 	c.currentOPRHash = "00037f39cf870a1f49129f9c82d935665d352ffd25ea3296208f6f7b16fd654f"
 	c.currentTarget = 0xfffe000000000000
@@ -135,7 +137,7 @@ func (c *Client) Handshake() error {
 		return err
 	}
 
-	return c.Authorize(fmt.Sprintf("%s,%s", c.username, c.minername), c.password, c.invitecode)
+	return c.Authorize(fmt.Sprintf("%s,%s", c.username, c.minername), c.password, c.invitecode, c.payoutaddress)
 }
 
 // InitConn will not start the handshake process. Good for unit tests
@@ -156,14 +158,15 @@ func (c *Client) WaitThenConnect(address, waittime string) error {
 }
 
 // Authorize against stratum pool
-func (c *Client) Authorize(username, password, invitecode string) error {
-	req := AuthorizeRequest(username, password, invitecode)
+func (c *Client) Authorize(username, password, invitecode, payoutaddress string) error {
+	req := AuthorizeRequest(username, password, invitecode, payoutaddress)
 	c.Lock()
 	c.requestsMade[req.ID] = func(resp Response) {
 		var result bool
 		if err := resp.FitResult(&result); err == nil {
 			if result == false {
-				log.Errorf("AuthorizeResponse is false. You may not be mining for your account!")
+				log.Errorf("AuthorizeResponse is false. Rather than contributing uncredited mining, shutting down client.")
+				c.Close()
 			} else {
 				log.Infof("AuthorizeResponse result: %t\n", result)
 			}
@@ -217,7 +220,7 @@ func (c *Client) Submit(username, jobID, nonce, oprHash, target string) error {
 	c.requestsMade[req.ID] = func(resp Response) {
 		var result bool
 		if err := resp.FitResult(&result); err == nil {
-			log.Debug("Submission result: %t\n", result)
+			log.Debugf("Submission result: %t\n", result)
 		}
 	}
 	c.Unlock()

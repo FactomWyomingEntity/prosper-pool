@@ -39,6 +39,7 @@ func init() {
 	rootCmd.Flags().StringP("user", "u", "", "Username to log into the mining pool")
 	rootCmd.Flags().StringP("minerid", "m", GenerateMinerID(), "Minerid should be unique per mining machine")
 	rootCmd.Flags().StringP("invitecode", "i", "", "Invite code for initial user registration")
+	rootCmd.Flags().StringP("payoutaddress", "a", "", "Address to receive payments at (for initial user registration)")
 
 	rootCmd.Flags().BoolP("password", "p", false, "Enable password prompt for user registration")
 
@@ -102,8 +103,9 @@ var rootCmd = &cobra.Command{
 		}
 
 		invitecode, _ := cmd.Flags().GetString("invitecode")
+		payoutaddress, _ := cmd.Flags().GetString("payoutaddress")
 
-		client, err := stratum.NewClient(username, minerid, password, invitecode, "0.0.1")
+		client, err := stratum.NewClient(username, minerid, password, invitecode, payoutaddress, "0.0.1")
 		if err != nil {
 			panic(err)
 		}

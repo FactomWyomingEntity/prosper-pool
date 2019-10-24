@@ -23,7 +23,7 @@ func TestClient_Authorize(t *testing.T) {
 	require.NoError(err)
 	require.False(isPrefix)
 
-	err = miner.Authorize("user,miner", "password")
+	err = miner.Authorize("user,miner", "password", "invitecode", "payoutaddress")
 	require.NoError(err)
 
 	data, isPrefix, err = r.ReadLine()
@@ -90,7 +90,7 @@ func TestClient_Submit(t *testing.T) {
 	require.NoError(err)
 	require.False(isPrefix)
 
-	err = miner.Authorize("user,miner", "password")
+	err = miner.Authorize("user,miner", "password", "invitecode", "payoutaddress")
 	require.NoError(err)
 
 	data, isPrefix, err = r.ReadLine()
