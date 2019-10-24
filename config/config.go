@@ -62,7 +62,7 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigSQLUsername, "postgres")
 	conf.SetDefault(ConfigSQLPassword, "password")
 
-	conf.SetDefault(ConfigFactomdLocation, "http://localhost:8088/v2")
+	conf.SetDefault(ConfigFactomdLocation, "http://localhost:8088")
 
 	conf.SetDefault(ConfigPegnetPollingPeriod, time.Second*2)
 	conf.SetDefault(ConfigPegnetRetryPeriod, time.Second*5)
@@ -104,7 +104,7 @@ func FactomClientFromConfig(conf *viper.Viper) *factom.Client {
 	cl := factom.NewClient()
 	cl.FactomdServer = conf.GetString(ConfigFactomdLocation)
 	// We don't use walletd
-	cl.WalletdServer = conf.GetString("http://localhost:8089/v2")
+	cl.WalletdServer = conf.GetString("http://localhost:8089")
 
 	return cl
 }

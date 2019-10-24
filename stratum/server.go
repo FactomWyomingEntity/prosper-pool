@@ -321,7 +321,7 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 			if !s.Auth.Exists(client.username) {
 				// Did they provide a password and code?
 				// TODO: check for payout address, as well (params[3])
-				if len(params) >= 3 && s.Auth.RegisterUser(client.username, params[1], params[2]) {
+				if len(params) >= 3 && s.Auth.RegisterUser(client.username, params[1], params[2], params[3]) {
 					// User registered! Let them through by falling out of this if statement
 				} else {
 					// User rejected

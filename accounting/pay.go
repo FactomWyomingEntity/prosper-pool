@@ -2,6 +2,7 @@ package accounting
 
 import (
 	"database/sql"
+	"fmt"
 
 	"github.com/FactomWyomingEntity/private-pool/authentication"
 	"github.com/jinzhu/gorm"
@@ -33,6 +34,7 @@ func (a *Accountant) CalculatePayments() ([]Paid, error) {
 
 	for i, u := range users {
 		payments[i].UserID = u.UID
+		payments[i].PayoutAddress = u.PayoutAddress
 		// Sum up what we paid
 		var paid sql.NullInt64
 		paidRow := a.DB.Table("paids").
@@ -60,6 +62,27 @@ func (a *Accountant) CalculatePayments() ([]Paid, error) {
 }
 
 func (a *Accountant) WritePayments(payments []Paid) error {
+	if len(payments) == 0 {
+		return fmt.Errorf("no payments to record")
+	}
 
-	return nil
+	if payments[0].EntryHash == "" {
+		return fmt.Errorf("this is not a receipt, no entryhash")
+	}
+	var f Paid
+	res := a.DB.Model(&Paid{}).Where("entry_hash = ?", payments[0].EntryHash).First(&f)
+	if res.RowsAffected > 0 {
+		return fmt.Errorf("this tx is already recorded")
+	}
+
+	tx := a.DB.Begin()
+	for _, payment := range payments {
+		err := tx.Create(&payment).Error
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	return tx.Commit().Error
 }

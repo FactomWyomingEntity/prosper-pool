@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/FactomWyomingEntity/private-pool/web"
@@ -21,6 +22,7 @@ func init() {
 	db.AddCommand(makeAdmin)
 	db.AddCommand(makeCode)
 	db.AddCommand(makePayments)
+	db.AddCommand(recordPayments)
 	rootCmd.AddCommand(db)
 }
 
@@ -31,8 +33,58 @@ var db = &cobra.Command{
 		"The cli calls interact directly with the database, so care should be taken.",
 }
 
+var recordPayments = &cobra.Command{
+	Use:     "record <receipt.json>",
+	Short:   "Record the pool payout",
+	Example: "prosper db record",
+	Args:    cobra.ExactArgs(1),
+	PreRun:  SoftReadConfig,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		info, err := os.Stat(args[0])
+		exists := info != nil && !os.IsNotExist(err)
+		if !exists {
+			return fmt.Errorf("no recipt file found at %s", args[0])
+		}
+
+		db, err := database.New(viper.GetViper())
+		if err != nil {
+			return err
+		}
+
+		a, err := accounting.NewAccountant(viper.GetViper(), db.DB)
+		if err != nil {
+			return err
+		}
+
+		file, err := os.OpenFile(args[0], os.O_RDONLY, 0666)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		data, err := ioutil.ReadAll(file)
+		if err != nil {
+			return err
+		}
+
+		var payments []accounting.Paid
+		err = json.Unmarshal(data, &payments)
+		if err != nil {
+			return err
+		}
+
+		err = a.WritePayments(payments)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Payment data recorded")
+		return nil
+	},
+}
+
 var makePayments = &cobra.Command{
-	Use:     "payout <file.payment>",
+	Use:     "payout <pay.json>",
 	Short:   "Will construct a payout tx for the pool",
 	Example: "prosper db payout",
 	Args:    cobra.ExactArgs(1),
@@ -73,6 +125,7 @@ var makePayments = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		defer file.Close()
 
 		_, err = file.Write(data)
 		if err != nil {

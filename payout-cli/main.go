@@ -18,8 +18,8 @@ import (
 
 func init() {
 	// Defaults
-	rootCmd.Flags().StringP("factomdhost", "s", "localhost:8088", "factomd api url")
-	rootCmd.Flags().StringP("walletdhost", "w", "localhost:8089", "factom-walletd url")
+	rootCmd.PersistentFlags().StringP("factomdhost", "s", "http://localhost:8088", "factomd api url")
+	rootCmd.PersistentFlags().StringP("walletdhost", "w", "http://localhost:8089", "factom-walletd url")
 
 	rootCmd.AddCommand(pay)
 }
@@ -45,18 +45,30 @@ var rootCmd = &cobra.Command{
 }
 
 var pay = &cobra.Command{
-	Use:   "pay <pay.payment file> <source-FA> <ECAddress>",
+	Use:   "pay <pay.json file> <source-FA> <ECAddress> <reciept.json>",
 	Short: "Pay users on pegnet",
-	Args:  cobra.ExactArgs(3),
+	Args:  cobra.ExactArgs(4),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		filename, source, payer := args[0], args[1], args[2]
-		fmt.Println(args)
+		filename, source, payer, receipt := args[0], args[1], args[2], args[3]
+
+		info, err := os.Stat(receipt)
+		exists := info != nil && !os.IsNotExist(err)
+		if exists {
+			return fmt.Errorf("%s already exists. Receipt must be a new file", args[0])
+		}
 
 		cl := factomdClient(cmd)
 		file, err := os.OpenFile(filename, os.O_RDONLY, 0777)
 		if err != nil {
 			return fmt.Errorf("error opening file: %s", err.Error())
 		}
+		defer file.Close()
+
+		recFile, err := os.OpenFile(receipt, os.O_CREATE|os.O_RDWR, 0666)
+		if err != nil {
+			return err
+		}
+		defer recFile.Close()
 
 		data, err := ioutil.ReadAll(file)
 		if err != nil {
@@ -85,6 +97,7 @@ var pay = &cobra.Command{
 			}
 			tx.Input.Amount = uint64(pay.PaymentAmount)
 			tx.Input.Address = poolAddr
+			tx.Input.Type = fat2.PTickerPEG
 			tx.Transfers = make([]fat2.AddressAmountTuple, 1)
 			tx.Transfers[0].Amount = uint64(pay.PaymentAmount)
 			tx.Transfers[0].Address, err = factom.NewFAAddress(pay.PayoutAddress)
@@ -122,6 +135,20 @@ var pay = &cobra.Command{
 			return fmt.Errorf("unable to submit entry: %s", err.Error())
 		}
 
+		for i := range payments {
+			payments[i].EntryHash = batch.Entry.Hash.String()
+		}
+
+		data, err = json.Marshal(payments)
+		if err != nil {
+			fmt.Printf("failed to make reciept: %s\n", err.Error())
+		} else {
+			_, err = recFile.Write(data)
+			if err != nil {
+				fmt.Printf("failed to make reciept: %s\n", err.Error())
+			}
+		}
+
 		fmt.Println("Payment submitted to the network")
 		fmt.Printf("EntryHash: %s\n", batch.Entry.Hash.String())
 		fmt.Printf("   Commit: %s\n", txid.String())
@@ -134,5 +161,8 @@ func factomdClient(cmd *cobra.Command) *factom.Client {
 	cl := factom.NewClient()
 	cl.FactomdServer, _ = cmd.Flags().GetString("factomdhost")
 	cl.WalletdServer, _ = cmd.Flags().GetString("walletdhost")
+
+	//cl.Factomd.DebugRequest = true
+	//cl.Walletd.DebugRequest = true
 	return cl
 }

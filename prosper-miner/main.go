@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Factom-Asset-Tokens/factom"
+
 	"github.com/FactomWyomingEntity/private-pool/exit"
 	"github.com/FactomWyomingEntity/private-pool/stratum"
 	log "github.com/sirupsen/logrus"
@@ -104,6 +106,11 @@ var rootCmd = &cobra.Command{
 
 		invitecode, _ := cmd.Flags().GetString("invitecode")
 		payoutaddress, _ := cmd.Flags().GetString("payoutaddress")
+		_, err := factom.NewFAAddress(payoutaddress)
+		if err != nil {
+			fmt.Printf("%s is not a valid FA address: %s", payoutaddress, err.Error())
+			os.Exit(1)
+		}
 
 		client, err := stratum.NewClient(username, minerid, password, invitecode, payoutaddress, "0.0.1")
 		if err != nil {
