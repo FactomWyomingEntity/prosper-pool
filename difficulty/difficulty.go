@@ -138,7 +138,7 @@ func CalculateMinimumDifficultyFromOPRs(oprs []*grader.GradingOPR, cutoff int) u
 //		cutoff		The targeted index difficulty estimate
 func CalculateMinimumDifficulty(spot int, difficulty uint64, cutoff int) uint64 {
 	// Calculate the effective hash rate of the network in hashes/s
-	hashrate := EffectiveHashRate(difficulty, spot)
+	hashrate := EffectiveHashRate(difficulty, spot, MiningPeriodSeconds)
 
 	// Given that hashrate, aim to be above the cutoff
 	floor := ExpectedMinimumDifficulty(hashrate, cutoff)
@@ -148,7 +148,7 @@ func CalculateMinimumDifficulty(spot int, difficulty uint64, cutoff int) uint64 
 // The effective hashrate of the network given the difficulty of the 50th opr
 // sorted by difficulty.
 // Using https://github.com/WhoSoup/pegnet/wiki/Mining-Probabilities
-func EffectiveHashRate(min uint64, spot int) float64 {
+func EffectiveHashRate(min uint64, spot int, seconds float64) float64 {
 	minF := big.NewFloat(float64(min))
 
 	// 2^64
@@ -161,7 +161,7 @@ func EffectiveHashRate(min uint64, spot int) float64 {
 	den := new(big.Float).Sub(space, minF)
 
 	ehr := new(big.Float).Quo(num, den)
-	ehr = ehr.Quo(ehr, big.NewFloat(MiningPeriodSeconds))
+	ehr = ehr.Quo(ehr, big.NewFloat(seconds))
 	f, _ := ehr.Float64()
 	return f
 }

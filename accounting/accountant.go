@@ -5,17 +5,13 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/FactomWyomingEntity/private-pool/difficulty"
-
-	"github.com/FactomWyomingEntity/private-pool/stratum"
-
-	"github.com/shopspring/decimal"
-
 	"github.com/FactomWyomingEntity/private-pool/config"
-	"github.com/spf13/viper"
-
+	"github.com/FactomWyomingEntity/private-pool/difficulty"
+	"github.com/FactomWyomingEntity/private-pool/stratum"
 	"github.com/jinzhu/gorm"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 var (

@@ -16,6 +16,7 @@ func BenchmarkNonceRotate(b *testing.B) {
 
 func testIncrement(b *testing.B) {
 	ni := NewNonceIncrementer(math.MaxUint32, 1)
+	ni.Nonce = append(ni.Nonce, []byte{0, 0, 0, 0, 0, 0}...)
 	for i := 0; i < b.N; i++ {
 		ni.NextNonce()
 	}
