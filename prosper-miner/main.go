@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -156,7 +157,12 @@ func OpenConfig(cmd *cobra.Command, args []string) error {
 	configPath, _ := cmd.Flags().GetString("config")
 	configCustom := true
 	if configPath == "" {
-		// TODO: Fix windows to be /Users/
+		if runtime.GOOS == "windows" {
+			u, err := user.Current()
+			if err == nil {
+				_ = os.Setenv("HOME", u.HomeDir)
+			}
+		}
 		configPath = "$HOME/.prosper/prosper-miner.toml" // Default
 		configCustom = false
 	}
