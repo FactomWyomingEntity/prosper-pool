@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Factom-Asset-Tokens/factom"
+	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/FactomWyomingEntity/private-pool/database"
 	"github.com/jinzhu/gorm"
 	"github.com/pegnet/pegnet/modules/grader"
@@ -23,7 +24,7 @@ func InsertGradeBlock(tx *gorm.DB, eblock *factom.EBlock, graded grader.GradedBl
 		EbSequence:  int(eblock.Sequence),
 	}
 
-	return tx.Create(&next).Error
+	return tx.FirstOrCreate(&next).Error
 }
 
 func (n *Node) Grade(ctx context.Context, block *factom.EBlock) (grader.GradedBlock, error) {
@@ -32,12 +33,12 @@ func (n *Node) Grade(ctx context.Context, block *factom.EBlock) (grader.GradedBl
 		return nil, nil
 	}
 
-	if *block.ChainID != OPRChain {
+	if *block.ChainID != config.OPRChain {
 		return nil, fmt.Errorf("trying to grade a non-opr chain")
 	}
 
 	ver := uint8(1)
-	if block.Height >= GradingV2Activation {
+	if block.Height >= config.GradingV2Activation {
 		ver = 2
 	}
 
@@ -69,7 +70,7 @@ func (n *Node) Grade(ctx context.Context, block *factom.EBlock) (grader.GradedBl
 		err = g.AddOPR(entry.Hash[:], extids, entry.Content)
 		if err != nil {
 			// This is a noisy debug print
-			// log.WithError(err).WithFields(log.Fields{"hash": entry.Hash.String()}).Debug("failed to add opr")
+			// pegdLog.WithError(err).WithFields(log.Fields{"hash": entry.Hash.String()}).Debug("failed to add opr")
 		}
 	}
 

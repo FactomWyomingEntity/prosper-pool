@@ -21,6 +21,7 @@ import (
 // we are guaranteed to always sync in order. And most blocks are filled
 // with oprs anyway, so eblock syncing doesn't buy much.
 func (n *Node) DBlockSync(ctx context.Context) {
+	n.justBooted = true
 	pollingPeriod := n.config.GetDuration(config.ConfigPegnetPollingPeriod)
 	retryPeriod := n.config.GetDuration(config.ConfigPegnetRetryPeriod)
 
@@ -38,7 +39,7 @@ OuterSyncLoop:
 		//	we will want to switch the client.
 		err := heights.Get(nil, n.FactomClient)
 		if err != nil {
-			log.WithError(err).WithFields(log.Fields{}).Errorf("failed to fetch heights")
+			pegdLog.WithError(err).WithFields(log.Fields{}).Errorf("failed to fetch heights")
 			time.Sleep(retryPeriod)
 			continue // Loop will just keep retrying until factomd is reached
 		}
@@ -47,17 +48,25 @@ OuterSyncLoop:
 			// We are currently synced, nothing to do. If we are above it, the factomd could
 			// be rebooted
 			// TODO: Reduce polling period depending on what minute we are in
-			time.Sleep(pollingPeriod)
-			continue
+
+			if n.Sync.Synced == int32(heights.DirectoryBlock) && n.justBooted {
+				// We want to send the last job down
+				n.Sync.Synced--
+			} else {
+				time.Sleep(pollingPeriod)
+				continue
+			}
 		}
 
 		var totalDur time.Duration
 		var iterations int
 
+		n.justBooted = false
 		begin := time.Now()
 		for n.Sync.Synced < int32(heights.DirectoryBlock) {
+			current := n.Sync.Synced + 1
 			start := time.Now()
-			hLog := log.WithFields(log.Fields{"height": n.Sync.Synced + 1})
+			hLog := pegdLog.WithFields(log.Fields{"height": current, "dheight": heights.DirectoryBlock, "hooks": len(n.hooks)})
 			if ctx.Err() != nil {
 				return // ctx is cancelled
 			}
@@ -73,7 +82,7 @@ OuterSyncLoop:
 			// We are not synced, so we need to iterate through the dblocks and sync them
 			// one by one. We can only sync our current synced height +1
 			// TODO: This skips the genesis block. I'm sure that is fine
-			block, err := n.SyncBlock(ctx, tx, uint32(n.Sync.Synced+1))
+			block, err := n.SyncBlock(ctx, tx, uint32(current))
 			if err != nil {
 				hLog.WithError(err).Errorf("failed to sync height")
 				// If we fail, we backout to the outer loop. This allows error handling on factomd state to be a bit
@@ -90,7 +99,7 @@ OuterSyncLoop:
 
 			n.Sync.Synced++
 
-			dbErr := tx.Create(n.Sync)
+			dbErr := tx.FirstOrCreate(n.Sync)
 			if dbErr.Error != nil {
 				n.Sync.Synced--
 				hLog.WithError(err).Errorf("unable to update synced metadata")
@@ -115,6 +124,7 @@ OuterSyncLoop:
 			}
 
 			elapsed := time.Since(start)
+
 			hLog.WithFields(log.Fields{"took": elapsed}).Debugf("synced")
 
 			// TODO: Insert hook for mining
@@ -123,10 +133,16 @@ OuterSyncLoop:
 
 			// Send the new block to anyone listening
 			// TODO: Ensure this logic is correct.
-			if n.Sync.Synced-1 == int32(heights.DirectoryBlock) {
+			hook := PegnetdHook{
+				GradedBlock: block,
+				Top:         current == int32(heights.DirectoryBlock),
+				Height:      current,
+			}
+			// Don't bother nil blocks
+			if hook.GradedBlock != nil {
 				for i := range n.hooks {
 					select {
-					case n.hooks[i] <- block:
+					case n.hooks[i] <- hook:
 					default:
 
 					}
@@ -155,7 +171,7 @@ OuterSyncLoop:
 // An error should then be returned. The context should be respected if it is
 // cancelled
 func (n *Node) SyncBlock(ctx context.Context, tx *gorm.DB, height uint32) (grader.GradedBlock, error) {
-	fLog := log.WithFields(log.Fields{"height": height})
+	fLog := pegdLog.WithFields(log.Fields{"height": height})
 	if err := ctx.Err(); err != nil { // Just an example about how to handle it being cancelled
 		return nil, err
 	}
@@ -167,7 +183,7 @@ func (n *Node) SyncBlock(ctx context.Context, tx *gorm.DB, height uint32) (grade
 	}
 
 	// First, gather all entries we need from factomd
-	oprEBlock := dblock.EBlock(OPRChain)
+	oprEBlock := dblock.EBlock(config.OPRChain)
 	if oprEBlock != nil {
 		if err := multiFetch(oprEBlock, n.FactomClient); err != nil {
 			return nil, err
@@ -196,7 +212,7 @@ func (n *Node) SyncBlock(ctx context.Context, tx *gorm.DB, height uint32) (grade
 					Identity:        winners[i].OPR.GetID(),
 					EntryHash:       winners[i].EntryHash,
 				}
-				if dbErr := tx.Create(&payout); dbErr.Error != nil {
+				if dbErr := tx.FirstOrCreate(&payout); dbErr.Error != nil {
 					return nil, dbErr.Error
 				}
 			}

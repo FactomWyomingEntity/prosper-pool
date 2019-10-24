@@ -8,13 +8,15 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/FactomWyomingEntity/private-pool/accounting"
-	"github.com/FactomWyomingEntity/private-pool/auth"
+	"github.com/FactomWyomingEntity/private-pool/authentication"
 	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/FactomWyomingEntity/private-pool/database"
+	"github.com/FactomWyomingEntity/private-pool/engine"
 	"github.com/FactomWyomingEntity/private-pool/exit"
 	"github.com/FactomWyomingEntity/private-pool/loghelp"
 	"github.com/FactomWyomingEntity/private-pool/pegnet"
@@ -30,11 +32,16 @@ func init() {
 	rootCmd.AddCommand(testSync)
 	rootCmd.AddCommand(testAccountant)
 	rootCmd.AddCommand(testAuth)
+	rootCmd.AddCommand(testStratum)
+	rootCmd.AddCommand(getConfig)
 
+	rootCmd.PersistentFlags().String("config", "$HOME/.prosper/prosper-pool.toml", "Location to config")
 	rootCmd.PersistentFlags().String("log", "info", "Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal'")
 	rootCmd.PersistentFlags().String("phost", "192.168.32.2", "Postgres host url")
 	rootCmd.PersistentFlags().Int("pport", 5432, "Postgres host port")
-	testMiner.Flags().Bool("v", false, "Verbosity (if enabled, print messages)")
+	rootCmd.PersistentFlags().Bool("testing", false, "Enable testing mode")
+	rootCmd.PersistentFlags().Int("act", 0, "Enable a custom activation height for testing mode")
+	rootCmd.PersistentFlags().Bool("rauth", true, "Enable miners to use actual registered usernames")
 }
 
 // Execute is cobra's entry point
@@ -49,7 +56,34 @@ var rootCmd = &cobra.Command{
 	Use:              "private-pool",
 	Short:            "Launch the private pool",
 	PersistentPreRun: rootPreRunSetup,
-	PreRun:           SoftReadConfig, // TODO: Do a hard read
+	PreRunE:          HardReadConfig,
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, cancel := context.WithCancel(context.Background())
+		exit.GlobalExitHandler.AddCancel(cancel)
+
+		pool, err := engine.Setup(viper.GetViper())
+		if err != nil {
+			log.WithError(err).Fatal("failed to launch pool")
+		}
+
+		pool.Run(ctx)
+	},
+}
+
+var getConfig = &cobra.Command{
+	Use:    "config",
+	Short:  "Write a example config with defaults",
+	PreRun: SoftReadConfig,
+	Args:   cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(viper.WriteConfigAs(args[0]))
+	},
+}
+
+var testStratum = &cobra.Command{
+	Use:    "stratum",
+	Short:  "Launch the stratum server",
+	PreRun: SoftReadConfig, // TODO: Do a hard read
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
 		exit.GlobalExitHandler.AddCancel(cancel)
@@ -76,6 +110,14 @@ var rootCmd = &cobra.Command{
 					case "getversion":
 						if len(words) > 1 {
 							s.GetVersion(words[1])
+						}
+					case "notify":
+						if len(words) > 3 {
+							s.SingleClientNotify(words[1], words[2], words[3], "")
+						}
+					case "settarget":
+						if len(words) > 2 {
+							s.SetTarget(words[1], words[2])
 						}
 					case "reconnect":
 						if len(words) > 4 {
@@ -115,10 +157,20 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 	_ = viper.BindPFlag(config.ConfigSQLHost, cmd.Flags().Lookup("phost"))
 	_ = viper.BindPFlag(config.ConfigSQLPort, cmd.Flags().Lookup("pport"))
 	_ = viper.BindPFlag(config.LoggingLevel, cmd.Flags().Lookup("log"))
+	_ = viper.BindPFlag(config.ConfigStratumRequireAuth, cmd.Flags().Lookup("rauth"))
+
+	// Handle testing mode
+	if ok, _ := cmd.Flags().GetBool("testing"); ok {
+		act, _ := cmd.Flags().GetUint32("act")
+		config.GradingV2Activation = act
+		config.PegnetActivation = act
+		config.GradingV2Activation = act
+		config.TransactionConversionActivation = act
+	}
 
 }
 
-// TODO: Move testMiner to it's own binary
+// TODO: Move testMiner to its own binary
 var testMiner = &cobra.Command{
 	Use:    "miner",
 	Short:  "Launch a miner",
@@ -127,19 +179,24 @@ var testMiner = &cobra.Command{
 		ctx, cancel := context.WithCancel(context.Background())
 		exit.GlobalExitHandler.AddCancel(cancel)
 
-		verbosityEnabled, _ := cmd.Flags().GetBool("v")
-		client, err := stratum.NewClient(verbosityEnabled)
+		client, err := stratum.NewClient("user", "miner", "password", "invitecode", "0.0.1")
 		if err != nil {
 			panic(err)
 		}
+
+		exit.GlobalExitHandler.AddExit(func() error {
+			return client.Close()
+		})
 
 		err = client.Connect("localhost:1234")
 		if err != nil {
 			panic(err)
 		}
 
+		client.Handshake()
+
+		keyboardReader := bufio.NewReader(os.Stdin)
 		go func() {
-			keyboardReader := bufio.NewReader(os.Stdin)
 			for {
 				userCommand, _ := keyboardReader.ReadString('\n')
 				words := strings.Fields(userCommand)
@@ -159,6 +216,7 @@ var testMiner = &cobra.Command{
 				}
 			}
 		}()
+
 		client.Listen(ctx)
 	},
 }
@@ -216,7 +274,7 @@ var testAccountant = &cobra.Command{
 					return
 				}
 
-				job := fmt.Sprintf("%d", i)
+				job := int32(i)
 				a.NewJob(job) // Force the new job
 				for u := 0; u < users; u++ {
 					for w := 0; w < 3; w++ {
@@ -262,7 +320,10 @@ var testAuth = &cobra.Command{
 			return db.Close()
 		})
 
-		a := auth.NewAuthenticator(db.DB)
+		a, err := authentication.NewAuthenticator(viper.GetViper(), db.DB)
+		if err != nil {
+			panic(err)
+		}
 
 		mux := http.NewServeMux()
 
@@ -288,15 +349,46 @@ var testAuth = &cobra.Command{
 	},
 }
 
+func setConfigLoc(cmd *cobra.Command, args []string) (string, bool) {
+	configPath, _ := cmd.Flags().GetString("config")
+	path := os.ExpandEnv(configPath)
+
+	dir := filepath.Dir(path)
+	name := filepath.Base(path)
+	viper.AddConfigPath(dir)
+
+	ext := filepath.Ext(name)
+	viper.SetConfigName(strings.TrimSuffix(name, ext))
+
+	info, err := os.Stat(path)
+	exists := info != nil && !os.IsNotExist(err)
+	return path, exists
+}
+
 // SoftReadConfig will not fail. It can be used for a command that needs the config,
 // but is happy with the defaults
 func SoftReadConfig(cmd *cobra.Command, args []string) {
+	path, exists := setConfigLoc(cmd, args)
+	var _, _ = path, exists
+
 	err := viper.ReadInConfig()
 	if err != nil {
 		log.WithError(err).Debugf("failed to load config")
 	}
 
 	initLogger()
+}
+
+// HardReadConfig requires a config file
+func HardReadConfig(cmd *cobra.Command, args []string) error {
+	path, exists := setConfigLoc(cmd, args)
+	if !exists {
+		return fmt.Errorf("config does not exist at %s", path)
+	}
+
+	initLogger()
+
+	return viper.ReadInConfig()
 }
 
 func initLogger() {

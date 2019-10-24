@@ -3,47 +3,108 @@ package stratum
 import (
 	"bufio"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/config"
+
+	"github.com/FactomWyomingEntity/private-pool/authentication"
+
+	"github.com/pegnet/pegnet/modules/opr"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
 type Server struct {
 	// miners is a map of miners to their session id
-	Miners *MinerMap
-	config *viper.Viper
+	Miners     *MinerMap
+	config     *viper.Viper
+	currentJob *Job
+
+	// For any user authentication
+	Auth *authentication.Authenticator
+
+	// Will assist in rejecting stale shares
+	ShareGate ShareCheck
+
+	configuration struct {
+		RequireAuth bool // Require actual username from miners
+	}
+
+	// We forward submissions to any listeners
+	submissionExports []chan<- *ShareSubmission
+}
+
+type ShareSubmission struct {
+	Username string
+	MinerID  string
+	JobID    int32  `gorm:"index:jobid"`
+	OPRHash  []byte // Bytes to ensure valid oprhash
+	Nonce    []byte // Bytes to ensure valid nonce
+	Target   uint64 // Uint64 to ensure valid target
 }
 
 type Job struct {
-	JobID   string `json:"jobid"`
+	JobID   int32  `json:"jobid"`
 	OPRHash string `json:"oprhash"`
+	OPR     opr.V2Content
+}
+
+func (j Job) JobIDString() string {
+	return fmt.Sprintf("%d", j.JobID)
+}
+
+// JobIDFromHeight is just a standard function to get the jobid for a height.
+// If we decide to extend the jobids, we can more easily control it with a
+// function.
+func JobIDFromHeight(height int32) int32 {
+	return height
 }
 
 func NewServer(conf *viper.Viper) (*Server, error) {
 	s := new(Server)
 	s.config = conf
 	s.Miners = NewMinerMap()
+
+	s.configuration.RequireAuth = conf.GetBool(config.ConfigStratumRequireAuth)
+	// Stub this out so we don't get a nil dereference
+	s.ShareGate = new(AlwaysYesShareCheck)
+
 	return s, nil
 }
 
+func (s *Server) SetShareCheck(sc ShareCheck) {
+	s.ShareGate = sc
+}
+
+func (s *Server) SetAuthenticator(auth *authentication.Authenticator) {
+	s.Auth = auth
+}
+
+// UpdateCurrentJob sets currently-active job details on the stratum server
+// and automatically pushes a notification to all connected miners
+func (s *Server) UpdateCurrentJob(job *Job) {
+	s.currentJob = job
+	s.Notify(job)
+}
+
 // Notify will notify all miners of a new block to mine
-// TODO: Come up with a job structure
-func (s Server) Notify(job *Job) {
-	jobReq := NotifyRequest(job.JobID, job.OPRHash, "")
+func (s *Server) Notify(job *Job) {
+	jobReq := NotifyRequest(job.JobIDString(), job.OPRHash, "")
 	data, _ := json.Marshal(jobReq)
 	errs := s.Miners.Notify(json.RawMessage(data))
 	var _ = errs
 	// TODO: handle errs
 }
 
-func (s Server) Listen(ctx context.Context) {
+func (s *Server) Listen(ctx context.Context) {
 	// TODO: Change this with config file
 	host := fmt.Sprintf("0.0.0.0:1234")
 	addr, err := net.ResolveTCPAddr("tcp", host)
@@ -85,7 +146,7 @@ func (s Server) Listen(ctx context.Context) {
 
 // NewConn handles all new conns from the listen. By factoring this out, we
 // can create unit tests using net.Pipe()
-func (s Server) NewConn(conn net.Conn) {
+func (s *Server) NewConn(conn net.Conn) {
 	m := InitMiner(conn)
 	go s.HandleClient(m)
 	go s.HandleBroadcasts(m)
@@ -106,8 +167,11 @@ type Miner struct {
 	// State information
 	subscribed bool
 	sessionID  string
+	ip         string
 	nonce      uint32
 	agent      string // Agent/version from subscribe
+	username   string
+	minerid    string
 	authorized bool
 
 	joined time.Time
@@ -116,6 +180,7 @@ type Miner struct {
 // InitMiner starts a new miner with the needed encoders and channels set up
 func InitMiner(conn net.Conn) *Miner {
 	m := new(Miner)
+	m.ip = conn.RemoteAddr().String()
 	m.conn = conn
 	m.enc = json.NewEncoder(conn)
 	m.log = log.WithFields(log.Fields{"ip": m.conn.RemoteAddr().String()})
@@ -133,7 +198,7 @@ func (m *Miner) Close() {
 
 // ToString returns a string representation of the internal miner client state
 func (m *Miner) ToString() string {
-	return fmt.Sprintf("Session ID: %s\nAgent: %s\nPreferred Target: %d\nSubscribed: %t\nAuthorized: %t\nNonce: %d", m.sessionID, m.agent, m.preferredTarget, m.subscribed, m.authorized, m.nonce)
+	return fmt.Sprintf("Session ID: %s\nIP: %s\nAgent: %s\nPreferred Target: %d\nSubscribed: %t\nAuthorized: %t\nNonce: %d", m.sessionID, m.conn.RemoteAddr().String(), m.agent, m.preferredTarget, m.subscribed, m.authorized, m.nonce)
 }
 
 // Broadcast should accept the already json marshalled msg
@@ -155,7 +220,7 @@ func (m *Miner) Broadcast(msg json.RawMessage) (err error) {
 
 // HandleBroadcasts will send out all pool broadcast messages to the miners.
 // This handles all notify messages
-func (s Server) HandleBroadcasts(client *Miner) {
+func (s *Server) HandleBroadcasts(client *Miner) {
 	for {
 		select {
 		case msg, ok := <-client.broadcast:
@@ -176,9 +241,10 @@ func (s Server) HandleBroadcasts(client *Miner) {
 	}
 }
 
-func (s Server) HandleClient(client *Miner) {
+func (s *Server) HandleClient(client *Miner) {
 	// Register this new miner
 	s.Miners.AddMiner(client)
+	defer s.Miners.DisconnectMiner(client)
 
 	reader := bufio.NewReader(client.conn)
 	for {
@@ -201,7 +267,7 @@ func (s Server) HandleClient(client *Miner) {
 	}
 }
 
-func (s Server) HandleMessage(client *Miner, data []byte) {
+func (s *Server) HandleMessage(client *Miner, data []byte) {
 	var u UnknownRPC
 	err := json.Unmarshal(data, &u)
 	if err != nil {
@@ -218,10 +284,10 @@ func (s Server) HandleMessage(client *Miner, data []byte) {
 	}
 
 	// TODO: Don't just print everything
-	client.log.Infof(string(data))
+	//client.log.Infof(string(data))
 }
 
-func (s Server) HandleRequest(client *Miner, req Request) {
+func (s *Server) HandleRequest(client *Miner, req Request) {
 	var params RPCParams
 	if err := req.FitParams(&params); err != nil {
 		client.log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
@@ -231,14 +297,38 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 
 	switch req.Method {
 	case "mining.authorize":
+		// "params": ["username,minerid", "password"]
 		if len(params) < 1 {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
 			return
 		}
 		// Ignore the session id if provided in the params
-		client.agent = params[0]
+		arr := strings.Split(params[0], ",")
+		if len(arr) != 2 {
+			_ = client.enc.Encode(HelpfulRPCError(req.ID, ErrorInvalidParams, "authorize requires 'username,minerid'"))
+			return
+		}
 
-		// TODO: actually check username/password (if user/pass authentication is desired)
+		client.username = arr[0]
+		client.minerid = arr[1]
+
+		if s.Auth != nil && s.configuration.RequireAuth {
+			if !s.Auth.Exists(client.username) {
+				// Did they provide a password and code?
+				if len(params) >= 3 && s.Auth.RegisterUser(client.username, params[1], params[2]) {
+					// User registered! Let them through by falling out of this if statement
+				} else {
+					// User rejected
+					// TODO: Provide a reason?
+					// TODO: Disconnect them?
+					if err := client.enc.Encode(AuthorizeResponse(req.ID, false, nil)); err != nil {
+						client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
+					}
+					return
+				}
+			}
+		}
+
 		if err := client.enc.Encode(AuthorizeResponse(req.ID, true, nil)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		} else {
@@ -249,11 +339,9 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
 			return
 		}
-		// Ignore the session id if provided in the params
-		client.agent = params[0]
 
 		// TODO: actually retrieve OPR hash for the given jobID (for now using dummy data)
-		dummyOPRHash := "00037f39cf870a1f49129f9c82d935665d352ffd25ea3296208f6f7b16fd654f"
+		dummyOPRHash := "00011111af870a1f49129f9c82d935665d352fffffea3296208f6f7b16faaabc"
 
 		if err := client.enc.Encode(GetOPRHashResponse(req.ID, dummyOPRHash)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
@@ -261,12 +349,24 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 			client.authorized = true
 		}
 	case "mining.submit":
-		if len(params) < 1 {
+		// "params": ["username", "jobID", "nonce", "oprHash", "target"]
+		if len(params) < 5 {
 			_ = client.enc.Encode(QuickRPCError(req.ID, ErrorInvalidParams))
 			return
 		}
 
-		// TODO: actually process the submission (ProcessSubmission); for now just pretend success
+		if params[0] != client.username {
+			_ = client.enc.Encode(HelpfulRPCError(req.ID, ErrorInvalidParams, "username not as expected"))
+			return
+		}
+
+		if !s.ProcessSubmission(client, params[1], params[2], params[3], params[4]) {
+			// Rejected share
+			// ignore errors on reject shares
+			_ = client.enc.Encode(SubmitResponse(req.ID, true, nil))
+			return
+		}
+
 		if err := client.enc.Encode(SubmitResponse(req.ID, true, nil)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		}
@@ -282,6 +382,14 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		} else {
 			client.subscribed = true
+
+			// Notify newly-subscribed client with current job details
+			if s.currentJob != nil {
+				err = s.SingleClientNotify(client.sessionID, s.currentJob.JobIDString(), s.currentJob.OPRHash, "")
+				if err != nil {
+					log.Error(err)
+				}
+			}
 		}
 	case "mining.suggest_target":
 		if len(params) < 1 {
@@ -299,7 +407,69 @@ func (s Server) HandleRequest(client *Miner, req Request) {
 	}
 }
 
-func (s Server) GetVersion(clientName string) error {
+// ProcessSubmission will forward the shares and return if the share was accepted
+func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target string) bool {
+	sLog := log.WithFields(log.Fields{"user": miner.username, "miner": miner.minerid, "job": jobID})
+	if s.currentJob == nil {
+		return false // No current job
+	}
+
+	if jobID != s.currentJob.JobIDString() || oprHash != s.currentJob.OPRHash {
+		return false // Only accepts current job
+	}
+
+	// Double check the fields
+	oB, err := hex.DecodeString(oprHash)
+	if err != nil {
+		sLog.WithError(err).Errorf("miner provided bad oprhash")
+		return false
+	}
+
+	nB, err := hex.DecodeString(nonce)
+	if err != nil {
+		sLog.WithError(err).Errorf("miner provided bad nonce")
+		return false
+	}
+
+	tU, err := strconv.ParseUint(target, 16, 64)
+	if err != nil {
+		sLog.WithError(err).Errorf("miner provided bad target")
+		return false
+	}
+
+	jobHeight, err := strconv.ParseInt(jobID, 10, 32)
+	if err != nil {
+		sLog.WithError(err).Errorf("miner provided bad jobid")
+		return false
+	}
+
+	// Check if we can accept shares right now
+	// E.g: If we are between minute 0 and minute 1, the job is
+	// stale
+	if !s.ShareGate.CanSubmit() {
+		return false
+	}
+
+	submit := &ShareSubmission{
+		Username: miner.username,
+		MinerID:  miner.minerid,
+		JobID:    int32(jobHeight),
+		OPRHash:  oB,
+		Nonce:    nB,
+		Target:   tU,
+	}
+
+	for _, export := range s.submissionExports {
+		select { // Non blocking
+		case export <- submit:
+		default:
+		}
+	}
+
+	return true
+}
+
+func (s *Server) GetVersion(clientName string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
 		return err
@@ -308,7 +478,16 @@ func (s Server) GetVersion(clientName string) error {
 	return err
 }
 
-func (s Server) ReconnectClient(clientName, hostname, port, waittime string) error {
+func (s *Server) SingleClientNotify(clientName, jobID, oprHash, cleanjobs string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(NotifyRequest(jobID, oprHash, cleanjobs))
+	return err
+}
+
+func (s *Server) ReconnectClient(clientName, hostname, port, waittime string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
 		return err
@@ -317,7 +496,7 @@ func (s Server) ReconnectClient(clientName, hostname, port, waittime string) err
 	return err
 }
 
-func (s Server) SetTarget(clientName, target string) error {
+func (s *Server) SetTarget(clientName, target string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
 		return err
@@ -326,7 +505,7 @@ func (s Server) SetTarget(clientName, target string) error {
 	return err
 }
 
-func (s Server) SetNonce(clientName, nonce string) error {
+func (s *Server) SetNonce(clientName, nonce string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
 		return err
@@ -335,11 +514,28 @@ func (s Server) SetNonce(clientName, nonce string) error {
 	return err
 }
 
-func (s Server) ShowMessage(clientName, message string) error {
+func (s *Server) ShowMessage(clientName, message string) error {
 	miner, err := s.Miners.GetMiner(clientName)
 	if err != nil {
 		return err
 	}
 	err = miner.enc.Encode(ShowMessageRequest(message))
 	return err
+}
+
+func (s *Server) StopMining(clientName string) error {
+	miner, err := s.Miners.GetMiner(clientName)
+	if err != nil {
+		return err
+	}
+	err = miner.enc.Encode(StopMiningRequest())
+	return err
+}
+
+// GetSubmissionExport should be called in an init phase, so does not
+// need to be thread safe
+func (s *Server) GetSubmissionExport() <-chan *ShareSubmission {
+	c := make(chan *ShareSubmission, 250)
+	s.submissionExports = append(s.submissionExports, c)
+	return c
 }

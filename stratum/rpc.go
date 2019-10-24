@@ -47,11 +47,11 @@ type RPCParams []string
 
 // Client-to-server methods
 
-func AuthorizeRequest(username, password string) Request {
+func AuthorizeRequest(username, password, invitecode string) Request {
 	return Request{
 		ID:     rand.Int(),
 		Method: "mining.authorize",
-	}.SetParams(RPCParams{username, password})
+	}.SetParams(RPCParams{username, password, invitecode})
 }
 
 func GetOPRHashRequest(jobID string) Request {
@@ -124,6 +124,13 @@ func SetNonceRequest(nonce string) Request {
 		ID:     rand.Int(),
 		Method: "mining.set_nonce",
 	}.SetParams(RPCParams{nonce})
+}
+
+func StopMiningRequest() Request {
+	return Request{
+		ID:     rand.Int(),
+		Method: "mining.stop_mining",
+	}.SetParams(nil)
 }
 
 type Response struct {
@@ -246,6 +253,17 @@ func QuickRPCError(id int, errorType int) Response {
 		Error: &RPCError{
 			Code:    errorType,
 			Message: RPCErrorString(errorType),
+		},
+	}
+}
+
+func HelpfulRPCError(id int, errorType int, data interface{}) Response {
+	return Response{
+		ID: id,
+		Error: &RPCError{
+			Code:    errorType,
+			Message: RPCErrorString(errorType),
+			Data:    data,
 		},
 	}
 }

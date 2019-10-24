@@ -66,6 +66,15 @@ func (m *MinerMap) AddMiner(u *Miner) string {
 	return u.sessionID
 }
 
+func (m *MinerMap) DisconnectMiner(u *Miner) {
+	m.Lock()
+	delete(m.miners, u.sessionID)
+	// Close the connection if they are still listening.
+	u.conn.Close()
+
+	m.Unlock()
+}
+
 // GetMiner returns a pointer to the miner in the MinerMap under the 'name' key
 func (m *MinerMap) GetMiner(name string) (*Miner, error) {
 	defer m.Unlock()
@@ -85,4 +94,18 @@ func (m *MinerMap) ListMiners() []string {
 	}
 	m.Unlock()
 	return names
+}
+
+func (m *MinerMap) SnapShot() []MinerSnapShot {
+	m.Lock()
+	defer m.Unlock()
+
+	snaps := make([]MinerSnapShot, len(m.miners))
+	var c int
+	for _, v := range m.miners {
+		snaps[c] = v.SnapShot()
+		c++
+	}
+
+	return snaps
 }

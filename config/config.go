@@ -3,6 +3,7 @@ package config
 import (
 	"time"
 
+	"github.com/Factom-Asset-Tokens/factom"
 	"github.com/spf13/viper"
 )
 
@@ -38,6 +39,17 @@ const (
 	ConfigFreeForexAPIpPriority     = "OracleDataSources.FreeForexAPI"
 	ConfigFixedUSDPriority          = "OracleDataSources.FixedUSD"
 	ConfigAlternativeMePriority     = "OracleDataSources.AlternativeMe"
+
+	ConfigPoolIdentity  = "Pool.OPRIdentity"
+	ConfigPoolCoinbase  = "Pool.OPRCoinbase"
+	ConfigPoolESAddress = "Pool.ESAddress"
+
+	ConfigSubmitterCutoff = "Submit.SubmissionCutoff"
+	ConfigSubmitterEMAN   = "Submit.EMA-N"
+
+	ConfigWebPort = "Web.Port"
+
+	ConfigStratumRequireAuth = "Stratum.RequireAuth"
 )
 
 func SetDefaults(conf *viper.Viper) {
@@ -70,4 +82,25 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigAlternativeMePriority, -1)
 
 	conf.SetDefault(ConfigPoolCut, "0.05")
+
+	conf.SetDefault(ConfigPoolIdentity, "Prosper")
+	conf.SetDefault(ConfigPoolCoinbase, "FA2jK2HcLnRdS94dEcU27rF3meoJfpUcZPSinpb7AwQvPRY6RL1Q")
+	conf.SetDefault(ConfigPoolESAddress, "Es2XT3jSxi1xqrDvS5JERM3W3jh1awRHuyoahn3hbQLyfEi1jvbq")
+
+	conf.SetDefault(ConfigSubmitterCutoff, 200)
+	// 6hrs
+	conf.SetDefault(ConfigSubmitterEMAN, 36)
+
+	conf.SetDefault(ConfigWebPort, 7070)
+
+	conf.SetDefault(ConfigStratumRequireAuth, true)
+}
+
+func FactomClientFromConfig(conf *viper.Viper) *factom.Client {
+	cl := factom.NewClient()
+	cl.FactomdServer = conf.GetString(ConfigFactomdLocation)
+	// We don't use walletd
+	cl.WalletdServer = conf.GetString("http://localhost:8089/v2")
+
+	return cl
 }

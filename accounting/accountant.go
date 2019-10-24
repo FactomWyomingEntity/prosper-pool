@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/FactomWyomingEntity/private-pool/difficulty"
+
+	"github.com/FactomWyomingEntity/private-pool/stratum"
+
 	"github.com/shopspring/decimal"
 
 	"github.com/FactomWyomingEntity/private-pool/config"
@@ -14,6 +18,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	acctLog = log.WithField("mod", "acct")
+)
+
 const AccountingPrecision = 8
 
 type Accountant struct {
@@ -21,12 +29,16 @@ type Accountant struct {
 
 	// Jobs are indexed by job id
 	jobLock     sync.RWMutex
-	JobsByMiner map[string]*ShareMap
-	JobsByUser  map[string]*ShareMap
+	JobsByMiner map[int32]*ShareMap
+	JobsByUser  map[int32]*ShareMap
 
-	newJobs chan string
-	shares  chan *Share
-	rewards chan *Reward
+	newJobs     chan int32
+	rewards     chan *Reward
+	submissions <-chan *stratum.ShareSubmission
+
+	// shares is mainly used for debug/testing. Most submissions come from
+	// Stratum.
+	shares chan *Share
 
 	// Pool Configuration
 	PoolFeeRate decimal.Decimal
@@ -35,11 +47,14 @@ type Accountant struct {
 func NewAccountant(conf *viper.Viper, db *gorm.DB) (*Accountant, error) {
 	a := new(Accountant)
 	a.DB = db
-	a.shares = make(chan *Share, 1000)
+	a.shares = make(chan *Share, 100)
 	a.rewards = make(chan *Reward, 1000)
-	a.newJobs = make(chan string, 100)
-	a.JobsByMiner = make(map[string]*ShareMap)
-	a.JobsByUser = make(map[string]*ShareMap)
+	a.newJobs = make(chan int32, 100)
+	a.JobsByMiner = make(map[int32]*ShareMap)
+	a.JobsByUser = make(map[int32]*ShareMap)
+
+	a.DB.AutoMigrate(&UserPayout{})
+	a.DB.AutoMigrate(&Payouts{})
 
 	cut := conf.GetString(config.ConfigPoolCut)
 
@@ -64,7 +79,7 @@ func NewAccountant(conf *viper.Viper, db *gorm.DB) (*Accountant, error) {
 	return a, nil
 }
 
-func (a Accountant) JobChannel() chan<- string {
+func (a Accountant) JobChannel() chan<- int32 {
 	return a.newJobs
 }
 
@@ -76,16 +91,43 @@ func (a Accountant) ShareChannel() chan<- *Share {
 	return a.shares
 }
 
+func (a *Accountant) SetSubmissions(subs <-chan *stratum.ShareSubmission) {
+	a.submissions = subs
+}
+
 // Listen accepts new shares and shares for handling the payout accounting.
 func (a *Accountant) Listen(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case share := <-a.shares:
+		case submit := <-a.submissions:
 			// A new share from a miner that we need to account for
+			if !a.JobExists(submit.JobID) {
+				acctLog.WithFields(log.Fields{
+					"job":     submit.JobID,
+					"minerid": submit.MinerID,
+					"userid":  submit.Username,
+				}).Debugf("share submitted, but no job exits")
+				continue // Nothing to do if the job does not exist
+			}
+
+			share := Share{
+				JobID:      submit.JobID,
+				Nonce:      submit.Nonce,
+				Difficulty: difficulty.DifficultyFromTarget(submit.Target, difficulty.PDiff),
+				Target:     submit.Target,
+				// The share will be rejected if sealed
+				Accepted: true,
+				MinerID:  submit.MinerID,
+				UserID:   submit.Username,
+			}
+
+			a.AddShare(share)
+		case share := <-a.shares:
+			// A share from somewhere internal (probably a test)
 			if !a.JobExists(share.JobID) {
-				log.WithFields(log.Fields{
+				acctLog.WithFields(log.Fields{
 					"job":     share.JobID,
 					"minerid": share.MinerID,
 					"userid":  share.UserID,
@@ -93,28 +135,33 @@ func (a *Accountant) Listen(ctx context.Context) {
 				continue // Nothing to do if the job does not exist
 			}
 
-			a.jobLock.Lock()
-			a.JobsByMiner[share.JobID].AddShare(share.MinerID, *share)
-			a.JobsByUser[share.JobID].AddShare(share.UserID, *share)
-			a.jobLock.Unlock()
+			a.AddShare(*share)
+
 		case newJob := <-a.newJobs:
 			if a.JobExists(newJob) {
-				log.WithFields(log.Fields{
+				acctLog.WithFields(log.Fields{
 					"job": newJob,
 				}).Warnf("newjob, but already exists")
 				continue
 			}
 			a.NewJob(newJob)
 		case reward := <-a.rewards:
-			rLog := log.WithFields(log.Fields{
+			rLog := acctLog.WithFields(log.Fields{
 				"job": reward.JobID,
 				"peg": reward.PoolReward / 1e8,
 			})
 			// Indication of a block being completed and us earning rewards
 			if !a.JobExists(reward.JobID) {
+				// TODO: We will still do the accounting so our numbers add up.
+				// 		But we should really see if we can do something to
+				//		payout our users if this happens. Like if we reboot
+				//		the pool, and didn't keep the user's pow. We could
+				//		just use the last blocks proportions or something.
 				rLog.Warnf("reward for job that does not exist")
-				continue
+				a.JobsByMiner[reward.JobID] = NewShareMap()
+				a.JobsByUser[reward.JobID] = NewShareMap()
 			}
+
 			a.jobLock.Lock()
 			us := a.JobsByUser[reward.JobID]
 			ms := a.JobsByMiner[reward.JobID]
@@ -130,7 +177,7 @@ func (a *Accountant) Listen(ctx context.Context) {
 			pays := NewPayout(*reward, a.PoolFeeRate, *us)
 
 			// TODO: Throw this into the database
-			dbErr := a.DB.Create(pays)
+			dbErr := a.DB.FirstOrCreate(pays)
 			if dbErr.Error != nil {
 				// TODO: This is pretty bad. This means payments failed.
 				// 		We don't want to just panic and kill the pool.
@@ -141,26 +188,30 @@ func (a *Accountant) Listen(ctx context.Context) {
 				rLog.WithError(dbErr.Error).Error("failed to write payouts to database")
 			}
 
-			rLog.WithFields(log.Fields{"pool": us.TotalDiff}).Infof("pool stats")
+			rLog.WithFields(log.Fields{"pool-diff": us.TotalDiff}).Infof("pool stats")
 			a.jobLock.Unlock()
 		}
 	}
 }
 
+func (a *Accountant) AddShare(share Share) {
+	a.jobLock.Lock()
+	a.JobsByMiner[share.JobID].AddShare(share.MinerID, share)
+	a.JobsByUser[share.JobID].AddShare(share.UserID, share)
+	a.jobLock.Unlock()
+}
+
 // NewJob adds a new job to the maps
-func (a *Accountant) NewJob(jobid string) {
+func (a *Accountant) NewJob(jobid int32) {
 	a.jobLock.Lock()
 	defer a.jobLock.Unlock()
 	a.JobsByMiner[jobid] = NewShareMap()
 	a.JobsByUser[jobid] = NewShareMap()
 }
 
-func (a Accountant) JobExists(jobid string) bool {
+func (a Accountant) JobExists(jobid int32) bool {
 	a.jobLock.RLock()
 	defer a.jobLock.RUnlock()
 	_, ok := a.JobsByMiner[jobid]
 	return ok
-}
-
-type BlockAccountant struct {
 }

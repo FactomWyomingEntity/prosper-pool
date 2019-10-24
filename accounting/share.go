@@ -36,10 +36,11 @@ func (p *Payouts) Payouts(work ShareMap, remaining int64) {
 		prop := decimal.NewFromFloat(work.TotalDifficulty).Div(decimal.NewFromFloat(p.PoolDifficuty))
 		prop = prop.Truncate(AccountingPrecision)
 		pay := UserPayout{
-			UserID:        user,
-			UserDifficuty: work.TotalDifficulty,
-			Proportion:    prop,
-			Payout:        cut(remaining, prop),
+			UserID:           user,
+			UserDifficuty:    work.TotalDifficulty,
+			TotalSubmissions: work.TotalShares,
+			Proportion:       prop,
+			Payout:           cut(remaining, prop),
 		}
 		p.UserPayouts = append(p.UserPayouts, pay)
 		totalPayout += pay.Payout
@@ -66,9 +67,10 @@ func cut(total int64, prop decimal.Decimal) int64 {
 }
 
 type UserPayout struct {
-	JobID         string `gorm:"primary_key"`
-	UserID        string `gorm:"primary_key"`
-	UserDifficuty float64
+	JobID            int32  `gorm:"primary_key"`
+	UserID           string `gorm:"primary_key"`
+	UserDifficuty    float64
+	TotalSubmissions int
 
 	// Proportion denoted with 10000 being 100% and 1 being 0.01%
 	Proportion decimal.Decimal `sql:"type:decimal(20,8);"`
@@ -76,8 +78,8 @@ type UserPayout struct {
 }
 
 type Reward struct {
-	JobID      string `gorm:"primary_key"` // Block height of reward payout
-	PoolReward int64  // PEG reward for block
+	JobID      int32 `gorm:"primary_key"` // Block height of reward payout
+	PoolReward int64 // PEG reward for block
 
 	Winning int // Number of oprs in the winning set
 	Graded  int // Number of oprs in the graded set
@@ -85,7 +87,7 @@ type Reward struct {
 
 // Share is an accepted piece of work done by a miner.
 type Share struct {
-	JobID      string // JobID's are always a block height
+	JobID      int32  // JobID's are always a block height
 	Nonce      []byte // Nonce is the work computed by the miner
 	Difficulty float64
 	Target     uint64

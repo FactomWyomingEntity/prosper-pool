@@ -1,0 +1,82 @@
+\documentclass[12pt]{article}
+\usepackage{mathtools}
+
+\DeclarePairedDelimiter\ceil{\lceil}{\rceil}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+
+\setlength{\oddsidemargin}{0in}
+\setlength{\evensidemargin}{\oddsidemargin}
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{9in}
+\setlength{\topmargin}{-0.25in}
+\newcommand{\bb}{$\Box$}
+\newcommand{\sline} {$\mbox{\underline{\hspace{4cm}}}$}
+\newcommand{\lline} {$\mbox{\underline{\hspace{4cm}}}$}
+\newcommand{\llline} {$\mbox{\underline{\hspace{8cm}}}$}
+\newcommand{\textmathbf}[1]{\textbf{\boldmath#1}}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{enumitem}% http://ctan.org/pkg/enumitem
+
+
+
+
+\begin{document}
+\begin{center}
+{\bf
+Pegnet Proof of Work \\
+Target \& Difficulty Equations\\
+}
+
+\end{center}
+
+\section{Definitions}
+
+\begin{description}[font=\sffamily\bfseries, leftmargin=1cm, style=nextline]
+    \item[Hash-rate]
+    An amount of lxr hashing operations per second
+    \item[Target]
+    8 byte hexadecimal value that comes from the top 8 bytes of the lxr(oprhash+nonce). The higher the target, the more difficult that target is.
+    \item[Difficulty]
+    Difficulty is a floating point number that can describe the amount of work needed to generate a given target. The difficulty is proportional to the hashrate, meaning a target with difficulty 2 requires twice as many hashes (on average) as a target with difficulty 1. All difficulty numbers are related to a base difficulty 1, which is arbitrarily chosen.
+    \item[pDiff]
+    pDiff is the base difficulty for determining the difficulty of work submitted to a mining pool. pDiff is currently set at \texttt{0xfffe000000000000}, which is about 6.5K h/s for 5s of work. All difficulty reported by the pool is in relation to pDiff. Meaning a difficulty of 100 is 100x the work of pDiff.
+\end{description}
+
+\pagebreak
+\section{Equations}
+
+\subsection{Work}
+
+The amount of work for a given target should be denoted in \textbf{difficulty}, but difficulty is not necessarily universal if a different base is chosen. Miners are more familiar with hashrate.
+
+
+   \subsubsection{Total-Hashes from Target}
+    To get the total number of hashes that on average will obtain the given target: \\
+    \large{\[
+    TH = \frac{2^{64}}{2^{64}-target}
+    \]}
+
+    \subsubsection{Difficulty from Target}
+    To get the difficulty of a given target:
+    \large{\[
+    diff = \frac{\neg pDiff}{\neg target}
+    \]}
+
+    \subsubsection{Estimate target from number of hashes}
+    Given a total number of hashes, we can estimate the best target.\\ Where $TH = totalhashes$
+     \large{\[
+    target=\frac{2^{64}*(TH-1)}{TH}
+    \]}
+
+
+    \subsubsection{Target from Difficulty}
+    To get the target of a given difficulty:
+    \large{\[
+    \neg target = \frac{\neg pDiff}{\neg diff}
+    \]}
+
+
+
+\end{document}

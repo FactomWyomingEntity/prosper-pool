@@ -3,12 +3,18 @@ package stratum
 import (
 	"bufio"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"reflect"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/mining"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,17 +27,95 @@ type Client struct {
 	dec  *bufio.Reader
 	conn net.Conn
 
-	version string
+	version        string
+	username       string
+	minername      string
+	currentJobID   string
+	currentOPRHash string
+	currentTarget  uint64
+
+	password   string // password and invitecode are only needed for initial user registration
+	invitecode string
+
+	miners    []*ControlledMiner
+	successes chan *mining.Winner
 
 	subscriptions []Subscription
-	verbose       bool
+	requestsMade  map[int]func(Response)
+	autoreconnect bool
+	sync.RWMutex
 }
 
-func NewClient(verbose bool) (*Client, error) {
+type ControlledMiner struct {
+	Miner          *mining.PegnetMiner
+	CommandChannel chan *mining.MinerCommand
+}
+
+func (c *ControlledMiner) SendCommand(command *mining.MinerCommand) bool {
+	select {
+	case c.CommandChannel <- command:
+		return true
+	default:
+		return false
+	}
+}
+
+func NewClient(username, minername, password, invitecode, version string) (*Client, error) {
 	c := new(Client)
-	c.verbose = verbose
-	c.version = "0.0.1"
+	c.autoreconnect = true
+	c.version = version
+	c.username = username
+	c.minername = minername
+	c.password = password
+	c.invitecode = invitecode
+	c.currentJobID = "1"
+	c.currentOPRHash = "00037f39cf870a1f49129f9c82d935665d352ffd25ea3296208f6f7b16fd654f"
+	c.currentTarget = 0xfffe000000000000
+	c.requestsMade = make(map[int]func(Response))
+
+	successChannel := make(chan *mining.Winner, 100)
+	c.successes = successChannel
+
+	go c.ListenForSuccess()
+	//
+	//c.miner = mining.NewPegnetMiner(1, commandChannel, successChannel)
+	//go c.miner.Mine(context.Background())
 	return c, nil
+}
+
+func (c *Client) InitMiners(num int) {
+	c.miners = make([]*ControlledMiner, num)
+	for i := range c.miners {
+		commandChannel := make(chan *mining.MinerCommand, 10)
+		c.miners[i] = &ControlledMiner{
+			CommandChannel: commandChannel,
+			Miner:          mining.NewPegnetMiner(uint32(i), commandChannel, c.successes),
+		}
+	}
+}
+
+func (c *Client) SendCommand(command *mining.MinerCommand) {
+	for i := range c.miners {
+		c.miners[i].SendCommand(command)
+	}
+}
+
+func (c *Client) RunMiners(ctx context.Context) {
+	for i := range c.miners {
+		go c.miners[i].Miner.Mine(ctx)
+	}
+}
+
+func (c Client) Encode(x interface{}) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("Connection issues (possibly dropped)\n")
+		}
+	}()
+	c.Lock()
+	err = c.enc.Encode(x)
+	c.Unlock()
+	return
 }
 
 func (c *Client) Connect(address string) error {
@@ -41,40 +125,17 @@ func (c *Client) Connect(address string) error {
 	}
 
 	conn, err := net.DialTCP("tcp", nil, addr)
-	if err != nil {
-		return err
-	}
-
-	return c.Handshake(conn)
+	c.InitConn(conn)
+	return err
 }
 
-func (c *Client) Handshake(conn net.Conn) error {
-	c.InitConn(conn)
+func (c *Client) Handshake() error {
 	err := c.Subscribe()
 	if err != nil {
 		return err
 	}
 
-	// Receive subscribe response
-	data, _, err := c.dec.ReadLine()
-	var resp Response
-	err = json.Unmarshal(data, &resp)
-
-	if c.verbose {
-		log.Printf("CLIENT READ: %s\n", string(data))
-	}
-
-	err = c.Authorize("user", "password")
-	if err != nil {
-		return err
-	}
-
-	data, _, err = c.dec.ReadLine()
-	err = json.Unmarshal(data, &resp)
-	if c.verbose {
-		log.Printf("CLIENT READ: %s\n", string(data))
-	}
-	return nil
+	return c.Authorize(fmt.Sprintf("%s,%s", c.username, c.minername), c.password, c.invitecode)
 }
 
 // InitConn will not start the handshake process. Good for unit tests
@@ -95,17 +156,54 @@ func (c *Client) WaitThenConnect(address, waittime string) error {
 }
 
 // Authorize against stratum pool
-func (c Client) Authorize(username, password string) error {
-	err := c.enc.Encode(AuthorizeRequest(username, password))
+func (c *Client) Authorize(username, password, invitecode string) error {
+	req := AuthorizeRequest(username, password, invitecode)
+	c.Lock()
+	c.requestsMade[req.ID] = func(resp Response) {
+		var result bool
+		if err := resp.FitResult(&result); err == nil {
+			if result == false {
+				log.Errorf("AuthorizeResponse is false. You may not be mining for your account!")
+			} else {
+				log.Infof("AuthorizeResponse result: %t\n", result)
+			}
+		}
+	}
+	c.Unlock()
+	err := c.Encode(req)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
 // Request current OPR hash from server
-func (c Client) GetOPRHash(jobID string) error {
-	err := c.enc.Encode(GetOPRHashRequest(jobID))
+func (c *Client) GetOPRHash(jobID string) error {
+	req := GetOPRHashRequest(jobID)
+	c.Lock()
+	c.requestsMade[req.ID] = func(resp Response) {
+		var result string
+		if err := resp.FitResult(&result); err == nil {
+			log.Infof("OPRHash result: %s\n", result)
+			if jobID == c.currentJobID {
+				newOPRHash, err := hex.DecodeString(result)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+				command := mining.BuildCommand().
+					ResetRecords().         // Reset nonce to keep it small
+					NewOPRHash(newOPRHash). // New OPR hash to mine
+					ResumeMining().         // Start mining
+					Build()
+				c.SendCommand(command)
+
+			}
+		}
+	}
+	c.Unlock()
+	err := c.Encode(req)
 	if err != nil {
 		return err
 	}
@@ -113,8 +211,17 @@ func (c Client) GetOPRHash(jobID string) error {
 }
 
 // Submit completed work to server
-func (c Client) Submit(username, jobID, nonce, oprHash, target string) error {
-	err := c.enc.Encode(SubmitRequest(username, jobID, nonce, oprHash, target))
+func (c *Client) Submit(username, jobID, nonce, oprHash, target string) error {
+	req := SubmitRequest(username, jobID, nonce, oprHash, target)
+	c.Lock()
+	c.requestsMade[req.ID] = func(resp Response) {
+		var result bool
+		if err := resp.FitResult(&result); err == nil {
+			log.Debug("Submission result: %t\n", result)
+		}
+	}
+	c.Unlock()
+	err := c.Encode(req)
 	if err != nil {
 		return err
 	}
@@ -122,8 +229,22 @@ func (c Client) Submit(username, jobID, nonce, oprHash, target string) error {
 }
 
 // Subscribe to stratum pool
-func (c Client) Subscribe() error {
-	err := c.enc.Encode(SubscribeRequest(c.version))
+func (c *Client) Subscribe() error {
+	req := SubscribeRequest(c.version)
+	c.Lock()
+	c.requestsMade[req.ID] = func(resp Response) {
+		var subscriptions []Subscription
+		if err := resp.FitResult(&subscriptions); err == nil {
+			log.Println("Subscriptions Results:")
+			for _, subscription := range subscriptions {
+				log.Println("...", subscription)
+			}
+		} else {
+			log.Error(err)
+		}
+	}
+	c.Unlock()
+	err := c.Encode(req)
 	if err != nil {
 		return err
 	}
@@ -131,42 +252,68 @@ func (c Client) Subscribe() error {
 }
 
 // Suggest preferred mining target to server
-func (c Client) SuggestTarget(preferredTarget string) error {
-	err := c.enc.Encode(SuggestTargetRequest(preferredTarget))
+func (c *Client) SuggestTarget(preferredTarget string) error {
+	err := c.Encode(SuggestTargetRequest(preferredTarget))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c Client) Listen(ctx context.Context) {
-	defer c.conn.Close()
-	// Capture a cancel and close the server
+func (c *Client) Close() error {
+	log.Infof("shutting down stratum client")
+	c.autoreconnect = false
+	if !reflect.ValueOf(c.conn).IsNil() {
+		return c.conn.Close()
+	}
+	return nil
+}
+
+func (c *Client) Listen(ctx context.Context) {
+	// Capture a cancel and close the client
 	go func() {
 		select {
 		case <-ctx.Done():
-			log.Infof("shutting down stratum client")
-			c.conn.Close()
+			c.Close()
 			return
 		}
 	}()
 
 	log.Printf("Stratum client listening to server at %s\n", c.conn.RemoteAddr().String())
+	originalServerAddress := c.conn.RemoteAddr().String()
 
 	r := bufio.NewReader(c.conn)
 
 	for {
 		readBytes, _, err := r.ReadLine()
 		if err != nil {
-			return
+			if err == io.EOF || (strings.Contains(err.Error(), "use of closed network connection") && c.autoreconnect) {
+				log.Info("Server disconnect detected, attempting reconnect in 5s...")
+				if !reflect.ValueOf(c.conn).IsNil() {
+					c.conn.Close()
+				}
+				reconnectError := c.WaitThenConnect(originalServerAddress, "5")
+				if reconnectError != nil {
+					if strings.Contains(reconnectError.Error(), "connection refused") {
+						continue
+					} else {
+						log.Error(reconnectError)
+						return
+					}
+				} else {
+					c.Handshake()
+					c.Listen(ctx)
+				}
+			} else {
+				return
+			}
 		} else {
 			c.HandleMessage(readBytes)
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 }
 
-func (c Client) HandleMessage(data []byte) {
+func (c *Client) HandleMessage(data []byte) {
 	var u UnknownRPC
 	err := json.Unmarshal(data, &u)
 	if err != nil {
@@ -178,15 +325,14 @@ func (c Client) HandleMessage(data []byte) {
 		c.HandleRequest(req)
 	} else {
 		resp := u.GetResponse()
-		// TODO: Handle resp
-		var _ = resp
+		c.HandleResponse(resp)
 	}
 
 	// TODO: Don't just print everything
-	log.Infof(string(data))
+	//log.Infof(string(data))
 }
 
-func (c Client) HandleRequest(req Request) {
+func (c *Client) HandleRequest(req Request) {
 	var params RPCParams
 	if err := req.FitParams(&params); err != nil {
 		log.WithField("method", req.Method).Warnf("bad params %s", req.Method)
@@ -195,7 +341,7 @@ func (c Client) HandleRequest(req Request) {
 
 	switch req.Method {
 	case "client.get_version":
-		if err := c.enc.Encode(GetVersionResponse(req.ID, c.version)); err != nil {
+		if err := c.Encode(GetVersionResponse(req.ID, c.version)); err != nil {
 			log.WithField("method", req.Method).WithError(err).Error("failed to respond to get_version")
 		}
 	case "client.reconnect":
@@ -232,29 +378,117 @@ func (c Client) HandleRequest(req Request) {
 		jobID := params[0]
 		oprHash := params[1]
 
-		log.Printf("JobID: %s ... OPR Hash: %s\n", jobID, oprHash)
-		// TODO: do more than just log the notification details (actually update miner)
+		newJobID, err := strconv.ParseInt(jobID, 10, 64)
+		if err != nil {
+			log.Error("Not a valid new JobID")
+			return
+		}
+		existingJobID, _ := strconv.ParseInt(c.currentJobID, 10, 64)
+		if newJobID >= existingJobID {
+			myHexBytes, err := hex.DecodeString(oprHash)
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			if newJobID > existingJobID {
+				c.currentJobID = jobID
+			}
+			c.currentOPRHash = oprHash
+			stats := make(chan *mining.SingleMinerStats, len(c.miners))
+			command := mining.BuildCommand().
+				SubmitStats(stats).
+				ResetRecords().
+				NewOPRHash(myHexBytes).
+				MinimumDifficulty(c.currentTarget).
+				ResumeMining().
+				Build()
+			c.SendCommand(command)
+
+			go c.AggregateStats(int32(existingJobID), stats, len(c.miners))
+
+			log.Printf("JobID: %s ... OPR Hash: %s\n", jobID, oprHash)
+		} else {
+			log.WithError(fmt.Errorf("old job")).Warnf("Rejected JobID: %s ... OPR Hash: %s\n", jobID, oprHash)
+		}
 	case "mining.set_target":
 		if len(params) < 1 {
 			log.Errorf("Not enough parameters from set_target: %s\n", params)
 			return
 		}
 
-		newTarget := params[0]
+		result, err := strconv.ParseUint(strings.Replace(params[0], "0x", "", -1), 16, 64)
+		if err != nil {
+			log.Errorln("Target unable to be converted to uint: ", err)
+			return
+		}
+		c.currentTarget = uint64(result)
 
-		log.Printf("New Target: %s\n", newTarget)
-		// TODO: do more than just log the newTarget details (actually update miner)
+		log.Printf("New Target: %x\n", c.currentTarget)
+
+		command := mining.BuildCommand().
+			MinimumDifficulty(c.currentTarget).
+			Build()
+		c.SendCommand(command)
 	case "mining.set_nonce":
 		if len(params) < 1 {
 			log.Errorf("Not enough parameters from set_nonce: %s\n", params)
 			return
 		}
 
-		nonce := params[0]
+		nonceString := params[0]
+		nonce, err := strconv.ParseUint(nonceString, 10, 32)
+		if err != nil {
+			log.Errorln("Nonce unable to be converted to integer: ", err)
+			return
+		}
 
-		log.Printf("New Nonce: %s\n", nonce)
-		// TODO: do more than just log the nonce details (actually update miner job)
+		log.Printf("New Nonce: %d\n", nonce)
+		command := mining.BuildCommand().
+			NewNoncePrefix(uint32(nonce)).
+			Build()
+		c.SendCommand(command)
+	case "mining.stop_mining":
+		log.Println("Request to stop mining received")
+		command := mining.BuildCommand().
+			PauseMining().
+			Build()
+		c.SendCommand(command)
 	default:
 		log.Warnf("unknown method %s", req.Method)
+	}
+}
+
+func (c *Client) AggregateStats(job int32, stats chan *mining.SingleMinerStats, l int) {
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
+	groupStats := mining.NewGroupMinerStats(job)
+
+	for i := 0; i < l; i++ {
+		select {
+		case stat := <-stats:
+			groupStats.Miners[stat.ID] = stat
+		case <-ctx.Done():
+		}
+	}
+
+	log.WithFields(groupStats.LogFields()).Info("job miner stats")
+}
+
+func (c *Client) HandleResponse(resp Response) {
+	c.Lock()
+	if funcToPerform, ok := c.requestsMade[resp.ID]; ok {
+		funcToPerform(resp)
+		delete(c.requestsMade, resp.ID)
+	} else {
+		log.Errorf("Response received for unrecognized request ID: %d (ignoring)\n", resp.ID)
+	}
+	c.Unlock()
+}
+
+func (c *Client) ListenForSuccess() {
+	for {
+		select {
+		case winner := <-c.successes:
+			c.Submit(c.username, c.currentJobID, winner.Nonce, winner.OPRHash, winner.Target)
+		}
 	}
 }
