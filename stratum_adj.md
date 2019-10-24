@@ -1,6 +1,6 @@
 # Adjusted Stratum for Pegnet
 
-The pool will use an adjusted form of the stratum protocol. The pool will use raw tcp with line based communication and json-rpc encoding. This will provide easy extensibility and debugging in the early days of the pool. If bandwidth ever becomes a concern, alternative encoding schemes can be supported.
+The pool uses an adjusted form of the Stratum protocol. This uses raw tcp with line-based communication and json-rpc encoding. This provides easy extensibility and debugging in the early days of the pool. If bandwidth ever becomes a concern, alternative encoding schemes can be supported.
 
 Stratum can be found:
 - https://slushpool.com/help/stratum-protocol#compatibility
@@ -24,6 +24,7 @@ request
   "params": ["username,minerid", "password", "invite-code"]
 }
 ```
+Note: password and invite-code can be empty strings once the username has already been successfully authorized by the pool.
 
 response
 ```json
