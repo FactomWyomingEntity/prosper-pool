@@ -24,7 +24,7 @@ func InsertGradeBlock(tx *gorm.DB, eblock *factom.EBlock, graded grader.GradedBl
 		EbSequence:  int(eblock.Sequence),
 	}
 
-	return tx.Create(&next).Error
+	return tx.FirstOrCreate(&next).Error
 }
 
 func (n *Node) Grade(ctx context.Context, block *factom.EBlock) (grader.GradedBlock, error) {

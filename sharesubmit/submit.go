@@ -180,7 +180,7 @@ func (s *Submitter) Run(ctx context.Context) {
 					} else {
 						sLog.WithFields(log.Fields{
 							"job":       share.JobID,
-							"entryhash": fmt.Sprintf("%x", entry.Hash.String()),
+							"entryhash": fmt.Sprintf("%s", entry.Hash.String()),
 							"target":    share.Target,
 						}).Debug("share submitted to factomd")
 					}
@@ -224,7 +224,7 @@ func (d *EntrySubmission) AfterFind() (err error) {
 // saveEMA will save a copy of the EMA to the database. It's a copy because
 // uint64s are not always safe to sql  and we need to modify it before saving
 func (s Submitter) saveEMA(ema EMA) error {
-	return s.db.Create(&ema).Error
+	return s.db.FirstOrCreate(&ema).Error
 }
 
 // EMA = [Latest Value  - Previous EMA Value] * (2 / N+1) + Previous EMA

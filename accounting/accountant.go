@@ -177,7 +177,7 @@ func (a *Accountant) Listen(ctx context.Context) {
 			pays := NewPayout(*reward, a.PoolFeeRate, *us)
 
 			// TODO: Throw this into the database
-			dbErr := a.DB.Create(pays)
+			dbErr := a.DB.FirstOrCreate(pays)
 			if dbErr.Error != nil {
 				// TODO: This is pretty bad. This means payments failed.
 				// 		We don't want to just panic and kill the pool.

@@ -21,6 +21,7 @@ import (
 // we are guaranteed to always sync in order. And most blocks are filled
 // with oprs anyway, so eblock syncing doesn't buy much.
 func (n *Node) DBlockSync(ctx context.Context) {
+	n.justBooted = true
 	pollingPeriod := n.config.GetDuration(config.ConfigPegnetPollingPeriod)
 	retryPeriod := n.config.GetDuration(config.ConfigPegnetRetryPeriod)
 
@@ -47,13 +48,20 @@ OuterSyncLoop:
 			// We are currently synced, nothing to do. If we are above it, the factomd could
 			// be rebooted
 			// TODO: Reduce polling period depending on what minute we are in
-			time.Sleep(pollingPeriod)
-			continue
+
+			if n.Sync.Synced == int32(heights.DirectoryBlock) && n.justBooted {
+				// We want to send the last job down
+				n.Sync.Synced--
+			} else {
+				time.Sleep(pollingPeriod)
+				continue
+			}
 		}
 
 		var totalDur time.Duration
 		var iterations int
 
+		n.justBooted = false
 		begin := time.Now()
 		for n.Sync.Synced < int32(heights.DirectoryBlock) {
 			current := n.Sync.Synced + 1
@@ -91,7 +99,7 @@ OuterSyncLoop:
 
 			n.Sync.Synced++
 
-			dbErr := tx.Create(n.Sync)
+			dbErr := tx.FirstOrCreate(n.Sync)
 			if dbErr.Error != nil {
 				n.Sync.Synced--
 				hLog.WithError(err).Errorf("unable to update synced metadata")
@@ -204,7 +212,7 @@ func (n *Node) SyncBlock(ctx context.Context, tx *gorm.DB, height uint32) (grade
 					Identity:        winners[i].OPR.GetID(),
 					EntryHash:       winners[i].EntryHash,
 				}
-				if dbErr := tx.Create(&payout); dbErr.Error != nil {
+				if dbErr := tx.FirstOrCreate(&payout); dbErr.Error != nil {
 					return nil, dbErr.Error
 				}
 			}

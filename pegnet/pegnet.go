@@ -23,6 +23,9 @@ type Node struct {
 	Sync *database.BlockSync
 
 	hooks []chan<- PegnetdHook
+
+	// Indicate a fresh boot
+	justBooted bool
 }
 
 func NewPegnetNode(conf *viper.Viper, db *database.SqlDatabase) (*Node, error) {
