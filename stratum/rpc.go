@@ -48,11 +48,11 @@ type RPCParams []string
 
 // Client-to-server methods
 
-func AuthorizeRequest(username, password, invitecode string) Request {
+func AuthorizeRequest(username, password, invitecode, payoutaddress string) Request {
 	return Request{
 		ID:     rand.Int(),
 		Method: "mining.authorize",
-	}.SetParams(RPCParams{username, password, invitecode})
+	}.SetParams(RPCParams{username, password, invitecode, payoutaddress})
 }
 
 func GetOPRHashRequest(jobID string) Request {
