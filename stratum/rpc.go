@@ -2,6 +2,7 @@ package stratum
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
 )
 
@@ -169,13 +170,15 @@ func SubmitResponse(id int, result bool, err error) Response {
 	}.SetResult(result)
 }
 
-func SubscribeResponse(id int, session string) Response {
+func SubscribeResponse(id int, session string, nonce uint32) Response {
 	notifySub := Subscription{Id: session, Type: "mining.notify"}
 	setTargetSub := Subscription{Id: session, Type: "mining.set_target"}
+	setNonce := Subscription{Id: fmt.Sprintf("%d", nonce), Type: "mining.set_nonce"}
 
-	res := make([]Subscription, 2)
+	res := make([]Subscription, 3)
 	res[0] = notifySub
 	res[1] = setTargetSub
+	res[2] = setNonce
 	return Response{
 		ID: id,
 	}.SetResult(res)

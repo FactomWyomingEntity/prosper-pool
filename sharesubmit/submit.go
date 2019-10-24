@@ -181,7 +181,8 @@ func (s *Submitter) Run(ctx context.Context) {
 						sLog.WithFields(log.Fields{
 							"job":       share.JobID,
 							"entryhash": fmt.Sprintf("%s", entry.Hash.String()),
-							"target":    share.Target,
+							"target":    fmt.Sprintf("%x", share.Target),
+							"nonce":     fmt.Sprintf("%x", share.Nonce),
 						}).Debug("share submitted to factomd")
 					}
 				}

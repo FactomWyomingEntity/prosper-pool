@@ -67,3 +67,13 @@ func TestNonceIncrementer(t *testing.T) {
 		}
 	}
 }
+
+//
+//func TestLXR(t *testing.T) {
+//	InitLX()
+//	// 4c36d71fa95bffe0 f9060442285e00a2c43d7669d6ed794d4371256d8fbfa9f4a84696a6d8a845c5 4cd818b501017bd4 8 fffedc2acef6b383
+//	o, _ := hex.DecodeString("f9060442285e00a2c43d7669d6ed794d4371256d8fbfa9f4a84696a6d8a845c5")
+//	n, _ := hex.DecodeString("4cd818b501017bd4")
+//	h := LX.Hash(append(o, n...))
+//	fmt.Printf(hex.EncodeToString(h))
+//}
