@@ -378,7 +378,7 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 		// Ignore the session id if provided in the params
 		client.agent = params[0]
 
-		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID)); err != nil {
+		if err := client.enc.Encode(SubscribeResponse(req.ID, client.sessionID, client.nonce)); err != nil {
 			client.log.WithField("method", req.Method).WithError(err).Error("failed to send message")
 		} else {
 			client.subscribed = true

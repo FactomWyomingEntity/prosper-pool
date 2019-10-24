@@ -1,6 +1,7 @@
 package pegnet
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
@@ -33,7 +34,7 @@ func (n *Node) Grade(ctx context.Context, block *factom.EBlock) (grader.GradedBl
 		return nil, nil
 	}
 
-	if *block.ChainID != config.OPRChain {
+	if bytes.Compare(block.ChainID[:], config.OPRChain[:]) != 0 {
 		return nil, fmt.Errorf("trying to grade a non-opr chain")
 	}
 

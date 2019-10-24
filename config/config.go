@@ -65,10 +65,10 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigPegnetPollingPeriod, time.Second*2)
 	conf.SetDefault(ConfigPegnetRetryPeriod, time.Second*5)
 
-	conf.SetDefault(Config1ForgeKey, "CHANGME")
-	conf.SetDefault(ConfigApiLayerKey, "CHANGME")
-	conf.SetDefault(ConfigCoinMarketCapKey, "CHANGME")
-	conf.SetDefault(ConfigOpenExchangeRatesKey, "CHANGME")
+	conf.SetDefault(Config1ForgeKey, "CHANGEME")
+	conf.SetDefault(ConfigApiLayerKey, "CHANGEME")
+	conf.SetDefault(ConfigCoinMarketCapKey, "CHANGEME")
+	conf.SetDefault(ConfigOpenExchangeRatesKey, "CHANGEME")
 
 	conf.SetDefault(Config1ForgePriority, -1)
 	conf.SetDefault(ConfigAPILayerPriority, -1)

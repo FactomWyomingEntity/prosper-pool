@@ -6,6 +6,7 @@ package mining
 import (
 	"context"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strconv"
@@ -29,9 +30,8 @@ func InitLX() {
 		if size, err := strconv.Atoi(os.Getenv("LXRBITSIZE")); err == nil && size >= 8 && size <= 30 {
 			LX.Init(0xfafaececfafaecec, uint64(size), 256, 5)
 		} else {
-			LX.Init(0xfafaececfafaecec, 30, 256, 5)
+			LX.Init(lxr.Seed, lxr.MapSizeBits, lxr.HashSize, lxr.Passes)
 		}
-
 	})
 }
 
@@ -186,14 +186,14 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 		}
 
 		p.MiningState.NextNonce()
-
 		diff := ComputeDifficulty(p.MiningState.oprhash, p.MiningState.Nonce)
+
 		p.MiningState.stats.TotalHashes++
 		p.MiningState.stats.NewDifficulty(diff)
 		if diff > p.MiningState.minimumDifficulty {
 			success := &Winner{
-				OPRHash: fmt.Sprintf("%x", p.MiningState.oprhash),
-				Nonce:   fmt.Sprintf("%x", p.MiningState.Nonce),
+				OPRHash: hex.EncodeToString(p.MiningState.oprhash),
+				Nonce:   hex.EncodeToString(p.MiningState.Nonce),
 				Target:  fmt.Sprintf("%x", diff),
 			}
 			p.MiningState.stats.TotalSubmissions++
@@ -319,15 +319,15 @@ func (b *CommandBuilder) Build() *MinerCommand {
 }
 
 func ComputeDifficulty(oprhash, nonce []byte) (difficulty uint64) {
-	no := append(oprhash, nonce...)
-	h := LX.Hash(no)
+	no := make([]byte, len(oprhash)+len(nonce))
+	i := copy(no, oprhash)
+	copy(no[i:], nonce)
+	b := LX.Hash(no)
 
 	// The high eight bytes of the hash(hash(entry.Content) + nonce) is the difficulty.
 	// Because we don't have a difficulty bar, we can define difficulty as the greatest
 	// value, rather than the minimum value.  Our bar is the greatest difficulty found
 	// within a 10 minute period.  We compute difficulty as Big Endian.
-	for i := uint64(0); i < 8; i++ {
-		difficulty = difficulty<<8 + uint64(h[i])
-	}
-	return difficulty
+	return uint64(b[7]) | uint64(b[6])<<8 | uint64(b[5])<<16 | uint64(b[4])<<24 |
+		uint64(b[3])<<32 | uint64(b[2])<<40 | uint64(b[1])<<48 | uint64(b[0])<<56
 }

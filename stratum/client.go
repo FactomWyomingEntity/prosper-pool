@@ -238,6 +238,17 @@ func (c *Client) Subscribe() error {
 			log.Println("Subscriptions Results:")
 			for _, subscription := range subscriptions {
 				log.Println("...", subscription)
+
+				// Set nonce if provided here
+				if subscription.Type == "mining.set_nonce" {
+					nonce, err := strconv.ParseUint(subscription.Id, 10, 32)
+					if err != nil {
+						log.Errorln("Nonce unable to be converted to integer: ", err)
+						continue
+					}
+
+					c.SetNewNonce(uint32(nonce))
+				}
 			}
 		} else {
 			log.Error(err)
@@ -442,11 +453,7 @@ func (c *Client) HandleRequest(req Request) {
 			return
 		}
 
-		log.Printf("New Nonce: %d\n", nonce)
-		command := mining.BuildCommand().
-			NewNoncePrefix(uint32(nonce)).
-			Build()
-		c.SendCommand(command)
+		c.SetNewNonce(uint32(nonce))
 	case "mining.stop_mining":
 		log.Println("Request to stop mining received")
 		command := mining.BuildCommand().
@@ -456,6 +463,14 @@ func (c *Client) HandleRequest(req Request) {
 	default:
 		log.Warnf("unknown method %s", req.Method)
 	}
+}
+
+func (c *Client) SetNewNonce(nonce uint32) {
+	log.Printf("New Nonce: %d\n", nonce)
+	command := mining.BuildCommand().
+		NewNoncePrefix(uint32(nonce)).
+		Build()
+	c.SendCommand(command)
 }
 
 func (c *Client) AggregateStats(job int32, stats chan *mining.SingleMinerStats, l int) {
