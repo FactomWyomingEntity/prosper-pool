@@ -17,12 +17,8 @@ RUN go mod download
 # Copy the source from the current directory to the Working Directory inside the container
 COPY . .
 
-# Build the Go private-pool application
-RUN go install .
-RUN go mod vendor
-
 # Expose ports 1234 and 7070 to the outside world
 EXPOSE 1234 7070
 
-# Update permissions on the "wait for db" script
-RUN ["chmod", "+x", "/go/src/prosper-pool/wait-for-it.sh"]
+# Build the Go private-pool application
+RUN ["/go/src/prosper-pool/build.sh"]
