@@ -143,8 +143,9 @@ OuterSyncLoop:
 				for i := range n.hooks {
 					select {
 					case n.hooks[i] <- hook:
+						hLog.Tracef("hook sent")
 					default:
-
+						hLog.Warnf("hook failed to send")
 					}
 				}
 			}
@@ -202,17 +203,24 @@ func (n *Node) SyncBlock(ctx context.Context, tx *gorm.DB, height uint32) (grade
 		}
 		winners := gradedBlock.Winners()
 		if 0 < len(winners) {
-			for i := range winners {
-				payout := database.PegnetPayout{
-					Height:          int32(height),
-					Position:        int32(winners[i].Position()),
-					Reward:          int64(winners[i].Payout()),
-					CoinbaseAddress: winners[i].OPR.GetAddress(),
-					Identity:        winners[i].OPR.GetID(),
-					EntryHash:       winners[i].EntryHash,
-				}
-				if dbErr := tx.FirstOrCreate(&payout); dbErr.Error != nil {
-					return nil, dbErr.Error
+			var s database.PegnetPayout
+			err := tx.Order("height desc").First(&s).Error
+			if err != nil && err != gorm.ErrRecordNotFound {
+				return nil, err
+			}
+			if s.Height != int32(height) {
+				for i := range winners {
+					payout := database.PegnetPayout{
+						Height:          int32(height),
+						Position:        int32(winners[i].Position()),
+						Reward:          int64(winners[i].Payout()),
+						CoinbaseAddress: winners[i].OPR.GetAddress(),
+						Identity:        winners[i].OPR.GetID(),
+						EntryHash:       winners[i].EntryHash,
+					}
+					if dbErr := tx.Create(&payout); dbErr.Error != nil {
+						return nil, dbErr.Error
+					}
 				}
 			}
 		} else {
