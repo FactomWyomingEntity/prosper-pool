@@ -54,7 +54,7 @@ var pay = &cobra.Command{
 		info, err := os.Stat(receipt)
 		exists := info != nil && !os.IsNotExist(err)
 		if exists {
-			return fmt.Errorf("%s already exists. Receipt must be a new file", args[0])
+			return fmt.Errorf("%s already exists. Receipt must be a new file", receipt)
 		}
 
 		cl := factomdClient(cmd)
