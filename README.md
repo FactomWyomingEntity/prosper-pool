@@ -29,15 +29,18 @@ All miner work is stored in memory and saved to postgres at the start of the nex
 The RPC documentation, including the PegNet-oriented modifications and additions, can be found [here](stratum_adj.md). To run the Stratum server only (for experimentation and/or debugging purposes) you can run things with the `stratum` command included: `private-pool stratum` and then run a client/miner to connect with it normally (the server will disable strict authentication requirements in this state). This also enables a simControl-esque environment, where server-side commands like `listclients`, `getversion <client-id>`, or `showmessage <client-id> <message>` or client-side commands like `getopr <job-id>` can be entered directly by the user.
 
 
-# Development enviroment
+# Development environment
 
-*Note: for best results, use Go v1.13*
+GoLang v1.13+ must be used when compiling the pool. A docker compose is provided to run postgres.
+
+When running on a chain other than mainnet, providing a `--testing` will set all activation heights to 0, and allow mining before mainnet activation heights are reached.
+
 
 ## Postgres instance
 
 ```
 echo "launch the postgres db"
-docker-compose up -d
+docker-compose up -d db
 ```
 
 ## User Authentication
@@ -60,35 +63,33 @@ Once the server is running, you can [run and connect a prosper-miner to it](pros
 
 ## Command-line options
 
-You can use `private-pool --help` to list the command-line arguments and options:
+You can use `private-pool --help` to list the command-line arguments and options. There are hidden commands used for development purposes.
 
 ```
+Launch the private pool
+
 Usage:
   private-pool [flags]
   private-pool [command]
 
 Available Commands:
-  accountant  Run the pool accountant
-  auth        Run the pegnet authenticator
   config      Write a example config with defaults
   db          Any direct db interactions can be done through this cli.
   help        Help about any command
-  miner       Launch a miner
-  stratum     Launch the stratum server
-  sync        Run the pegnet sync
 
 Flags:
+      --act int         Enable a custom activation height for testing mode
       --config string   Location to config (default "$HOME/.prosper/prosper-pool.toml")
   -h, --help            help for private-pool
-      --log string      Change the logging level. Options: 
-                            'trace', 'debug', 'info', 'warn', 
-                            'error', or 'fatal' (default "info")
+      --log string      Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal' (default "info")
       --phost string    Postgres host url (default "192.168.32.2")
       --pport int       Postgres host port (default 5432)
       --rauth           Enable miners to use actual registered usernames (default true)
+      --sport int       Stratum server host port (default 1234)
       --testing         Enable testing mode
 
 Use "private-pool [command] --help" for more information about a command.
+
 ```
 
 

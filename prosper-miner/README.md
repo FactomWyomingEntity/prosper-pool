@@ -1,37 +1,43 @@
 # Prosper Miner
 
+The prosper-miner binary is a PegNet miner compatible with the Prosper pool (private-pool) server. When a miner submits their work to the pool in the form of a share, the pool software determines whether or not to submit that share, and will credit the miner for the work they have done.
 
-The prosper-miner binary is a PegNet miner compatible with the Prosper pool (`private-pool`) server. When a miner submits their work to the pool in the form of a share, the pool software determines whether or not to submit that share, and will credit the miner for the work they have done.
+## Performance Notes
 
-*Note: for best results, use Go v1.13*
+The pool must be compiled with GoLang 1.13+, however the miner does not. There is some significant performance changes both positive and negative with GoLang 1.13 compliation of the miner for some platforms. It would be advisable to do some testing and figure out the best compliation options to maximize your hashrate. 
 
-# Usage
+# Initial Setup
 
-## Example setup
-First, make sure that [a prosper pool server is running](../README.md#Usage). Then, from the `prosper-miner` directory (`cd prosper-miner`), use `go build` or `go install` to build the miner binary. Assuming that the pool server is running and accessible at the address `123.45.67.89:1234` you can connect a miner with the username `user@example.com` to it like so:
+Initital setup of a miner requires some additional parameters to register your user account. A single user can have many miners, where a miner is a single instance of `prosper-miner`. A user receives all credit for a miner's work, and all payouts resulting from the miner's work. 
 
-```
-./prosper-miner --poolhost 123.45.67.89:1234 --user user@example.com
-```
+To run your first miner against the pool, an invite code must be provided. The current pool is setup as invite only. The params:
 
-## Notes
-
-* The username provided must be a valid email address.
-* The first time you authenticate a particular username, you must provide an invite code (with `--invitecode` or `-i`) and use the `--password` (or `-p`) flag to enable a password prompt upon startup. You will also need to provide a payout address (`-a`) *Note: the password should not be provided on the command-line; the `-p` flag is simply a boolean to enable the prompt.*
-
-An example of someone connecting to the pool for the first time using the invite-code "invite-EAXPRO" and mining with 4 threads might be like below. Once you are registered, you will only need to provide the user field.
+- Username: This is an email address that will serve as your login. Provide a legit one please, as it must be valid.
+- Password: A prompt will come up to type in a password. The password is not needed for future miners, but it will be needed to login through any web portal
+- MinerID: This is optional. You can provide a custom minerid that can be used to identify a specific miner. If you leave this blank, one will be chosen for you.
+- PayoutAddress: A factoid address that will associated with your account for payouts
+- Invite Code: This is needed for registration, ask the pool operator for one.
 
 ```
-./prosper-miner -s 123.45.67.89:1234 -u user@example.com -t 4 -i invite-EAXPRO -p -a FA2jK2HcLnRdS94dEcU27rF3meoJfpUcZPSinpb7AwQvPRY6RL1Q
+#		   pool-address          username            invitecode  pass    PayoutAddress
+./prosper-miner -s 123.45.67.89:1234 -u user@example.com -i invite-EAXPRO -p -a FA2jK2HcLnRdS94dEcU27rF3meoJfpUcZPSinpb7AwQvPRY6RL1Q
+
 ```
-The password would then be entered and confirmed at the ensuing prompt.
 
-* Make sure to enter the right username, as this is how you will be credited for the hashrate you provide to the pool.
+The configuration for the pool miner is stored at `~/.prosper/prosper-miner.toml`. This path can be changed with the `--config`.
 
-* The configuration for pool miners is by default stored and managed at `~/.prosper/prosper-miner.toml` though this can be changed with the `--config` command-line option.
+# Running Further Miners
+
+Once you have an account, all further miners only need the username and optional minerid. If no minerid is provided, a random one is chosen for you. The miner will report stats at the completion of every job. The miner will begin mining as soon as the pool tells it too (within seconds of a successful connection). The miner will start automatically with the number of CPU's found, you can change this with `-t`. E.g `-t 10` will use 10 threads.
+
+```
+./prosper-miner --poolhost 123.45.67.89:1234 --user user@example.com -m machine01
+```
 
 
-## Command-line options
+
+
+# Command-line options
 
 You can use `prosper-miner --help` to list the command-line arguments and options:
 

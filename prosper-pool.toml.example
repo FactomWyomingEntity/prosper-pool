@@ -1,6 +1,7 @@
 [app]
   loglevel = "info"
 
+# The database must be a postgres instance
 [database]
   dbname = "postgres"
   host = "localhost"
@@ -9,8 +10,9 @@
   username = "postgres"
 
 [factom]
-  factomdlocation = "http://localhost:8088/v2"
+  factomdlocation = "http://localhost:8088"
 
+# The oracle section is the same as Pegnet
 [oracle]
   1forgekey = "CHANGEME"
   apilayerkey = "CHANGEME"
@@ -36,15 +38,34 @@
 [pool]
   esaddress = "Es2XT3jSxi1xqrDvS5JERM3W3jh1awRHuyoahn3hbQLyfEi1jvbq"
   oprcoinbase = "FA2jK2HcLnRdS94dEcU27rF3meoJfpUcZPSinpb7AwQvPRY6RL1Q"
+
+  # The identity placed in the OPR. This will be put on the blockchain
   opridentity = "Prosper"
+
+  # The pool fee is how much of the rewards goes to the pool before distributed
+  # to the miners. '0.05' is 5% of the rewards. Dust is currently accounted
+  # for, but unallocated.
   poolfeerate = "0.05"
 
 [stratum]
+  # If this is set to false, we will authorize miners without proper usernames.
+  # The pool will allow unauthorized miners mine, but most clients will
+  # disconnect if they are not authorized.
   requireauth = true
 
 [submit]
+  # An exponential moving average is used of the on chain targets to determine
+  # our rolling submission minimum target. This is the same as the reference
+  # miner detailed here:
+  #     https://github.com/pegnet/pegnet/blob/master/utilities/simulate/DifficultyTarget.md
+  # The major difference is we account for the last N blocks in our minimum.
+  # Raising the window accounts for a longer period.
+  #
+  # EMA = [Latest Value  - Previous EMA Value] * (2 / N+1) + Previous EMA
+  # N is the number of points in the Exponential Moving Average
   ema-n = 36
   submissioncutoff = 200
 
 [web]
+  # The web UI port.
   port = 7070
