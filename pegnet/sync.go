@@ -143,8 +143,9 @@ OuterSyncLoop:
 				for i := range n.hooks {
 					select {
 					case n.hooks[i] <- hook:
+						hLog.Tracef("hook sent")
 					default:
-
+						hLog.Warnf("hook failed to send")
 					}
 				}
 			}
