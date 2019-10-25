@@ -5,6 +5,11 @@ FROM golang:latest
 # Set the Current Working Directory inside the container
 RUN mkdir -p /go/src/prosper-pool
 
+# For UI
+RUN mkdir -p /go/src/github.com/qor
+RUN git clone https://github.com/qor/auth_themes.git
+RUN mv auth_themes /go/src/github.com/qor
+
 WORKDIR /go/src/prosper-pool
 
 # Copy go mod and sum files
