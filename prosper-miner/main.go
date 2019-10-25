@@ -46,6 +46,8 @@ func init() {
 	// Defaults
 	rootCmd.Flags().StringP("poolhost", "s", "localhost:1234", "URL to connect to the pool")
 	rootCmd.Flags().IntP("miners", "t", runtime.NumCPU(), "Number of mining threads")
+
+	rootCmd.AddCommand(properties)
 }
 
 // Pool entry point
