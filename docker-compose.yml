@@ -13,21 +13,14 @@ services:
     build: .
     environment:
       - LXRBITSIZE=8
-    command: ["./wait-for-it.sh", "db:5432", "--", "private-pool", "--phost", "db", "--fhost", "http://factomd:8088"]
+    command: ["./wait-for-it.sh", "db:5432", "--", "private-pool", "--phost", "db", "--fhost", "http://172.17.0.1:8088"]
     volumes:
       - .:/go/src/prosper-pool
     ports:
       - "1234:1234"
     depends_on:
       - db
-      - factomd
     links:
       - db
-      - factomd
-  factomd:
-    image: factominc/factomd
-    command: ['-network=CUSTOM', '-customnet="mycustomnet"', '-blktime=40', '-exclusive=true']
-    ports:
-      - "8088:8088"
 volumes:
   pool_db:
