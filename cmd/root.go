@@ -39,7 +39,7 @@ func init() {
 	rootCmd.PersistentFlags().String("log", "info", "Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal'")
 	rootCmd.PersistentFlags().String("phost", "192.168.32.2", "Postgres host url")
 	rootCmd.PersistentFlags().Int("pport", 5432, "Postgres host port")
-	rootCmd.PersistentFlags().String("fhost", "localhost", "Factomd host url")
+	rootCmd.PersistentFlags().String("fhost", "http://localhost:8088", "Factomd host url")
 	rootCmd.PersistentFlags().Bool("testing", false, "Enable testing mode")
 	rootCmd.PersistentFlags().Int("act", 0, "Enable a custom activation height for testing mode")
 	rootCmd.PersistentFlags().Bool("rauth", true, "Enable miners to use actual registered usernames")
