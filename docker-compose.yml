@@ -13,9 +13,11 @@ services:
     build: .
     environment:
       - LXRBITSIZE=30
-    command: ["./wait-for-it.sh", "db:5432", "--", "private-pool", "--phost", "db", "--log", "debug" "--fhost", "http://172.17.0.1:8088"]
+    command: ["./wait-for-it.sh", "db:5432", "--", "private-pool", "--phost", "db", "--fhost", "http://172.17.0.1:8088"]
     volumes:
       - .:/go/src/prosper-pool
+      - lxrhash:/root/.lxrhash
+      - pool_conf:/root/.prosper
     ports:
       - "1234:1234"
       - "7070:7070"
@@ -25,3 +27,5 @@ services:
       - db
 volumes:
   pool_db:
+  lxrhash:
+  pool_conf:

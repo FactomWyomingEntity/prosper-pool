@@ -4,11 +4,11 @@ FROM golang:latest
 
 # Set the Current Working Directory inside the container
 RUN mkdir -p /go/src/prosper-pool
+
 WORKDIR /go/src/prosper-pool
 
 # Copy go mod and sum files
 COPY go.mod go.sum wait-for-it.sh ./
-
 COPY prosper-pool.toml.example /root/.prosper/prosper-pool.toml
 
 # Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
@@ -19,6 +19,7 @@ COPY . .
 
 # Build the Go private-pool application
 RUN go install .
+RUN go mod vendor
 
 # Expose ports 1234 and 7070 to the outside world
 EXPOSE 1234 7070
