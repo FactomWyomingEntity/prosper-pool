@@ -187,9 +187,8 @@ func (e *PoolEngine) link() error {
 }
 
 func (e *PoolEngine) Run(ctx context.Context) {
-	// TODO: Spin off all threads
-
 	// MinuteKeeper watches for the min 0 to 1 problem
+	//	- Used by the submitter and stratum server to reject shares
 	go e.MinuteKeeper.Run(ctx)
 
 	// Stratum server listens to new jobs - spits out new shares
@@ -207,7 +206,7 @@ func (e *PoolEngine) Run(ctx context.Context) {
 	// Start api/web
 	go e.Web.Listen()
 
-	// Listen for new jobs
+	// Listen for new jobs for forwarding
 	e.listenBlocks(ctx)
 }
 
@@ -222,6 +221,8 @@ func (e *PoolEngine) listenBlocks(ctx context.Context) {
 			}
 
 			// We update the job if it is the latest block
+			// The hook.Top let's processes know if this is the latest block
+			// or we are just syncing
 			if hook.Top {
 				// Update current job and notify the Miners
 				e.StratumServer.UpdateCurrentJob(job)
@@ -235,13 +236,11 @@ func (e *PoolEngine) listenBlocks(ctx context.Context) {
 			e.Accountant.RewardChannel() <- e.findRewards(hook)
 
 			// Notify Submissions
-			//	Submissions needs the hook and the job
+			//	Submissions needs the new job to know what shares are valid
 			e.Submitter.GetBlocksChannel() <- sharesubmit.SubmissionJob{
 				Block: hook,
 				Job:   job,
 			}
-			// TODO: Notify submission module
-
 		case <-ctx.Done():
 			return
 		}

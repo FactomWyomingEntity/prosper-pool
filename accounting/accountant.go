@@ -173,13 +173,12 @@ func (a *Accountant) Listen(ctx context.Context) {
 			// This will also calculate the pool cut
 			pays := NewPayout(*reward, a.PoolFeeRate, *us)
 
-			// TODO: Throw this into the database
 			dbErr := a.DB.FirstOrCreate(pays)
 			if dbErr.Error != nil {
 				// TODO: This is pretty bad. This means payments failed.
 				// 		We don't want to just panic and kill the pool.
-				//		For now, we can just write everything to a file,
-				//		and try to notify someone.
+				//		Maybe, we can just write everything to a file,
+				//		and try to notify someone?
 
 				// TODO: Write to a file all the details so we can recover the payments
 				rLog.WithError(dbErr.Error).Error("failed to write payouts to database")

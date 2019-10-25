@@ -39,7 +39,6 @@ func (r Request) SetParams(p interface{}) Request {
 	return r
 }
 
-// TODO: If we store the json.RawMessage, it would give us a performance boost
 func (r Request) FitParams(t interface{}) error {
 	return json.Unmarshal(r.Params, t)
 }

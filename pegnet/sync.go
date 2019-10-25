@@ -202,7 +202,6 @@ func (n *Node) SyncBlock(ctx context.Context, tx *gorm.DB, height uint32) (grade
 		}
 		winners := gradedBlock.Winners()
 		if 0 < len(winners) {
-			// TODO: Insert rewards
 			for i := range winners {
 				payout := database.PegnetPayout{
 					Height:          int32(height),

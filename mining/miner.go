@@ -222,18 +222,6 @@ func (p *PegnetMiner) HandleCommand(c *MinerCommand) {
 	case ResetRecords:
 		p.ResetNonce()
 		p.MiningState.stats = NewSingleMinerStats(p.PersonalID)
-		// Log our last hashrate
-		//if p.MiningState.stats.TotalHashes > 0 {
-		//	h := new(big.Float).SetUint64(p.MiningState.hashes)
-		//	d := time.Since(p.MiningState.start)
-		//	rate := h.Quo(h, big.NewFloat(d.Seconds()))
-		//	r, _ := rate.Float64()
-		//	log.WithFields(log.Fields{
-		//		"hashrate":    fmt.Sprintf("%.2f h/s", r),
-		//		"duration":    d,
-		//		"submissions": p.MiningState.submissions,
-		//	}).Infof("previous mining job closed")
-		//}
 		p.MiningState.stats.Start = time.Now()
 	case SubmitStats:
 		p.MiningState.stats.Stop = time.Now()

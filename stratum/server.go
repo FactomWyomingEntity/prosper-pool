@@ -110,7 +110,6 @@ func (s *Server) Notify(job *Job) {
 }
 
 func (s *Server) Listen(ctx context.Context) {
-	// TODO: Change this with config file
 	host := fmt.Sprintf("0.0.0.0:%d", s.stratumPort)
 	addr, err := net.ResolveTCPAddr("tcp", host)
 	if err != nil {
@@ -288,7 +287,6 @@ func (s *Server) HandleMessage(client *Miner, data []byte) {
 		var _ = resp
 	}
 
-	// TODO: Don't just print everything
 	//client.log.Infof(string(data))
 }
 
@@ -319,8 +317,7 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 
 		if s.Auth != nil && s.configuration.RequireAuth {
 			if !s.Auth.Exists(client.username) {
-				// Did they provide a password and code?
-				// TODO: check for payout address, as well (params[3])
+				// Did they provide a password, code, and payout addr?
 				if len(params) >= 4 && s.Auth.RegisterUser(client.username, params[1], params[2], params[3]) {
 					// User registered! Let them through by falling out of this if statement
 				} else {

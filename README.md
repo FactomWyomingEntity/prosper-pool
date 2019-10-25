@@ -50,6 +50,8 @@ https://github.com/qor/auth is used for user management and authentication. All 
 
 # Usage
 
+To interact with a running pool as an admin, you can consult [this document](./ADMIN.md)
+
 ## Example setup
 First, make sure that a postgresql database is running (`docker-compose up -d`), and that `factomd`, is running locally. Start the compiled prosper server binary with:
 
