@@ -12,12 +12,13 @@ services:
   prosper-pool:
     build: .
     environment:
-      - LXRBITSIZE=8
+      - LXRBITSIZE=30
     command: ["./wait-for-it.sh", "db:5432", "--", "private-pool", "--phost", "db", "--fhost", "http://172.17.0.1:8088"]
     volumes:
       - .:/go/src/prosper-pool
     ports:
       - "1234:1234"
+      - "7070:7070"
     depends_on:
       - db
     links:

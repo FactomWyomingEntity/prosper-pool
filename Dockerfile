@@ -20,8 +20,8 @@ COPY . .
 # Build the Go private-pool application
 RUN go install .
 
-# Expose port 1234 to the outside world
-EXPOSE 1234
+# Expose ports 1234 and 7070 to the outside world
+EXPOSE 1234 7070
 
 # Update permissions on the "wait for db" script
 RUN ["chmod", "+x", "/go/src/prosper-pool/wait-for-it.sh"]
