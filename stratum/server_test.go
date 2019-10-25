@@ -16,7 +16,6 @@ import (
 func serverAndClient(t *testing.T) (s *Server, miner *Client, srv net.Conn, cli net.Conn) {
 	require := require.New(t)
 
-	// TODO: Replace config with some defaults
 	s, err := NewServer(viper.GetViper())
 	require.NoError(err)
 
@@ -79,8 +78,26 @@ func TestServer_ReconnectClient(t *testing.T) {
 	require.NoError(err)
 	require.False(isPrefix)
 
-	err = srv.ReconnectClient(srv.Miners.ListMiners()[0], "pipe", "1234", "3")
-	// TODO: see if client actually reinitates a connection, maybe sleep and check again
+	initialLength := len(srv.Miners.ListMiners())
+	require.Greater(initialLength, 0)
+
+	initialMinerSessionID := srv.Miners.ListMiners()[0]
+	newViper := viper.GetViper()
+	newViper.Set("stratum.StratumPort", 1234)
+	srvr, err := NewServer(newViper)
+	require.NoError(err)
+
+	go srvr.Listen(ctx)
+	err = srv.ReconnectClient(initialMinerSessionID, "0.0.0.0", "1234", "2")
+
+	time.Sleep(1 * time.Second)
+	// Client should be disconnected by now
+	time.Sleep(2 * time.Second)
+	newLength := len(srvr.Miners.ListMiners())
+	require.Greater(newLength, 0)
+	newMinerSessionID := srvr.Miners.ListMiners()[0]
+
+	require.NotEqual(initialMinerSessionID, newMinerSessionID)
 	require.NoError(err)
 }
 
