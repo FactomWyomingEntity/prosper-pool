@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pegnet/pegnet/modules/opr"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -133,7 +135,8 @@ type DataSourceWithPriority struct {
 }
 
 // NewDataSources reads the config and sets everything up for polling
-func NewDataSources(conf *viper.Viper) *DataSources {
+//	enforce will ensure all assets are covered
+func NewDataSources(conf *viper.Viper, enforce bool) *DataSources {
 	d := new(DataSources)
 	d.AssetSources = make(map[string][]string)
 	d.DataSources = make(map[string]IDataSource)
@@ -200,6 +203,17 @@ func NewDataSources(conf *viper.Viper) *DataSources {
 	for _, asset := range AllAssets {
 		if order := conf.GetString("oracleassetdatasourcespriority." + strings.ToLower(asset)); order != "" {
 			d.AssetSources[asset] = strings.Split(order, ",")
+		}
+	}
+
+	if enforce {
+		// Verify all assets are covered
+		for _, asset := range opr.V2Assets {
+			if len(d.AssetSources[asset]) == 0 && asset != "PEG" {
+				dLog.Errorf("Asset %s has no datasource. All assets need a datasource!",
+					asset)
+				CheckAndPanic(fmt.Errorf("asset found with 0 datasources"))
+			}
 		}
 	}
 

@@ -20,7 +20,9 @@ import (
 	"github.com/FactomWyomingEntity/private-pool/exit"
 	"github.com/FactomWyomingEntity/private-pool/loghelp"
 	"github.com/FactomWyomingEntity/private-pool/pegnet"
+	"github.com/FactomWyomingEntity/private-pool/polling"
 	"github.com/FactomWyomingEntity/private-pool/stratum"
+	"github.com/pegnet/pegnet/modules/opr"
 	"github.com/qor/session/manager"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -34,6 +36,7 @@ func init() {
 	rootCmd.AddCommand(testAuth)
 	rootCmd.AddCommand(testStratum)
 	rootCmd.AddCommand(getConfig)
+	rootCmd.AddCommand(datasources)
 
 	rootCmd.PersistentFlags().String("config", "$HOME/.prosper/prosper-pool.toml", "Location to config")
 	rootCmd.PersistentFlags().String("log", "info", "Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal'")
@@ -355,6 +358,76 @@ var testAuth = &cobra.Command{
 				break InfiniteLoop
 			}
 		}
+	},
+}
+
+// Direct copy from Pegnet
+var datasources = &cobra.Command{
+	Use:   "datasources [assets or datasource]",
+	Short: "Reads a config and outputs the data sources and their priorities",
+	Long: "When setting up a datasource config, this cmd will help you verify your config is set " +
+		"correctly. It will also help you ensure you have redudent data sources. " +
+		"This command can also provide all datasources, and what assets they support. As well as the " +
+		"opposite; given an asset what datasources include it.",
+	Example:   "prosper-pool datasources FCT\nprosper-pool datasources CoinMarketCap",
+	Args:      cobra.MaximumNArgs(1),
+	PreRun:    SoftReadConfig,
+	ValidArgs: append(opr.V2Assets, polling.AllDataSourcesList()...),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// User selected a data source or asset
+		if len(args) == 1 {
+			if AssetListContainsCaseInsensitive(opr.V2Assets, args[0]) {
+				// Specified an asset
+				asset := strings.ToUpper(args[0])
+
+				// Find all exchanges for the asset
+				fmt.Printf("Asset : %s\n", asset)
+
+				var sources []string
+				for k, v := range polling.AllDataSources {
+					if AssetListContains(v.SupportedPegs(), asset) {
+						sources = append(sources, k)
+					}
+				}
+				fmt.Printf("Datasources : %v\n", sources)
+			} else if AssetListContainsCaseInsensitive(polling.AllDataSourcesList(), args[0]) {
+				// Specified an exchange
+				source := polling.CorrectCasing(args[0])
+				s, ok := polling.AllDataSources[source]
+				if !ok {
+					return fmt.Errorf("%s is not a supported datasource", args[0])
+				}
+
+				fmt.Printf("Datasource : %s\n", s.Name())
+				fmt.Printf("Datasource URL : %s\n", s.Url())
+				fmt.Printf("Supported peg pricing\n")
+				for _, asset := range s.SupportedPegs() {
+					fmt.Printf("\t%s\n", asset)
+				}
+			} else {
+				// Should never happen
+				fmt.Println("This should never happen. The provided argument is invalid")
+			}
+			return nil
+		}
+
+		// Default to printing everything
+		d := polling.NewDataSources(viper.GetViper(), false)
+
+		// Time to print
+		fmt.Println("Data sources in priority order")
+		fmt.Printf("\t%s\n", d.PriorityListString())
+
+		fmt.Println()
+		fmt.Println("Assets and their data source order. The order left to right is the fallback order.")
+		for _, asset := range opr.V2Assets {
+			if asset == "PEG" {
+				continue
+			}
+			str := d.AssetPriorityString(asset)
+			fmt.Printf("\t%4s (%d) : %s\n", asset, len(d.AssetSources[asset]), str)
+		}
+		return nil
 	},
 }
 

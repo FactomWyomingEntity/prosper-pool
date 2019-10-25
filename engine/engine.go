@@ -6,6 +6,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
+	"regexp"
+
+	"github.com/pegnet/pegnet/modules/grader"
+
+	"github.com/pegnet/pegnet/modules/factoidaddress"
 
 	"github.com/Factom-Asset-Tokens/factom"
 	"github.com/FactomWyomingEntity/private-pool/accounting"
@@ -102,7 +107,7 @@ func (e *PoolEngine) init() error {
 
 	// This one will fatal log if an error is encountered
 	// TODO: We should probably make this like the rest
-	pol := polling.NewDataSources(e.conf)
+	pol := polling.NewDataSources(e.conf, true)
 
 	acc, err := accounting.NewAccountant(e.conf, db.DB)
 	if err != nil {
@@ -325,6 +330,12 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 	oprHashHex := fmt.Sprintf("%x", oprHash[:])
 	hLog.WithFields(log.Fields{"oprhash": oprHashHex, "top": hook.Top}).Debugf("new job")
 
+	err = ValidateV2Content(data)
+	if err != nil {
+		hLog.WithError(err).Errorf("OPR Data is Invalid! All submitted records by the pool will be rejected by PegNet!")
+		hLog.Errorf("Please check your config is correct. Like the correct data sources")
+	}
+
 	// The job is for the height + 1. The synced block is wrapping up the last
 	// job
 	return &stratum.Job{
@@ -332,4 +343,38 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 		OPRHash: oprHashHex,
 		OPR:     record,
 	}
+}
+
+// The module does not validate opr content, only the full entry...
+// We need to fix that there.
+// TODO: Move this into pegnet modules
+func ValidateV2Content(content []byte) error {
+	o, err := opr.ParseV2Content(content)
+	if err != nil {
+		return grader.NewDecodeError(err.Error())
+	}
+
+	// verify assets
+	if len(o.Assets) != len(opr.V2Assets) {
+		return grader.NewValidateError("invalid assets")
+	}
+	for i, val := range o.Assets {
+		if i > 0 && val == 0 {
+			return grader.NewValidateError(fmt.Sprintf("asset quote must be greater than 0, %s is 0", opr.V2Assets[i]))
+		}
+	}
+
+	if len(o.Winners) != 10 && len(o.Winners) != 25 {
+		return grader.NewValidateError("must have exactly 10 or 25 previous winning shorthashes")
+	}
+
+	if err := factoidaddress.Valid(o.Address); err != nil {
+		return grader.NewValidateError(fmt.Sprintf("factoidaddress is invalid : %s", err.Error()))
+	}
+
+	if valid, _ := regexp.MatchString("^[a-zA-Z0-9,]+$", o.ID); !valid {
+		return grader.NewValidateError("only alphanumeric characters and commas are allowed in the identity")
+	}
+
+	return nil
 }

@@ -48,7 +48,7 @@ func TestBasicPollingSources(t *testing.T) {
   UnitTest8=8
 `)
 
-	s := NewDataSources(conf)
+	s := NewDataSources(conf, false)
 
 	pa, err := s.PullAllPEGAssets(1)
 	if err != nil {
@@ -97,7 +97,7 @@ func TestBasicPollingSources(t *testing.T) {
 
 `)
 
-		s = NewDataSources(conf)
+		s = NewDataSources(conf, false)
 		pa, err := s.PullAllPEGAssets(1)
 		if err != nil {
 			t.Error(err)
@@ -164,7 +164,7 @@ func AlwaysOnePolling() *DataSources {
   UnitTest1 = 1
 `)
 
-	s := NewDataSources(c)
+	s := NewDataSources(c, false)
 	return s
 }
 
