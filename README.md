@@ -65,7 +65,7 @@ docker-compose up
 ```
 *Note: you can pass the `-d` flag to `docker-compose` if you'd like to run this detached)*
 
-The configuration for the pool server is by default stored and managed at `~/.prosper/prosper-pool.toml` though this can be changed with the `--config` command-line option.
+The configuration for the pool server is by default stored and managed at `~/.prosper/prosper-pool.toml` though this can be changed with the `--config` command-line option. Please look and modify your config before running the pool. The `prosper-pool datasources` command will help you setup your data sources.
 
 Once the server is running, you can [run and connect a prosper-miner to it](prosper-miner/README.md).
 
@@ -83,13 +83,13 @@ Usage:
 
 Available Commands:
   config      Write a example config with defaults
+  datasources Reads a config and outputs the data sources and their priorities
   db          Any direct db interactions can be done through this cli.
   help        Help about any command
 
 Flags:
       --act int         Enable a custom activation height for testing mode
       --config string   Location to config (default "$HOME/.prosper/prosper-pool.toml")
-      --fhost string    Factomd host url (default "http://localhost:8088")
   -h, --help            help for private-pool
       --log string      Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal' (default "info")
       --phost string    Postgres host url (default "192.168.32.2")
@@ -99,5 +99,4 @@ Flags:
       --testing         Enable testing mode
 
 Use "private-pool [command] --help" for more information about a command.
-
 ```
