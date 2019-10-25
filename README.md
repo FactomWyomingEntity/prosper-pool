@@ -14,7 +14,7 @@ There are a few moving parts in the pool. This diagram depicts things from a hig
 
 ### The pool cannot bootstrap the network
 
-The pool is currently not able to bootstrap the network. If running local development, it is advised to also run a local pegnet miner to ensure enough records are submitted.
+The pool is currently not able to bootstrap the network. If running local development, it is advised to also run a local pegnet miner to ensure enough records are submitted. The pool requires a fully valid (25 winners) block to start mining ontop of.
 
 ### Rolling Submissions
 
