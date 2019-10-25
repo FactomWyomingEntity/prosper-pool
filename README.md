@@ -90,6 +90,7 @@ Available Commands:
 Flags:
       --act int         Enable a custom activation height for testing mode
       --config string   Location to config (default "$HOME/.prosper/prosper-pool.toml")
+      --fhost string    Factomd host url (default "http://localhost:8088")
   -h, --help            help for private-pool
       --log string      Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal' (default "info")
       --phost string    Postgres host url (default "192.168.32.2")
