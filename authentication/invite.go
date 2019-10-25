@@ -41,15 +41,20 @@ func (a *Authenticator) NewCode(code string) error {
 
 func (a *Authenticator) CodeUnclaimed(code string) bool {
 	var i InviteCode
-	dbErr := a.DB.Model(&InviteCode{}).Where("code = ?", code).Find(&i)
+	dbErr := a.DB.Where("code = ?", code).Find(&i)
 	if dbErr.Error != nil {
 		// TODO: ?
+		return false
 	}
 
 	return i.Code != "" && i.Claimed == false
 }
 
 func (a *Authenticator) Claim(code string, user string) bool {
+	if !a.CodeUnclaimed(code) {
+		return false
+	}
+
 	dbErr := a.DB.Model(&InviteCode{}).Where("code = ?", code).Updates(InviteCode{
 		Code:        code,
 		ClaimedTime: time.Now(),
