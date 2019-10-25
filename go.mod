@@ -3,14 +3,12 @@ module github.com/FactomWyomingEntity/private-pool
 go 1.13
 
 require (
-	github.com/AdamSLevy/jsonrpc2/v12 v12.0.2-0.20191005213732-3b0dfc9c5f77 // indirect
 	github.com/Factom-Asset-Tokens/base58 v0.0.0-20181227014902-61655c4dd885
 	github.com/Factom-Asset-Tokens/factom v0.0.0-20190911201853-7b283996f02a
 	github.com/andybalholm/cascadia v1.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
 	github.com/aws/aws-sdk-go v1.25.12 // indirect
 	github.com/cenkalti/backoff v2.1.1+incompatible
-	github.com/coreos/etcd v3.3.10+incompatible
 	github.com/disintegration/imaging v1.6.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0 // indirect

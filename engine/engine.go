@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/FactomWyomingEntity/private-pool/minutekeeper"
-
 	"github.com/Factom-Asset-Tokens/factom"
 	"github.com/FactomWyomingEntity/private-pool/accounting"
 	"github.com/FactomWyomingEntity/private-pool/authentication"
 	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/FactomWyomingEntity/private-pool/database"
 	"github.com/FactomWyomingEntity/private-pool/exit"
+	"github.com/FactomWyomingEntity/private-pool/factomclient"
+	"github.com/FactomWyomingEntity/private-pool/minutekeeper"
 	"github.com/FactomWyomingEntity/private-pool/pegnet"
 	"github.com/FactomWyomingEntity/private-pool/polling"
 	"github.com/FactomWyomingEntity/private-pool/sharesubmit"
@@ -118,7 +118,7 @@ func (e *PoolEngine) init() error {
 
 	srv := web.NewHttpServices(e.conf, db.DB)
 
-	mk := minutekeeper.NewMinuteKeeper(config.FactomClientFromConfig(e.conf))
+	mk := minutekeeper.NewMinuteKeeper(factomclient.FactomClientFromConfig(e.conf))
 
 	// Load our identity info for oprs
 	if id := e.conf.GetString(config.ConfigPoolIdentity); id == "" {

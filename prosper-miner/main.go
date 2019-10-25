@@ -13,14 +13,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Factom-Asset-Tokens/factom"
-
 	"github.com/FactomWyomingEntity/private-pool/exit"
 	"github.com/FactomWyomingEntity/private-pool/stratum"
+	"github.com/pegnet/pegnet/modules/factoidaddress"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -101,7 +99,7 @@ var rootCmd = &cobra.Command{
 				return
 			}
 
-			_, err = factom.NewFAAddress(payoutaddress)
+			err = factoidaddress.Valid(payoutaddress)
 			if err != nil {
 				fmt.Printf("%s is not a valid FA address: %s", payoutaddress, err.Error())
 				os.Exit(1)

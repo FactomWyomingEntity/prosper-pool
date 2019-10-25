@@ -3,7 +3,6 @@ package config
 import (
 	"time"
 
-	"github.com/Factom-Asset-Tokens/factom"
 	"github.com/spf13/viper"
 )
 
@@ -98,13 +97,4 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigStratumRequireAuth, true)
 	conf.SetDefault(ConfigStratumPort, 1234)
 	conf.SetDefault(ConfigStratumWelcomeMessage, "Welcome to Prosper pool! Please visit http://my.pool.url:port for more information.")
-}
-
-func FactomClientFromConfig(conf *viper.Viper) *factom.Client {
-	cl := factom.NewClient()
-	cl.FactomdServer = conf.GetString(ConfigFactomdLocation)
-	// We don't use walletd
-	cl.WalletdServer = conf.GetString("http://localhost:8089")
-
-	return cl
 }

@@ -89,7 +89,7 @@ var pay = &cobra.Command{
 		// Construct the transaction
 		var batch fat2.TransactionBatch
 		batch.Version = 1
-		batch.ChainID = config.TransactionChain
+		batch.ChainID = factom.NewBytes32(config.TransactionChain[:])
 		for _, pay := range payments {
 			var tx fat2.Transaction
 			if pay.PaymentAmount < 0 {

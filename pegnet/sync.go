@@ -183,7 +183,7 @@ func (n *Node) SyncBlock(ctx context.Context, tx *gorm.DB, height uint32) (grade
 	}
 
 	// First, gather all entries we need from factomd
-	oprEBlock := dblock.EBlock(*config.OPRChain)
+	oprEBlock := dblock.EBlock(factom.Bytes32(config.OPRChain))
 	if oprEBlock != nil {
 		if err := multiFetch(oprEBlock, n.FactomClient); err != nil {
 			return nil, err

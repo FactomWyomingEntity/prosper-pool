@@ -6,6 +6,7 @@ import (
 	"github.com/Factom-Asset-Tokens/factom"
 	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/FactomWyomingEntity/private-pool/database"
+	"github.com/FactomWyomingEntity/private-pool/factomclient"
 	"github.com/pegnet/pegnet/modules/grader"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -30,7 +31,7 @@ type Node struct {
 
 func NewPegnetNode(conf *viper.Viper, db *database.SqlDatabase) (*Node, error) {
 	n := new(Node)
-	n.FactomClient = config.FactomClientFromConfig(conf)
+	n.FactomClient = factomclient.FactomClientFromConfig(conf)
 	n.config = conf
 	n.db = db
 

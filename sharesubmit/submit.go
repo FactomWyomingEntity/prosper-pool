@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/FactomWyomingEntity/private-pool/factomclient"
+
 	"github.com/pegnet/pegnet/modules/opr"
 
 	"github.com/Factom-Asset-Tokens/factom"
@@ -69,7 +71,7 @@ func NewSubmitter(conf *viper.Viper, db *gorm.DB) (*Submitter, error) {
 		return nil, dbErr.Error
 	}
 
-	s.FactomClient = config.FactomClientFromConfig(conf)
+	s.FactomClient = factomclient.FactomClientFromConfig(conf)
 
 	s.configuration.Cutoff = conf.GetInt(config.ConfigSubmitterCutoff)
 	s.configuration.EMANumPoints = conf.GetInt(config.ConfigSubmitterEMAN)
@@ -155,7 +157,7 @@ func (s *Submitter) Run(ctx context.Context) {
 				buf := make([]byte, 8)
 				binary.BigEndian.PutUint64(buf, share.Target)
 				entry := factom.Entry{
-					ChainID: config.OPRChain,
+					ChainID: factom.NewBytes32(config.OPRChain[:]),
 					ExtIDs: []factom.Bytes{
 						//	[0] the nonce for the entry
 						share.Nonce,
