@@ -12,6 +12,10 @@ There are a few moving parts in the pool. This diagram depicts things from a hig
 
 ## Notes
 
+### The pool cannot bootstrap the network
+
+The pool is currently not able to bootstrap the network. If running local development, it is advised to also run a local pegnet miner to ensure enough records are submitted.
+
 ### Rolling Submissions
 
 The pegnet reference miner requires a node that syncs with minutes. If the minute syncing is lost, the miner is dead in the water. Prosper pool does not require syncing by minutes, and uses a rolling submission strategy. If your hashpower begins to dominate the network, tweaking might be necessary. A 36 block (6 hr) exponential moving average is kept of the network difficulty to determine whether or not to submit a share.
