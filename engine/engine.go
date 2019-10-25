@@ -280,6 +280,7 @@ func (e *PoolEngine) findRewards(hook pegnet.PegnetdHook) *accounting.Reward {
 func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 	hLog := engLog.WithFields(log.Fields{"height": hook.Height})
 	if !hook.Top {
+		hLog.WithFields(log.Fields{"top": hook.Top}).Debug("no new job for height")
 		// Don't bother populating the fields
 		return &stratum.Job{
 			JobID:   stratum.JobIDFromHeight(hook.Height + 1),
