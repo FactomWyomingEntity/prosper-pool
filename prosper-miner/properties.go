@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/FactomWyomingEntity/private-pool/config"
 	"github.com/spf13/cobra"
 )
 
@@ -13,6 +14,8 @@ var properties = &cobra.Command{
 	PersistentPreRunE: OpenConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Properties")
-		fmt.Printf("\tGoLang Version: %s\n", runtime.Version())
+		fmt.Printf("\t%30s: %s\n", "Build Verison", config.CompiledInVersion)
+		fmt.Printf("\t%30s: %s\n", "Build Commit", config.CompiledInBuild)
+		fmt.Printf("\t%30s: %s\n", "GoLang Version", runtime.Version())
 	},
 }

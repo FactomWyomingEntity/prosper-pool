@@ -23,3 +23,7 @@ var TransactionConversionActivation uint32 = 213237
 var PEGPricingActivation uint32 = 214287
 
 const OPRVersion uint8 = 2
+
+// Compiled in
+var CompiledInBuild string = "Unknown"
+var CompiledInVersion string = "Unknown"

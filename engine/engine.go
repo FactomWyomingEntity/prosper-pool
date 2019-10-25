@@ -82,6 +82,9 @@ func Setup(conf *viper.Viper) (*PoolEngine, error) {
 // init calls the 'New' on all the modules to initialize them with their
 // configurations
 func (e *PoolEngine) init() error {
+	log.Infof("Build Version: %s", config.CompiledInVersion)
+	log.Infof("Build commit %s", config.CompiledInBuild)
+
 	db, err := database.New(e.conf)
 	if err != nil {
 		return err
