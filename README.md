@@ -37,7 +37,11 @@ The RPC documentation, including the PegNet-oriented modifications and additions
 
 GoLang v1.13+ must be used when compiling the pool. A docker compose is provided to run postgres.
 
-When running on a chain other than mainnet, providing a `--testing` will set all activation heights to 0, and allow mining before mainnet activation heights are reached.
+If you are running the pool against a private network and not mainnet, you must ensure:
+ - The pegnet chains are initialized
+ - There are valid pegnet blocks being made (like by the reference miner)
+ 
+When running the pool, the additional flag `--testing` **must** be provided. The mainnet activation heights are embedded in the codebase, and the `--testing` flag will set these activation heights to 0 and allow your node to start syncing pegnet from block height 0. 
 
 
 ## Postgres instance
