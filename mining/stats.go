@@ -81,6 +81,9 @@ func (g *GroupMinerStats) AvgDurationPerMiner() time.Duration {
 	var totalDur time.Duration
 	// Weight by duration
 	for _, m := range g.Miners {
+		if m.Start.IsZero() {
+			continue
+		}
 		elapsed := m.Stop.Sub(m.Start)
 		totalDur += elapsed
 	}
