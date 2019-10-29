@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/config"
+
 	"github.com/FactomWyomingEntity/private-pool/exit"
 	"github.com/FactomWyomingEntity/private-pool/stratum"
 	"github.com/pegnet/pegnet/modules/factoidaddress"
@@ -113,7 +115,7 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		client, err := stratum.NewClient(username, minerid, password, invitecode, payoutaddress, "0.0.1")
+		client, err := stratum.NewClient(username, minerid, password, invitecode, payoutaddress, config.CompiledInVersion)
 		if err != nil {
 			panic(err)
 		}
