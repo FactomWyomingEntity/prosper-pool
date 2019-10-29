@@ -88,7 +88,7 @@ func NewClient(username, minername, password, invitecode, payoutaddress, version
 func (c *Client) InitMiners(num int) {
 	c.miners = make([]*ControlledMiner, num)
 	for i := range c.miners {
-		commandChannel := make(chan *mining.MinerCommand, 10)
+		commandChannel := make(chan *mining.MinerCommand, 15)
 		c.miners[i] = &ControlledMiner{
 			CommandChannel: commandChannel,
 			Miner:          mining.NewPegnetMiner(uint32(i), commandChannel, c.successes),

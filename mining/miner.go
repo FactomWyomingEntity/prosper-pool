@@ -240,6 +240,7 @@ func (p *PegnetMiner) HandleCommand(c *MinerCommand) {
 }
 
 func (p *PegnetMiner) waitForResume(ctx context.Context) {
+	log.Debugf("waiting to be resumed")
 	// Pause until we get a new start or are cancelled
 	for {
 		select {
@@ -248,6 +249,7 @@ func (p *PegnetMiner) waitForResume(ctx context.Context) {
 		case c := <-p.commands:
 			p.HandleCommand(c)
 			if !p.paused {
+				log.Debug("resumed")
 				return
 			}
 		}
