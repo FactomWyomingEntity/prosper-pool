@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/loghelp"
+
 	"github.com/FactomWyomingEntity/private-pool/config"
 
 	"github.com/FactomWyomingEntity/private-pool/exit"
@@ -36,6 +38,7 @@ var rxEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9
 
 func init() {
 	rootCmd.Flags().StringP("config", "c", "", "config path location")
+	rootCmd.Flags().String("log", "info", "Set the logger level (trace, debug, info, warn, error, or fatal)")
 
 	// Should be set by the user
 	rootCmd.Flags().StringP("user", "u", "", "Username to log into the mining pool")
@@ -166,6 +169,7 @@ var rootCmd = &cobra.Command{
 }
 
 func OpenConfig(cmd *cobra.Command, args []string) error {
+	initLogger(cmd)
 	configPath, _ := cmd.Flags().GetString("config")
 	configCustom := true
 	if configPath == "" {
@@ -232,4 +236,24 @@ func SetDefaults(cmd *cobra.Command) {
 // GenerateMinerID has to be random
 func GenerateMinerID() string {
 	return NewRandomName(time.Now().UnixNano()).Haikunate()
+}
+
+func initLogger(cmd *cobra.Command) {
+	logLvl, _ := cmd.Flags().GetString("log")
+	switch strings.ToLower(logLvl) {
+	case "trace":
+		log.SetLevel(log.TraceLevel)
+	case "debug":
+		log.SetLevel(log.DebugLevel)
+	case "info":
+		log.SetLevel(log.InfoLevel)
+	case "warn":
+		log.SetLevel(log.WarnLevel)
+	case "error":
+		log.SetLevel(log.ErrorLevel)
+	case "fatal":
+		log.SetLevel(log.FatalLevel)
+	}
+
+	log.StandardLogger().Hooks.Add(&loghelp.ContextHook{})
 }
