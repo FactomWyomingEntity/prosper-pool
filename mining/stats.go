@@ -31,7 +31,11 @@ func (g *GroupMinerStats) TotalHashPower() float64 {
 	for _, m := range g.Miners {
 		elapsed := m.Stop.Sub(m.Start)
 		totalDur += elapsed
-		acc += float64(m.TotalHashes) / elapsed.Seconds()
+		dur := elapsed.Seconds()
+		if dur == 0 {
+			continue // Divide by 0 catch
+		}
+		acc += float64(m.TotalHashes) / dur
 	}
 
 	return acc
@@ -54,14 +58,26 @@ func (g *GroupMinerStats) AvgHashRatePerMiner() float64 {
 	for _, m := range g.Miners {
 		elapsed := m.Stop.Sub(m.Start)
 		totalDur += elapsed
-		acc += elapsed.Seconds() * (float64(m.TotalHashes) / elapsed.Seconds())
+		dur := elapsed.Seconds()
+		if dur == 0 {
+			continue // Divide by 0 catch
+		}
+		acc += elapsed.Seconds() * (float64(m.TotalHashes) / dur)
 	}
 
+	dur := totalDur.Seconds()
+	if dur == 0 {
+		return 0 // Divide by 0 catch
+	}
 	return acc / totalDur.Seconds()
 }
 
 // AvgDurationPerMiner is the average duration of mining across all miners.
 func (g *GroupMinerStats) AvgDurationPerMiner() time.Duration {
+	if len(g.Miners) == 0 {
+		return 0 // Divide by 0 catch
+	}
+
 	var totalDur time.Duration
 	// Weight by duration
 	for _, m := range g.Miners {
