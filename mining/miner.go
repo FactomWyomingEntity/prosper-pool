@@ -163,12 +163,14 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 	case c := <-p.commands:
 		p.HandleCommand(c)
 	case <-ctx.Done():
+		log.Debugf("Mining init cancelled for miner %d\n", p.ID)
 		return // Cancelled
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
+			log.Debugf("Mining cancelled for miner: %d\n", p.ID)
 			return // Mining cancelled
 		case c := <-p.commands:
 			p.HandleCommand(c)
