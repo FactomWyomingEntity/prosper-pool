@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/FactomWyomingEntity/private-pool/profile"
+
 	"github.com/FactomWyomingEntity/private-pool/loghelp"
 
 	"github.com/FactomWyomingEntity/private-pool/config"
@@ -39,6 +41,7 @@ var rxEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9
 func init() {
 	rootCmd.Flags().StringP("config", "c", "", "config path location")
 	rootCmd.Flags().String("log", "info", "Set the logger level (trace, debug, info, warn, error, or fatal)")
+	rootCmd.Flags().Bool("profile", false, "Turn on profiling")
 
 	// Should be set by the user
 	rootCmd.Flags().StringP("user", "u", "", "Username to log into the mining pool")
@@ -181,6 +184,10 @@ func OpenConfig(cmd *cobra.Command, args []string) error {
 		}
 		configPath = "$HOME/.prosper/prosper-miner.toml" // Default
 		configCustom = false
+	}
+
+	if pro, _ := cmd.Flags().GetBool("profile"); pro {
+		go profile.StartProfiler(false, 6050) // Only localhost, on 6050
 	}
 
 	path := os.ExpandEnv(configPath)
