@@ -50,6 +50,11 @@ func (p *OwedPayouts) Payouts(work ShareMap, remaining int64) {
 		target := work.Targets[last-1]
 		hashrate := difficulty.EffectiveHashRate(target, last, work.LastShare.Sub(work.FirstShare).Seconds())
 
+		if work.TotalShares < 5 {
+			// If there is too few shares, don't bother trying to calc a hashrate
+			hashrate = 0
+		}
+
 		pay := UserOwedPayouts{
 			UserID:           user,
 			UserDifficuty:    work.TotalDifficulty,

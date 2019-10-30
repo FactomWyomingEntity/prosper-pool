@@ -14,7 +14,7 @@ const (
 
 	// Roughly 6.5K h/s for 5s will achieve a pDiff
 	// A raspberry pi is 7.5k h/s
-	PDiff uint64 = 0xfffe000000000000
+	PDiff uint64 = 0xffff000000000000
 
 	// TODO: Maybe define a BDiff?
 	BDiff uint64 = 0xffffffa68581fc34

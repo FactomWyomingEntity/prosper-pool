@@ -43,6 +43,8 @@ func init() {
 	rootCmd.PersistentFlags().String("log", "info", "Set the logger level (trace, debug, info, warn, error, or fatal)")
 	rootCmd.PersistentFlags().Bool("profile", false, "Turn on profiling")
 
+	rootCmd.Flags().Int("fake", -1, "Set a fake hash-rate")
+
 	// Should be set by the user
 	rootCmd.Flags().StringP("user", "u", "", "Username to log into the mining pool")
 	rootCmd.Flags().StringP("minerid", "m", GenerateMinerID(), "Minerid should be unique per mining machine")
@@ -127,6 +129,12 @@ var rootCmd = &cobra.Command{
 		}
 
 		miners := viper.GetInt(ConfigNumGoRountines)
+		fake, _ := cmd.Flags().GetInt("fake")
+		if fake > 0 {
+			log.Warnf("!!FAKE MINING ENABLED!!")
+			log.Warnf("All hashes are invalid. Rate is set at %d/s per core", fake)
+			client.SetFakeHashRate(fake)
+		}
 		client.InitMiners(miners)
 		client.RunMiners(ctx)
 

@@ -15,6 +15,7 @@ import (
 
 	"github.com/FactomWyomingEntity/private-pool/authentication"
 	"github.com/FactomWyomingEntity/private-pool/config"
+	"github.com/FactomWyomingEntity/private-pool/difficulty"
 	"github.com/pegnet/pegnet/modules/opr"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -384,11 +385,17 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 		} else {
 			client.subscribed = true
 
+			// TODO: Use vardiff
+			client.preferredTarget = difficulty.PDiff
+			err = s.SetTarget(client.sessionID, fmt.Sprintf("%x", difficulty.PDiff))
+			if err != nil {
+				log.WithError(err).Error("failed to set target")
+			}
 			// Notify newly-subscribed client with current job details
 			if s.currentJob != nil {
 				err = s.SingleClientNotify(client.sessionID, s.currentJob.JobIDString(), s.currentJob.OPRHash, "")
 				if err != nil {
-					log.Error(err)
+					log.WithError(err).Error("failed to send job")
 				}
 			}
 		}
@@ -398,10 +405,11 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 			return
 		}
 
-		preferredTarget, err := strconv.ParseUint(params[0], 16, 64)
-		if err == nil {
-			client.preferredTarget = preferredTarget
-		}
+		// We will not accept suggested targets from miners at this time
+		//preferredTarget, err := strconv.ParseUint(params[0], 16, 64)
+		//if err == nil {
+		//	client.preferredTarget = preferredTarget
+		//}
 	default:
 		client.log.Warnf("unknown method %s", req.Method)
 		_ = client.enc.Encode(QuickRPCError(req.ID, ErrorMethodNotFound))
@@ -435,6 +443,10 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 	tU, err := strconv.ParseUint(target, 16, 64)
 	if err != nil {
 		sLog.WithError(err).Errorf("miner provided bad target")
+		return false
+	}
+
+	if tU < miner.preferredTarget {
 		return false
 	}
 

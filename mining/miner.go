@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
 	"os"
 	"strconv"
 	"sync"
@@ -15,6 +16,7 @@ import (
 
 	lxr "github.com/pegnet/LXRHash"
 	log "github.com/sirupsen/logrus"
+	"go.uber.org/ratelimit"
 )
 
 // LX holds an instance of lxrhash
@@ -74,6 +76,12 @@ type PegnetMiner struct {
 
 	// Tells us we are paused
 	paused bool
+
+	// Fake Mining for testing
+	ratelimit.Limiter
+
+	// Used to compute difficulties
+	ComputeDifficulty func(oprhash, nonce []byte) (difficulty uint64)
 }
 
 type oprMiningState struct {
@@ -147,7 +155,17 @@ func NewPegnetMiner(id uint32, commands chan *MinerCommand, successes chan *Winn
 	p.ResetNonce()
 	p.MiningState.stats = NewSingleMinerStats(p.PersonalID)
 
+	p.ComputeDifficulty = ComputeDifficulty
+
 	return p
+}
+
+// SetFakeHashRate sets the miner to "fake" a hashrate. All targets are invalid
+// The rate is in hashes/s
+func (p *PegnetMiner) SetFakeHashRate(rate int) {
+	// For fake mining
+	p.Limiter = ratelimit.New(rate)
+	p.ComputeDifficulty = p.FakeComputeDifficulty
 }
 
 func (p *PegnetMiner) IsPaused() bool {
@@ -187,7 +205,7 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 		}
 
 		p.MiningState.NextNonce()
-		diff := ComputeDifficulty(p.MiningState.oprhash, p.MiningState.Nonce)
+		diff := p.ComputeDifficulty(p.MiningState.oprhash, p.MiningState.Nonce)
 
 		p.MiningState.stats.TotalHashes++
 		p.MiningState.stats.NewDifficulty(diff)
@@ -206,6 +224,11 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 		}
 	}
 
+}
+
+func (p *PegnetMiner) FakeComputeDifficulty(_, _ []byte) uint64 {
+	p.Limiter.Take()
+	return rand.Uint64()
 }
 
 func (p *PegnetMiner) SendCommand(mc *MinerCommand) {

@@ -96,6 +96,12 @@ func (c *Client) InitMiners(num int) {
 	}
 }
 
+func (c *Client) SetFakeHashRate(rate int) {
+	for i := range c.miners {
+		c.miners[i].Miner.SetFakeHashRate(rate)
+	}
+}
+
 func (c *Client) SendCommand(command *mining.MinerCommand) {
 	for i := range c.miners {
 		c.miners[i].SendCommand(command)
