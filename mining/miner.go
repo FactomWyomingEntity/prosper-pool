@@ -155,7 +155,7 @@ func (p *PegnetMiner) IsPaused() bool {
 }
 
 func (p *PegnetMiner) Mine(ctx context.Context) {
-	mineLog := log.WithFields(log.Fields{"miner": p.ID})
+	mineLog := log.WithFields(log.Fields{"miner": p.ID, "pid": p.PersonalID})
 	var _ = mineLog
 	select {
 	// Wait for the first command to start
@@ -242,7 +242,7 @@ func (p *PegnetMiner) HandleCommand(c *MinerCommand) {
 }
 
 func (p *PegnetMiner) waitForResume(ctx context.Context) {
-	log.Debugf("waiting to be resumed")
+	log.WithField("pid", p.PersonalID).Debugf("waiting to be resumed")
 	// Pause until we get a new start or are cancelled
 	for {
 		select {
@@ -251,7 +251,7 @@ func (p *PegnetMiner) waitForResume(ctx context.Context) {
 		case c := <-p.commands:
 			p.HandleCommand(c)
 			if !p.paused {
-				log.Debug("resumed")
+				log.WithField("pid", p.PersonalID).Debug("resumed")
 				return
 			}
 		}
