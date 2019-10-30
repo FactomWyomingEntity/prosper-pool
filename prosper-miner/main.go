@@ -39,9 +39,9 @@ const (
 var rxEmail = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
 func init() {
-	rootCmd.Flags().StringP("config", "c", "", "config path location")
-	rootCmd.Flags().String("log", "info", "Set the logger level (trace, debug, info, warn, error, or fatal)")
-	rootCmd.Flags().Bool("profile", false, "Turn on profiling")
+	rootCmd.PersistentFlags().StringP("config", "c", "", "config path location")
+	rootCmd.PersistentFlags().String("log", "info", "Set the logger level (trace, debug, info, warn, error, or fatal)")
+	rootCmd.PersistentFlags().Bool("profile", false, "Turn on profiling")
 
 	// Should be set by the user
 	rootCmd.Flags().StringP("user", "u", "", "Username to log into the mining pool")

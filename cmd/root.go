@@ -21,6 +21,7 @@ import (
 	"github.com/FactomWyomingEntity/private-pool/loghelp"
 	"github.com/FactomWyomingEntity/private-pool/pegnet"
 	"github.com/FactomWyomingEntity/private-pool/polling"
+	"github.com/FactomWyomingEntity/private-pool/profile"
 	"github.com/FactomWyomingEntity/private-pool/stratum"
 	"github.com/pegnet/pegnet/modules/opr"
 	"github.com/qor/session/manager"
@@ -38,6 +39,7 @@ func init() {
 	rootCmd.AddCommand(getConfig)
 	rootCmd.AddCommand(datasources)
 
+	rootCmd.PersistentFlags().Bool("profile", false, "Turn on profiling")
 	rootCmd.PersistentFlags().String("config", "$HOME/.prosper/prosper-pool.toml", "Location to config")
 	rootCmd.PersistentFlags().String("log", "info", "Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal'")
 	rootCmd.PersistentFlags().String("phost", "192.168.32.2", "Postgres host url")
@@ -450,6 +452,7 @@ func setConfigLoc(cmd *cobra.Command, args []string) (string, bool) {
 // SoftReadConfig will not fail. It can be used for a command that needs the config,
 // but is happy with the defaults
 func SoftReadConfig(cmd *cobra.Command, args []string) {
+	loadProfiler(cmd)
 	path, exists := setConfigLoc(cmd, args)
 	var _, _ = path, exists
 
@@ -461,8 +464,15 @@ func SoftReadConfig(cmd *cobra.Command, args []string) {
 	initLogger()
 }
 
+func loadProfiler(cmd *cobra.Command) {
+	if pro, _ := cmd.Flags().GetBool("profile"); pro {
+		go profile.StartProfiler(false, 6040) // Only localhost, on 6040
+	}
+}
+
 // HardReadConfig requires a config file
 func HardReadConfig(cmd *cobra.Command, args []string) error {
+	loadProfiler(cmd)
 	path, exists := setConfigLoc(cmd, args)
 	if !exists {
 		return fmt.Errorf("config does not exist at %s", path)
