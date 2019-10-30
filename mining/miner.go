@@ -156,21 +156,20 @@ func (p *PegnetMiner) IsPaused() bool {
 
 func (p *PegnetMiner) Mine(ctx context.Context) {
 	mineLog := log.WithFields(log.Fields{"miner": p.ID, "pid": p.PersonalID})
-	var _ = mineLog
 	select {
 	// Wait for the first command to start
 	// We start 'paused'. Any command will knock us out of this init phase
 	case c := <-p.commands:
 		p.HandleCommand(c)
 	case <-ctx.Done():
-		log.Debugf("Mining init cancelled for miner %d\n", p.ID)
+		mineLog.Debugf("Mining init cancelled for miner %d\n", p.ID)
 		return // Cancelled
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Debugf("Mining cancelled for miner: %d\n", p.ID)
+			mineLog.Debugf("Mining cancelled for miner: %d\n", p.ID)
 			return // Mining cancelled
 		case c := <-p.commands:
 			p.HandleCommand(c)
@@ -199,7 +198,11 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 				Target:  fmt.Sprintf("%x", diff),
 			}
 			p.MiningState.stats.TotalSubmissions++
-			p.successes <- success
+			select {
+			case p.successes <- success:
+			default:
+				mineLog.Errorf("failed to submit")
+			}
 		}
 	}
 
