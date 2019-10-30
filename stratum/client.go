@@ -512,6 +512,9 @@ func (c *Client) ListenForSuccess() {
 	for {
 		select {
 		case winner := <-c.successes:
+			if float64(len(c.successes))/float64(cap(c.successes)) > 0.9 {
+				log.Warnf("success channel is at %d/%d", len(c.successes), cap(c.successes))
+			}
 			err := c.Submit(c.username, c.currentJobID, winner.Nonce, winner.OPRHash, winner.Target)
 			if err != nil {
 				log.WithError(err).Error("failed to submit to server")
