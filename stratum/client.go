@@ -42,7 +42,7 @@ type Client struct {
 	successes chan *mining.Winner
 
 	subscriptions []Subscription
-	requestsMade  map[int]func(Response)
+	requestsMade  map[int32]func(Response)
 	autoreconnect bool
 	sync.RWMutex
 }
@@ -73,7 +73,7 @@ func NewClient(username, minername, password, invitecode, payoutaddress, version
 	c.currentJobID = "1"
 	c.currentOPRHash = "00037f39cf870a1f49129f9c82d935665d352ffd25ea3296208f6f7b16fd654f"
 	c.currentTarget = 0xfffe000000000000
-	c.requestsMade = make(map[int]func(Response))
+	c.requestsMade = make(map[int32]func(Response))
 
 	successChannel := make(chan *mining.Winner, 100)
 	c.successes = successChannel
@@ -506,7 +506,10 @@ func (c *Client) ListenForSuccess() {
 	for {
 		select {
 		case winner := <-c.successes:
-			c.Submit(c.username, c.currentJobID, winner.Nonce, winner.OPRHash, winner.Target)
+			err := c.Submit(c.username, c.currentJobID, winner.Nonce, winner.OPRHash, winner.Target)
+			if err != nil {
+				log.WithError(err).Error("failed to submit to server")
+			}
 		}
 	}
 }

@@ -8,7 +8,7 @@ import (
 
 // UnknownRPC is the struct any json rpc can be unmarshalled into before it is categorized.
 type UnknownRPC struct {
-	ID int `json:"id"`
+	ID int32 `json:"id"`
 	Request
 	Response
 }
@@ -28,7 +28,7 @@ func (u UnknownRPC) IsRequest() bool {
 }
 
 type Request struct {
-	ID     int             `json:"id"`
+	ID     int32           `json:"id"`
 	Method string          `json:"method"`
 	Params json.RawMessage `json:"params"`
 }
@@ -49,35 +49,35 @@ type RPCParams []string
 
 func AuthorizeRequest(username, password, invitecode, payoutaddress string) Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "mining.authorize",
 	}.SetParams(RPCParams{username, password, invitecode, payoutaddress})
 }
 
 func GetOPRHashRequest(jobID string) Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "mining.get_oprhash",
 	}.SetParams(RPCParams{jobID})
 }
 
 func SubmitRequest(username, jobID, nonce, oprHash, target string) Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "mining.submit",
 	}.SetParams(RPCParams{username, jobID, nonce, oprHash, target})
 }
 
 func SubscribeRequest(version string) Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "mining.subscribe",
 	}.SetParams(RPCParams{"prosper/" + version})
 }
 
 func SuggestTargetRequest(preferredTarget string) Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "mining.suggest_target",
 	}.SetParams(RPCParams{preferredTarget})
 }
@@ -86,55 +86,55 @@ func SuggestTargetRequest(preferredTarget string) Request {
 
 func GetVersionRequest() Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "client.get_version",
 	}.SetParams(nil)
 }
 
 func ReconnectRequest(hostname, port, waittime string) Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "client.reconnect",
 	}.SetParams(RPCParams{hostname, port, waittime})
 }
 
 func ShowMessageRequest(message string) Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "client.show_message",
 	}.SetParams(RPCParams{message})
 }
 
 func NotifyRequest(jobID, oprHash, cleanjobs string) Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "mining.notify",
 	}.SetParams(RPCParams{jobID, oprHash, cleanjobs})
 }
 
 func SetTargetRequest(target string) Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "mining.set_target",
 	}.SetParams(RPCParams{target})
 }
 
 func SetNonceRequest(nonce string) Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "mining.set_nonce",
 	}.SetParams(RPCParams{nonce})
 }
 
 func StopMiningRequest() Request {
 	return Request{
-		ID:     rand.Int(),
+		ID:     rand.Int31(),
 		Method: "mining.stop_mining",
 	}.SetParams(nil)
 }
 
 type Response struct {
-	ID     int             `json:"id"`
+	ID     int32           `json:"id"`
 	Result json.RawMessage `json:"result"`
 	Error  *RPCError       `json:"error,omitempty"`
 }
@@ -157,19 +157,19 @@ type Subscription struct {
 // SubscribeResult is [session id, nonce]
 type SubscribeResult []Subscription
 
-func AuthorizeResponse(id int, result bool, err error) Response {
+func AuthorizeResponse(id int32, result bool, err error) Response {
 	return Response{
 		ID: id,
 	}.SetResult(result)
 }
 
-func SubmitResponse(id int, result bool, err error) Response {
+func SubmitResponse(id int32, result bool, err error) Response {
 	return Response{
 		ID: id,
 	}.SetResult(result)
 }
 
-func SubscribeResponse(id int, session string, nonce uint32) Response {
+func SubscribeResponse(id int32, session string, nonce uint32) Response {
 	notifySub := Subscription{Id: session, Type: "mining.notify"}
 	setTargetSub := Subscription{Id: session, Type: "mining.set_target"}
 	setNonce := Subscription{Id: fmt.Sprintf("%d", nonce), Type: "mining.set_nonce"}
@@ -183,13 +183,13 @@ func SubscribeResponse(id int, session string, nonce uint32) Response {
 	}.SetResult(res)
 }
 
-func GetVersionResponse(id int, version string) Response {
+func GetVersionResponse(id int32, version string) Response {
 	return Response{
 		ID: id,
 	}.SetResult(version)
 }
 
-func GetOPRHashResponse(id int, oprHash string) Response {
+func GetOPRHashResponse(id int32, oprHash string) Response {
 	return Response{
 		ID: id,
 	}.SetResult(oprHash)
@@ -249,7 +249,7 @@ func RPCErrorString(errorType int) string {
 	}
 }
 
-func QuickRPCError(id int, errorType int) Response {
+func QuickRPCError(id int32, errorType int) Response {
 	return Response{
 		ID: id,
 		Error: &RPCError{
@@ -259,7 +259,7 @@ func QuickRPCError(id int, errorType int) Response {
 	}
 }
 
-func HelpfulRPCError(id int, errorType int, data interface{}) Response {
+func HelpfulRPCError(id int32, errorType int, data interface{}) Response {
 	return Response{
 		ID: id,
 		Error: &RPCError{
