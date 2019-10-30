@@ -312,6 +312,7 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 
 		client.username = arr[0]
 		client.minerid = arr[1]
+		client.log = client.log.WithFields(log.Fields{"minerid": client.minerid, "username": client.username})
 
 		if s.Auth != nil && s.configuration.RequireAuth {
 			if !s.Auth.Exists(client.username) {
@@ -463,6 +464,7 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 		select { // Non blocking
 		case export <- submit:
 		default:
+			sLog.Warnf("failed to export share")
 		}
 	}
 
