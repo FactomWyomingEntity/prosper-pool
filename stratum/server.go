@@ -45,12 +45,12 @@ type Server struct {
 }
 
 type ShareSubmission struct {
-	Username string
-	MinerID  string
-	JobID    int32  `gorm:"index:jobid"`
-	OPRHash  []byte // Bytes to ensure valid oprhash
-	Nonce    []byte // Bytes to ensure valid nonce
-	Target   uint64 // Uint64 to ensure valid target
+	Username string `json:"username, omitempty"`
+	MinerID  string `json:"minerid, omitempty"`
+	JobID    int32  `gorm:"index:jobid" json:"jobid"`
+	OPRHash  []byte `json:"oprhash, omitempty"` // Bytes to ensure valid oprhash
+	Nonce    []byte `json:"nonce, omitempty"`   // Bytes to ensure valid nonce
+	Target   uint64 `json:"target, omitempty"`  // Uint64 to ensure valid target
 }
 
 type Job struct {

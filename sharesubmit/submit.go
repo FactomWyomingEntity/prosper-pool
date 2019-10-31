@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/FactomWyomingEntity/private-pool/database"
+
 	"github.com/FactomWyomingEntity/private-pool/factomclient"
 
 	"github.com/pegnet/pegnet/modules/opr"
@@ -201,12 +203,23 @@ func (s Submitter) saveEntrySubmission(es EntrySubmission) error {
 	return s.db.Create(&es).Error
 }
 
+// PublicEntrySubmission are accessible to anyone.
+// TODO: Custom the json marshaler for the api
+type PublicEntrySubmission struct {
+	JobID      int32  `gorm:"index:jobid" json:"jobid"`
+	OPRHash    []byte `json:"oprhash, omitempty"` // Bytes to ensure valid oprhash
+	Nonce      []byte `json:"nonce, omitempty"`   // Bytes to ensure valid nonce
+	Target     uint64 `json:"target, omitempty"`  // Uint64 to ensure valid target
+	EntryHash  string `json:"entryhash"`
+	CommitTxID string `json:"committxid"`
+}
+
 // EntrySubmission is a record that we submitted an entry
 type EntrySubmission struct {
-	gorm.Model
+	database.Model
 	stratum.ShareSubmission
-	EntryHash  string
-	CommitTxID string
+	EntryHash  string `json:"entryhash"`
+	CommitTxID string `json:"committxid"`
 }
 
 // BeforeCreate
