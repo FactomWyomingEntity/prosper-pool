@@ -82,6 +82,9 @@ func NewServer(conf *viper.Viper) (*Server, error) {
 	s.stratumPort = conf.GetInt(config.ConfigStratumPort)
 	s.welcomeMessage = conf.GetString(config.ConfigStratumWelcomeMessage)
 	s.configuration.ValidateShares = conf.GetBool(config.ConfigStratumCheckAllWork)
+	if s.configuration.ValidateShares {
+		InitLX()
+	}
 
 	return s, nil
 }
@@ -458,9 +461,12 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 		return false
 	}
 
-	if !Validate(oB, nB, tU) {
-		return false // Submitted a bad share
+	if s.configuration.ValidateShares {
+		if !Validate(oB, nB, tU) {
+			return false // Submitted a bad share
+		}
 	}
+
 
 	// Check if we can accept shares right now
 	// E.g: If we are between minute 0 and minute 1, the job is
