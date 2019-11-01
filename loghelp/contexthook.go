@@ -2,8 +2,9 @@ package loghelp
 
 import (
 	"fmt"
-	"path"
+	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -18,11 +19,36 @@ func (hook ContextHook) Levels() []logrus.Level {
 
 // Fire ...
 func (hook ContextHook) Fire(entry *logrus.Entry) error {
-	if pc, file, line, ok := runtime.Caller(6); ok {
-		funcName := runtime.FuncForPC(pc).Name()
+	for i := 5; i < 10; i++ {
+		_, file, line, ok := runtime.Caller(i)
+		fmt.Println(file, line)
+		if ok && strings.Contains(file, "private-pool") {
+			trimmed := ShortenPoolFilePath(file, "", 0)
 
-		entry.Data["source"] = fmt.Sprintf("%s:%v:%s", path.Base(file), line, path.Base(funcName))
+			entry.Data["source"] = fmt.Sprintf("%s:%v", trimmed, line)
+			break
+		}
 	}
 
 	return nil
+}
+
+// ShortenPoolFilePath takes a long path url to private-pool, and shortens it:
+//	"/home/billy/go/src/github.com/FactomWyomingProject/private-pool/opr.go" -> "pegnet/opr.go"
+//	This is nice for errors that print the file + line number
+//
+// 		!! Only use for error printing !!
+//
+func ShortenPoolFilePath(path, acc string, depth int) (trimmed string) {
+	if depth > 5 || path == "." {
+		// Recursive base case
+		// If depth > 5 probably no private-pool dir exists
+		return filepath.ToSlash(filepath.Join(path, acc))
+	}
+	dir, base := filepath.Split(path)
+	if strings.ToLower(base) == "private-pool" { // Used to be named PegNet. Not everyone changed I bet
+		return filepath.ToSlash(filepath.Join(base, acc))
+	}
+
+	return ShortenPoolFilePath(filepath.Clean(dir), filepath.Join(base, acc), depth+1)
 }

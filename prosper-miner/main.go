@@ -44,6 +44,7 @@ func init() {
 	rootCmd.PersistentFlags().Bool("profile", false, "Turn on profiling")
 
 	rootCmd.Flags().Int("fake", -1, "Set a fake hash-rate")
+	rootCmd.Flags().MarkHidden("fake")
 
 	// Should be set by the user
 	rootCmd.Flags().StringP("user", "u", "", "Username to log into the mining pool")
@@ -129,13 +130,15 @@ var rootCmd = &cobra.Command{
 		}
 
 		miners := viper.GetInt(ConfigNumGoRountines)
+		client.InitMiners(miners)
 		fake, _ := cmd.Flags().GetInt("fake")
 		if fake > 0 {
 			log.Warnf("!!FAKE MINING ENABLED!!")
 			log.Warnf("All hashes are invalid. Rate is set at %d/s per core", fake)
+			log.Errorf("Fake hashing is disabled")
+			os.Exit(1)
 			client.SetFakeHashRate(fake)
 		}
-		client.InitMiners(miners)
 		client.RunMiners(ctx)
 
 		// TODO: Add version number
