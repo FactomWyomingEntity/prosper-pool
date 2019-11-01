@@ -370,7 +370,7 @@ func (s *Server) HandleRequest(client *Miner, req Request) {
 		if !s.ProcessSubmission(client, params[1], params[2], params[3], params[4]) {
 			// Rejected share
 			// ignore errors on reject shares
-			_ = client.enc.Encode(SubmitResponse(req.ID, true, nil))
+			_ = client.enc.Encode(SubmitResponse(req.ID, false, nil))
 			return
 		}
 
@@ -466,7 +466,6 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 			return false // Submitted a bad share
 		}
 	}
-
 
 	// Check if we can accept shares right now
 	// E.g: If we are between minute 0 and minute 1, the job is
