@@ -21,7 +21,6 @@ func (hook ContextHook) Levels() []logrus.Level {
 func (hook ContextHook) Fire(entry *logrus.Entry) error {
 	for i := 5; i < 10; i++ {
 		_, file, line, ok := runtime.Caller(i)
-		fmt.Println(file, line)
 		if ok && strings.Contains(file, "private-pool") {
 			trimmed := ShortenPoolFilePath(file, "", 0)
 

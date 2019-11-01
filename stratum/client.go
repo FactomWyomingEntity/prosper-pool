@@ -388,7 +388,7 @@ func (c *Client) HandleRequest(req Request) {
 		}
 		// Print & log message in human-readable way
 		fmt.Printf("\n\nMessage from server: %s\n\n\n", params[0])
-		log.Printf("Message from server: %s\n", params[0])
+		//log.Printf("Message from server: %s\n", params[0])
 	case "mining.notify":
 		if len(params) < 2 {
 			log.Errorf("Not enough parameters from notify: %s\n", params)
