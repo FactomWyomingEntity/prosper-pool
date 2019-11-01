@@ -12,8 +12,7 @@ const (
 	MiningPeriodDuration = 480 * time.Second
 	MiningPeriodSeconds  = 480 // in seconds
 
-	// Roughly 6.5K h/s for 5s will achieve a pDiff
-	// A raspberry pi is 7.5k h/s
+	// Roughly 32,000 h/s for 2s
 	PDiff uint64 = 0xffff000000000000
 
 	// TODO: Maybe define a BDiff?

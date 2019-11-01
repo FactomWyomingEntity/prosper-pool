@@ -1,6 +1,7 @@
 package accounting
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -12,22 +13,24 @@ type OwedPayouts struct {
 	Reward // All the reward info
 
 	// PoolFeeRate is the pool cut
-	PoolFeeRate decimal.Decimal `sql:"type:decimal(20,8);"`
-	PoolFee     int64           // In PEG
+	PoolFeeRate decimal.Decimal `sql:"type:decimal(20,8);" json:"poolfeerate"`
+	PoolFee     int64           `json:"poolfee"` // In PEG
 	// Dust should always be 0, but it is any rewards that are not accounted
 	// to a user or to the pool. We should account for it if it happens.
-	Dust int64
+	Dust int64 `json:"dust"`
 
-	PoolDifficuty float64
-	TotalHashrate float64 `gorm:"default:0"`
+	PoolDifficuty float64 `json:"pooldifficulty"`
+	PDiff         string  `gorm:"default:'ffff000000000000'" json:"pdiff"` // String to avoid sql uint64 errors
+	TotalHashrate float64 `gorm:"default:0" json:"totalhashrate"`
 
-	UserPayouts []UserOwedPayouts `gorm:"foreignkey:JobID"`
+	UserPayouts []UserOwedPayouts `gorm:"foreignkey:JobID" json:"userpayouts,omitempty"`
 }
 
 func NewPayout(r Reward, poolFeeRate decimal.Decimal, work ShareMap) *OwedPayouts {
 	p := new(OwedPayouts)
 	p.PoolFeeRate = poolFeeRate
 	p.Reward = r
+	p.PDiff = fmt.Sprintf("%x", difficulty.PDiff)
 	remaining := p.TakePoolCut(p.Reward.PoolReward)
 	p.Payouts(work, remaining)
 
@@ -93,7 +96,7 @@ func cut(total int64, prop decimal.Decimal) int64 {
 }
 
 type UserOwedPayouts struct {
-	JobID            int32  `gorm:"primary_key"`
+	JobID            int32  `gorm:"primary_key" json:"jobid"`
 	UserID           string `gorm:"primary_key"`
 	UserDifficuty    float64
 	TotalSubmissions int
@@ -106,11 +109,11 @@ type UserOwedPayouts struct {
 }
 
 type Reward struct {
-	JobID      int32 `gorm:"primary_key"` // Block height of reward payout
-	PoolReward int64 // PEG reward for block
+	JobID      int32 `gorm:"primary_key" json:"jobid"` // Block height of reward payout
+	PoolReward int64 `json:"poolreward"`               // PEG reward for block
 
-	Winning int // Number of oprs in the winning set
-	Graded  int // Number of oprs in the graded set
+	Winning int `json:"winningoprs"` // Number of oprs in the winning set
+	Graded  int `json:"gradedoprs"`  // Number of oprs in the graded set
 }
 
 // Share is an accepted piece of work done by a miner.

@@ -72,7 +72,7 @@ func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
 	primaryMux.HandleFunc("/user/owed", s.OwedPayouts)
 	primaryMux.HandleFunc("/pool/rewards", s.PoolRewards)
 	primaryMux.HandleFunc("/pool/submissions", s.PoolSubmissions)
-	primaryMux.HandleFunc("/api/v1/submitsync", s.MinuteKeeperInfo)
+	// primaryMux.HandleFunc("/api/v1/submitsync", s.MinuteKeeperInfo)
 
 	// Links
 	primaryMux.HandleFunc("/pool", s.PoolLinks)
@@ -84,7 +84,11 @@ func (s *HttpServices) InitPrimary(auth *authentication.Authenticator) {
 	adminMux.HandleFunc("/admin/miners", s.PoolMiners)
 	primaryMux.Handle("/admin/", s.Auth.Authority.Authorize("admin")(adminMux))
 
+	// Add /auth to primary mux
 	auth.AddHandler(primaryMux)
+
+	apiBase := "/api/v1"
+	primaryMux.Handle(apiBase, s.APIMux(apiBase))
 
 	s.Primary = &http.Server{
 		Handler: s.MiddleWare()(auth.GetSessionManager(primaryMux)),

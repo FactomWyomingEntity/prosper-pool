@@ -12,6 +12,7 @@ require (
 	github.com/disintegration/imaging v1.6.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fatih/color v1.7.0 // indirect
+	github.com/gorilla/rpc v1.2.0
 	github.com/gorilla/sessions v1.2.0 // indirect
 	github.com/gosimple/slug v1.8.0 // indirect
 	github.com/jinzhu/configor v1.1.1 // indirect
