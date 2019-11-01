@@ -34,7 +34,8 @@ type Server struct {
 	ShareGate ShareCheck
 
 	configuration struct {
-		RequireAuth bool // Require actual username from miners
+		RequireAuth    bool // Require actual username from miners
+		ValidateShares bool
 	}
 
 	// We forward submissions to any listeners
@@ -80,6 +81,7 @@ func NewServer(conf *viper.Viper) (*Server, error) {
 	s.ShareGate = new(AlwaysYesShareCheck)
 	s.stratumPort = conf.GetInt(config.ConfigStratumPort)
 	s.welcomeMessage = conf.GetString(config.ConfigStratumWelcomeMessage)
+	s.configuration.ValidateShares = conf.GetBool(config.ConfigStratumCheckAllWork)
 
 	return s, nil
 }
@@ -454,6 +456,10 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 	if err != nil {
 		sLog.WithError(err).Errorf("miner provided bad jobid")
 		return false
+	}
+
+	if !Validate(oB, nB, tU) {
+		return false // Submitted a bad share
 	}
 
 	// Check if we can accept shares right now

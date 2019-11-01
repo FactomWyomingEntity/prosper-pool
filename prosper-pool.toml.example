@@ -53,6 +53,9 @@
   # disconnect if they are not authorized.
   requireauth = true
 
+  # Check miner submissions are correct, and not fake hashes.s
+  validateallshares = true
+
 [submit]
   # An exponential moving average is used of the on chain targets to determine
   # our rolling submission minimum target. This is the same as the reference
@@ -65,6 +68,9 @@
   # N is the number of points in the Exponential Moving Average
   ema-n = 36
   submissioncutoff = 200
+
+   stratumport = 1234
+   welcomemessage = "Welcome to Prosper pool! Please visit http://my.pool.url:port for more information."
 
 [web]
   # The web UI port.
