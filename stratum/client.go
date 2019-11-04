@@ -121,8 +121,8 @@ func (c Client) Encode(x interface{}) (err error) {
 		}
 	}()
 	c.Lock()
+	defer c.Unlock()
 	err = c.enc.Encode(x)
-	c.Unlock()
 	return
 }
 
