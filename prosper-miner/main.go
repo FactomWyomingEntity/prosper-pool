@@ -163,6 +163,8 @@ var rootCmd = &cobra.Command{
 				words := strings.Fields(userCommand)
 				if len(words) > 0 {
 					switch words[0] {
+					case "total":
+						fmt.Printf("Total submit %d\n", client.TotalSuccesses())
 					case "getopr":
 						if len(words) > 1 {
 							client.GetOPRHash(words[1])

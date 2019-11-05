@@ -76,17 +76,18 @@ func (m *MinerMap) AddMiner(u *Miner) string {
 
 func (m *MinerMap) DisconnectMiner(u *Miner) {
 	m.Lock()
+	defer m.Unlock()
+
 	delete(m.miners, u.sessionID)
 	// Close the connection if they are still listening.
 	u.conn.Close()
-
-	m.Unlock()
 }
 
 // GetMiner returns a pointer to the miner in the MinerMap under the 'name' key
 func (m *MinerMap) GetMiner(name string) (*Miner, error) {
-	defer m.Unlock()
 	m.Lock()
+	defer m.Unlock()
+
 	if miner, ok := m.miners[name]; ok {
 		return miner, nil
 	} else {

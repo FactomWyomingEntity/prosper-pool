@@ -219,7 +219,7 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 			select {
 			case p.successes <- success:
 			default:
-				mineLog.Errorf("failed to submit")
+				mineLog.Errorf("failed to submit, %d/%d", len(p.successes), cap(p.successes))
 			}
 		}
 	}

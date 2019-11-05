@@ -38,8 +38,9 @@ type Client struct {
 	invitecode    string // only needed for initial user registration
 	payoutaddress string // only needed for initial user registration
 
-	miners    []*ControlledMiner
-	successes chan *mining.Winner
+	miners         []*ControlledMiner
+	successes      chan *mining.Winner
+	totalSuccesses uint64 // Total submitted shares
 
 	subscriptions []Subscription
 	requestsMade  map[int32]func(Response)
@@ -518,7 +519,13 @@ func (c *Client) ListenForSuccess() {
 			err := c.Submit(c.username, c.currentJobID, winner.Nonce, winner.OPRHash, winner.Target)
 			if err != nil {
 				log.WithError(err).Error("failed to submit to server")
+			} else {
+				c.totalSuccesses++
 			}
 		}
 	}
+}
+
+func (c Client) TotalSuccesses() uint64 {
+	return c.totalSuccesses
 }
