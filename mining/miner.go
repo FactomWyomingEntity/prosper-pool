@@ -173,7 +173,7 @@ func (p *PegnetMiner) IsPaused() bool {
 }
 
 func (p *PegnetMiner) Mine(ctx context.Context) {
-	mineLog := log.WithFields(log.Fields{"miner": p.ID, "pid": p.PersonalID})
+	mineLog := log.WithFields(log.Fields{"pid": p.PersonalID})
 	select {
 	// Wait for the first command to start
 	// We start 'paused'. Any command will knock us out of this init phase
@@ -219,7 +219,7 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 			select {
 			case p.successes <- success:
 			default:
-				mineLog.Errorf("failed to submit, %d/%d", len(p.successes), cap(p.successes))
+				mineLog.WithField("channel", fmt.Sprintf("%p", p.successes)).Errorf("failed to submit, %d/%d", len(p.successes), cap(p.successes))
 			}
 		}
 	}
