@@ -489,7 +489,8 @@ func (c *Client) SetNewNonce(nonce uint32) {
 }
 
 func (c *Client) AggregateStats(job int32, stats chan *mining.SingleMinerStats, l int) {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel() // Must clean up context to avoid a memory leak
 	groupStats := mining.NewGroupMinerStats(job)
 
 	for i := 0; i < l; i++ {
@@ -531,6 +532,6 @@ func (c *Client) ListenForSuccess() {
 	}
 }
 
-func (c Client) TotalSuccesses() uint64 {
+func (c *Client) TotalSuccesses() uint64 {
 	return c.totalSuccesses
 }

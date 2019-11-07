@@ -76,15 +76,15 @@ func NewAccountant(conf *viper.Viper, db *gorm.DB) (*Accountant, error) {
 	return a, nil
 }
 
-func (a Accountant) JobChannel() chan<- int32 {
+func (a *Accountant) JobChannel() chan<- int32 {
 	return a.newJobs
 }
 
-func (a Accountant) RewardChannel() chan<- *Reward {
+func (a *Accountant) RewardChannel() chan<- *Reward {
 	return a.rewards
 }
 
-func (a Accountant) ShareChannel() chan<- *Share {
+func (a *Accountant) ShareChannel() chan<- *Share {
 	return a.shares
 }
 
@@ -205,7 +205,7 @@ func (a *Accountant) NewJob(jobid int32) {
 	a.JobsByUser[jobid] = NewShareMap()
 }
 
-func (a Accountant) JobExists(jobid int32) bool {
+func (a *Accountant) JobExists(jobid int32) bool {
 	a.jobLock.RLock()
 	defer a.jobLock.RUnlock()
 	_, ok := a.JobsByMiner[jobid]

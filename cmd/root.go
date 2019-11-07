@@ -154,7 +154,8 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 
 		// We will give it 3 seconds to close gracefully.
 		// If anything is hanging beyond that, just kill it.
-		ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancel()
 		err := exit.GlobalExitHandler.CloseWithTimeout(ctx)
 		if err != nil {
 			log.Warn("took too long to close")

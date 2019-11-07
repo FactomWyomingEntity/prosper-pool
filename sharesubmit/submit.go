@@ -207,9 +207,9 @@ func (s Submitter) saveEntrySubmission(es EntrySubmission) error {
 // TODO: Custom the json marshaler for the api
 type PublicEntrySubmission struct {
 	JobID      int32  `gorm:"index:jobid" json:"jobid"`
-	OPRHash    []byte `json:"oprhash, omitempty"` // Bytes to ensure valid oprhash
-	Nonce      []byte `json:"nonce, omitempty"`   // Bytes to ensure valid nonce
-	Target     uint64 `json:"target, omitempty"`  // Uint64 to ensure valid target
+	OPRHash    []byte `json:"oprhash,omitempty"` // Bytes to ensure valid oprhash
+	Nonce      []byte `json:"nonce,omitempty"`   // Bytes to ensure valid nonce
+	Target     uint64 `json:"target,omitempty"`  // Uint64 to ensure valid target
 	EntryHash  string `json:"entryhash"`
 	CommitTxID string `json:"committxid"`
 }
