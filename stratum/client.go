@@ -115,7 +115,7 @@ func (c *Client) RunMiners(ctx context.Context) {
 	}
 }
 
-func (c Client) Encode(x interface{}) (err error) {
+func (c *Client) Encode(x interface{}) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("Connection issues (possibly dropped)\n")
@@ -123,6 +123,11 @@ func (c Client) Encode(x interface{}) (err error) {
 	}()
 	c.Lock()
 	defer c.Unlock()
+
+	err = c.conn.SetWriteDeadline(time.Now().Add(time.Second * 3))
+	if err != nil {
+		return fmt.Errorf("encode deadline set: %s", err.Error())
+	}
 	err = c.enc.Encode(x)
 	return
 }
