@@ -74,9 +74,9 @@ func Execute() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:               "prosper-miner",
-	Short:             "Launch miner to communicate with the prosper mining pool.",
-	PersistentPreRunE: OpenConfig,
+	Use:     "prosper-miner",
+	Short:   "Launch miner to communicate with the prosper mining pool.",
+	PreRunE: OpenConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
 		exit.GlobalExitHandler.AddCancel(cancel)
