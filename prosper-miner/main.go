@@ -74,9 +74,9 @@ func Execute() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:               "prosper-miner",
-	Short:             "Launch miner to communicate with the prosper mining pool.",
-	PersistentPreRunE: OpenConfig,
+	Use:     "prosper-miner",
+	Short:   "Launch miner to communicate with the prosper mining pool.",
+	PreRunE: OpenConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
 		exit.GlobalExitHandler.AddCancel(cancel)
@@ -163,6 +163,8 @@ var rootCmd = &cobra.Command{
 				words := strings.Fields(userCommand)
 				if len(words) > 0 {
 					switch words[0] {
+					case "total":
+						fmt.Printf("Total submit %d\n", client.TotalSuccesses())
 					case "getopr":
 						if len(words) > 1 {
 							client.GetOPRHash(words[1])

@@ -4,7 +4,7 @@ package stratum
 // the stratum server. Since the miners are active connections, we will save
 // a snapshot.
 // TODO: This should be replaced with a better api, but atm we need some insight
-func (s Server) MinersSnapShot() []MinerSnapShot {
+func (s *Server) MinersSnapShot() []MinerSnapShot {
 	return s.Miners.SnapShot()
 }
 
@@ -20,7 +20,7 @@ type MinerSnapShot struct {
 	Authorized      bool
 }
 
-func (m Miner) SnapShot() (snap MinerSnapShot) {
+func (m *Miner) SnapShot() (snap MinerSnapShot) {
 	return MinerSnapShot{
 		IP:              m.conn.RemoteAddr().String(),
 		SessionID:       m.sessionID,

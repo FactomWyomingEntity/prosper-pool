@@ -114,23 +114,23 @@ var testStratum = &cobra.Command{
 						fmt.Println(strings.Join(s.Miners.ListMiners()[:], ", "))
 					case "showmessage":
 						if len(words) > 2 {
-							s.ShowMessage(words[1], strings.Join(words[2:], " "))
+							_ = s.ShowMessage(words[1], strings.Join(words[2:], " "))
 						}
 					case "getversion":
 						if len(words) > 1 {
-							s.GetVersion(words[1])
+							_ = s.GetVersion(words[1])
 						}
 					case "notify":
 						if len(words) > 3 {
-							s.SingleClientNotify(words[1], words[2], words[3], "")
+							_ = s.SingleClientNotify(words[1], words[2], words[3], "")
 						}
 					case "settarget":
 						if len(words) > 2 {
-							s.SetTarget(words[1], words[2])
+							_ = s.SetTarget(words[1], words[2])
 						}
 					case "reconnect":
 						if len(words) > 4 {
-							s.ReconnectClient(words[1], words[2], words[3], words[4])
+							_ = s.ReconnectClient(words[1], words[2], words[3], words[4])
 						}
 					default:
 						fmt.Println("Server command not supported: ", words[0])
@@ -154,7 +154,8 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 
 		// We will give it 3 seconds to close gracefully.
 		// If anything is hanging beyond that, just kill it.
-		ctx, _ := context.WithTimeout(context.Background(), time.Second*3)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancel()
 		err := exit.GlobalExitHandler.CloseWithTimeout(ctx)
 		if err != nil {
 			log.Warn("took too long to close")
@@ -206,7 +207,7 @@ var testMiner = &cobra.Command{
 			panic(err)
 		}
 
-		client.Handshake()
+		_ = client.Handshake()
 
 		keyboardReader := bufio.NewReader(os.Stdin)
 		go func() {
@@ -217,11 +218,11 @@ var testMiner = &cobra.Command{
 					switch words[0] {
 					case "getopr":
 						if len(words) > 1 {
-							client.GetOPRHash(words[1])
+							_ = client.GetOPRHash(words[1])
 						}
 					case "suggesttarget":
 						if len(words) > 1 {
-							client.SuggestTarget(words[1])
+							_ = client.SuggestTarget(words[1])
 						}
 					default:
 						fmt.Println("Client command not supported: ", words[0])

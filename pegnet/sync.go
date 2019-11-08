@@ -209,14 +209,16 @@ func (n *Node) SyncBlock(ctx context.Context, tx *gorm.DB, height uint32) (grade
 				return nil, err
 			}
 			if s.Height != int32(height) {
-				for i := range winners {
+				// Write the top 50, not just the top 25
+				graded := gradedBlock.Graded()
+				for i := range graded {
 					payout := database.PegnetPayout{
 						Height:          int32(height),
-						Position:        int32(winners[i].Position()),
-						Reward:          int64(winners[i].Payout()),
-						CoinbaseAddress: winners[i].OPR.GetAddress(),
-						Identity:        winners[i].OPR.GetID(),
-						EntryHash:       winners[i].EntryHash,
+						Position:        int32(graded[i].Position()),
+						Reward:          int64(graded[i].Payout()),
+						CoinbaseAddress: graded[i].OPR.GetAddress(),
+						Identity:        graded[i].OPR.GetID(),
+						EntryHash:       graded[i].EntryHash,
 					}
 					if dbErr := tx.Create(&payout); dbErr.Error != nil {
 						return nil, dbErr.Error

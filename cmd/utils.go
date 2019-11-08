@@ -8,7 +8,7 @@ import "strings"
 // cmd line.
 func AssetListContainsCaseInsensitive(assetList []string, asset string) bool {
 	for _, a := range assetList {
-		if strings.ToLower(asset) == strings.ToLower(a) {
+		if strings.EqualFold(asset, a) {
 			return true
 		}
 	}
