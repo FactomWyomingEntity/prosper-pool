@@ -15,8 +15,12 @@ import (
 
 type Target uint64
 
-func (t Target) Difficulty() Difficulty {
-	return Difficulty(DifficultyFromTarget(t.Uint64(), PDiff))
+func (t Target) DifficultyP() Difficulty {
+	return t.Difficulty(PDiff)
+}
+
+func (t Target) Difficulty(base uint64) Difficulty {
+	return Difficulty(DifficultyFromTarget(t.Uint64(), base))
 }
 
 func (t Target) HashRate() float64 {
@@ -42,15 +46,19 @@ func (d Difficulty) Float64() float64 {
 	return float64(d)
 }
 
-func (d Difficulty) Target() Target {
-	return Target(TargetFromDifficulty(d.Float64(), PDiff))
+func (d Difficulty) TargetP(base uint64) Target {
+	return d.Target(PDiff)
 }
 
-func (d Difficulty) HashRate() float64 {
-	return d.HashRateFromCustom(MiningPeriodDuration)
+func (d Difficulty) Target(base uint64) Target {
+	return Target(TargetFromDifficulty(d.Float64(), base))
 }
 
-func (d Difficulty) HashRateFromCustom(dur time.Duration) float64 {
-	t := d.Target()
+func (d Difficulty) HashRate(base uint64) float64 {
+	return d.HashRateFromCustom(MiningPeriodDuration, base)
+}
+
+func (d Difficulty) HashRateFromCustom(dur time.Duration, base uint64) float64 {
+	t := d.Target(base)
 	return t.HashRateFromCustom(dur)
 }
