@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/FactomWyomingEntity/private-pool/database"
+	"github.com/FactomWyomingEntity/prosper-pool/database"
 
-	"github.com/FactomWyomingEntity/private-pool/factomclient"
+	"github.com/FactomWyomingEntity/prosper-pool/factomclient"
 
 	"github.com/pegnet/pegnet/modules/opr"
 
 	"github.com/Factom-Asset-Tokens/factom"
 
-	"github.com/FactomWyomingEntity/private-pool/config"
-	"github.com/FactomWyomingEntity/private-pool/difficulty"
-	"github.com/FactomWyomingEntity/private-pool/pegnet"
-	"github.com/FactomWyomingEntity/private-pool/stratum"
+	"github.com/FactomWyomingEntity/prosper-pool/config"
+	"github.com/FactomWyomingEntity/prosper-pool/difficulty"
+	"github.com/FactomWyomingEntity/prosper-pool/pegnet"
+	"github.com/FactomWyomingEntity/prosper-pool/stratum"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"

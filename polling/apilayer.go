@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/FactomWyomingEntity/private-pool/config"
+	"github.com/FactomWyomingEntity/prosper-pool/config"
 	"github.com/cenkalti/backoff"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"

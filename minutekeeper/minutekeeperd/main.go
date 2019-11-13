@@ -6,7 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Factom-Asset-Tokens/factom"
-	"github.com/FactomWyomingEntity/private-pool/minutekeeper"
+	"github.com/FactomWyomingEntity/prosper-pool/minutekeeper"
 )
 
 func main() {

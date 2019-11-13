@@ -2,7 +2,7 @@ package factomclient
 
 import (
 	"github.com/Factom-Asset-Tokens/factom"
-	"github.com/FactomWyomingEntity/private-pool/config"
+	"github.com/FactomWyomingEntity/prosper-pool/config"
 	"github.com/spf13/viper"
 )
 

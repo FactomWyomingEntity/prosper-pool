@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FactomWyomingEntity/private-pool/config"
+	"github.com/FactomWyomingEntity/prosper-pool/config"
 	"github.com/cenkalti/backoff"
 	"github.com/spf13/viper"
 )

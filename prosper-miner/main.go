@@ -13,14 +13,14 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/FactomWyomingEntity/private-pool/profile"
+	"github.com/FactomWyomingEntity/prosper-pool/profile"
 
-	"github.com/FactomWyomingEntity/private-pool/loghelp"
+	"github.com/FactomWyomingEntity/prosper-pool/loghelp"
 
-	"github.com/FactomWyomingEntity/private-pool/config"
+	"github.com/FactomWyomingEntity/prosper-pool/config"
 
-	"github.com/FactomWyomingEntity/private-pool/exit"
-	"github.com/FactomWyomingEntity/private-pool/stratum"
+	"github.com/FactomWyomingEntity/prosper-pool/exit"
+	"github.com/FactomWyomingEntity/prosper-pool/stratum"
 	"github.com/pegnet/pegnet/modules/factoidaddress"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"

@@ -12,17 +12,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/FactomWyomingEntity/private-pool/accounting"
-	"github.com/FactomWyomingEntity/private-pool/authentication"
-	"github.com/FactomWyomingEntity/private-pool/config"
-	"github.com/FactomWyomingEntity/private-pool/database"
-	"github.com/FactomWyomingEntity/private-pool/engine"
-	"github.com/FactomWyomingEntity/private-pool/exit"
-	"github.com/FactomWyomingEntity/private-pool/loghelp"
-	"github.com/FactomWyomingEntity/private-pool/pegnet"
-	"github.com/FactomWyomingEntity/private-pool/polling"
-	"github.com/FactomWyomingEntity/private-pool/profile"
-	"github.com/FactomWyomingEntity/private-pool/stratum"
+	"github.com/FactomWyomingEntity/prosper-pool/accounting"
+	"github.com/FactomWyomingEntity/prosper-pool/authentication"
+	"github.com/FactomWyomingEntity/prosper-pool/config"
+	"github.com/FactomWyomingEntity/prosper-pool/database"
+	"github.com/FactomWyomingEntity/prosper-pool/engine"
+	"github.com/FactomWyomingEntity/prosper-pool/exit"
+	"github.com/FactomWyomingEntity/prosper-pool/loghelp"
+	"github.com/FactomWyomingEntity/prosper-pool/pegnet"
+	"github.com/FactomWyomingEntity/prosper-pool/polling"
+	"github.com/FactomWyomingEntity/prosper-pool/profile"
+	"github.com/FactomWyomingEntity/prosper-pool/stratum"
 	"github.com/pegnet/pegnet/modules/opr"
 	"github.com/qor/session/manager"
 	log "github.com/sirupsen/logrus"
@@ -61,7 +61,7 @@ func Execute() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:              "private-pool",
+	Use:              "prosper-pool",
 	Short:            "Launch the private pool",
 	PersistentPreRun: rootPreRunSetup,
 	PreRunE:          HardReadConfig,

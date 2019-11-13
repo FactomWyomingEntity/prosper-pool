@@ -25,5 +25,5 @@ COPY . .
 # Expose ports 1234 and 7070 to the outside world
 EXPOSE 1234 7070
 
-# Build the Go private-pool application
+# Build the Go prosper-pool application
 RUN ["/go/src/prosper-pool/build.sh"]

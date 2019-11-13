@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/FactomWyomingEntity/private-pool/difficulty"
+	. "github.com/FactomWyomingEntity/prosper-pool/difficulty"
 )
 
 var _ = crand.Read

@@ -7,13 +7,13 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/FactomWyomingEntity/private-pool/web"
+	"github.com/FactomWyomingEntity/prosper-pool/web"
 
-	"github.com/FactomWyomingEntity/private-pool/accounting"
+	"github.com/FactomWyomingEntity/prosper-pool/accounting"
 
 	"github.com/Factom-Asset-Tokens/base58"
-	"github.com/FactomWyomingEntity/private-pool/authentication"
-	"github.com/FactomWyomingEntity/private-pool/database"
+	"github.com/FactomWyomingEntity/prosper-pool/authentication"
+	"github.com/FactomWyomingEntity/prosper-pool/database"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
