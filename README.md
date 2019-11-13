@@ -10,6 +10,8 @@ There are a few moving parts in the pool. This diagram depicts things from a hig
 
 ![image](imgs/pool.png)
 
+More details about the initial design can be found [here](Prosper Pegnet Mining Pool.pdf). The document may not track the development changes.
+
 ## Notes
 
 ### The pool cannot bootstrap the network
