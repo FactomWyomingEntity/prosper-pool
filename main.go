@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/FactomWyomingEntity/private-pool/cmd"
+	"github.com/FactomWyomingEntity/prosper-pool/cmd"
 )
 
 // Pool entry point

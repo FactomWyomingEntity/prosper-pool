@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/FactomWyomingEntity/private-pool/stratum"
+	"github.com/FactomWyomingEntity/prosper-pool/stratum"
 )
 
 func TestUnknownRPC_IsRequest(t *testing.T) {

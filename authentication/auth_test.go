@@ -12,7 +12,7 @@ import (
 
 	"github.com/qor/mailer"
 
-	. "github.com/FactomWyomingEntity/private-pool/authentication"
+	. "github.com/FactomWyomingEntity/prosper-pool/authentication"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/stretchr/testify/require"

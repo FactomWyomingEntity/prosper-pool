@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/FactomWyomingEntity/private-pool/authentication"
+	"github.com/FactomWyomingEntity/prosper-pool/authentication"
 	"github.com/jinzhu/gorm"
 )
 

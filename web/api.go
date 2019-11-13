@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/FactomWyomingEntity/private-pool/minutekeeper"
+	"github.com/FactomWyomingEntity/prosper-pool/minutekeeper"
 
-	"github.com/FactomWyomingEntity/private-pool/sharesubmit"
+	"github.com/FactomWyomingEntity/prosper-pool/sharesubmit"
 
-	"github.com/FactomWyomingEntity/private-pool/accounting"
-	"github.com/FactomWyomingEntity/private-pool/database"
+	"github.com/FactomWyomingEntity/prosper-pool/accounting"
+	"github.com/FactomWyomingEntity/prosper-pool/database"
 	rpc "github.com/gorilla/rpc/v2"
 	"github.com/gorilla/rpc/v2/json2"
 	"github.com/jinzhu/gorm"

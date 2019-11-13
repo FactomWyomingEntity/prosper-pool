@@ -3,7 +3,7 @@ package cmd_test
 import (
 	"testing"
 
-	. "github.com/FactomWyomingEntity/private-pool/cmd"
+	. "github.com/FactomWyomingEntity/prosper-pool/cmd"
 )
 
 func TestAssetListContainsCaseInsensitive(t *testing.T) {

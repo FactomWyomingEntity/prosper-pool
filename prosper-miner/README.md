@@ -1,6 +1,6 @@
 # Prosper Miner
 
-The prosper-miner binary is a PegNet miner compatible with the Prosper pool (private-pool) server. When a miner submits their work to the pool in the form of a share, the pool software determines whether or not to submit that share, and will credit the miner for the work they have done.
+The prosper-miner binary is a PegNet miner compatible with the Prosper pool server. When a miner submits their work to the pool in the form of a share, the pool software determines whether or not to submit that share, and will credit the miner for the work they have done.
 
 ## Performance Notes
 

@@ -32,7 +32,7 @@ All miner work is stored in memory and saved to postgres at the start of the nex
 
 ### Stratum RPCs
 
-The RPC documentation, including the PegNet-oriented modifications and additions, can be found [here](stratum_adj.md). To run the Stratum server only (for experimentation and/or debugging purposes) you can run things with the `stratum` command included: `private-pool stratum` and then run a client/miner to connect with it normally (the server will disable strict authentication requirements in this state). This also enables a simControl-esque environment, where server-side commands like `listclients`, `getversion <client-id>`, or `showmessage <client-id> <message>` or client-side commands like `getopr <job-id>` can be entered directly by the user.
+The RPC documentation, including the PegNet-oriented modifications and additions, can be found [here](stratum_adj.md). To run the Stratum server only (for experimentation and/or debugging purposes) you can run things with the `stratum` command included: `prosper-pool stratum` and then run a client/miner to connect with it normally (the server will disable strict authentication requirements in this state). This also enables a simControl-esque environment, where server-side commands like `listclients`, `getversion <client-id>`, or `showmessage <client-id> <message>` or client-side commands like `getopr <job-id>` can be entered directly by the user.
 
 
 # Development environment
@@ -82,14 +82,14 @@ Once the server is running, you can [run and connect a prosper-miner to it](pros
 
 ## Command-line options
 
-You can use `private-pool --help` to list the command-line arguments and options. There are hidden commands used for development purposes.
+You can use `prosper-pool --help` to list the command-line arguments and options. There are hidden commands used for development purposes.
 
 ```
 Launch the private pool
 
 Usage:
-  private-pool [flags]
-  private-pool [command]
+  prosper-pool [flags]
+  prosper-pool [command]
 
 Available Commands:
   config      Write a example config with defaults
@@ -101,7 +101,7 @@ Flags:
       --act int         Enable a custom activation height for testing mode
       --config string   Location to config (default "$HOME/.prosper/prosper-pool.toml")
       --fhost string    Factomd host url (default "http://localhost:8088")
-  -h, --help            help for private-pool
+  -h, --help            help for prosper-pool
       --log string      Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal' (default "info")
       --phost string    Postgres host url (default "192.168.32.2")
       --pport int       Postgres host port (default 5432)
@@ -109,5 +109,5 @@ Flags:
       --sport int       Stratum server host port (default 1234)
       --testing         Enable testing mode
 
-Use "private-pool [command] --help" for more information about a command.
+Use "prosper-pool [command] --help" for more information about a command.
 ```
