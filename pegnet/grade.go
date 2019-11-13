@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/Factom-Asset-Tokens/factom"
-	"github.com/FactomWyomingEntity/private-pool/config"
-	"github.com/FactomWyomingEntity/private-pool/database"
+	"github.com/FactomWyomingEntity/prosper-pool/config"
+	"github.com/FactomWyomingEntity/prosper-pool/database"
 	"github.com/jinzhu/gorm"
 	"github.com/pegnet/pegnet/modules/grader"
 )

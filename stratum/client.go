@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/FactomWyomingEntity/private-pool/mining"
+	"github.com/FactomWyomingEntity/prosper-pool/mining"
 	log "github.com/sirupsen/logrus"
 )
 

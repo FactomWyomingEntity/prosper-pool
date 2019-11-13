@@ -3,7 +3,7 @@ package sharesubmit_test
 import (
 	"testing"
 
-	"github.com/FactomWyomingEntity/private-pool/sharesubmit"
+	"github.com/FactomWyomingEntity/prosper-pool/sharesubmit"
 )
 
 func TestComputeEMA(t *testing.T) {

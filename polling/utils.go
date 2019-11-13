@@ -195,7 +195,7 @@ func DetailError(e error) error {
 	return fmt.Errorf("%s:%d %s", shortFile, line, e.Error())
 }
 
-// ShortenPoolFilePath takes a long path url to private-pool, and shortens it:
+// ShortenPoolFilePath takes a long path url to prosper-pool, and shortens it:
 //	"/home/billy/go/src/github.com/pegnet/pegnet/opr.go" -> "pegnet/opr.go"
 //	This is nice for errors that print the file + line number
 //
@@ -208,7 +208,7 @@ func ShortenPoolFilePath(path, acc string, depth int) (trimmed string) {
 		return filepath.ToSlash(filepath.Join(path, acc))
 	}
 	dir, base := filepath.Split(path)
-	if strings.ToLower(base) == "private-pool" {
+	if strings.ToLower(base) == "prosper-pool" {
 		return filepath.ToSlash(filepath.Join(base, acc))
 	}
 

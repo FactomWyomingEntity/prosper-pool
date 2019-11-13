@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/FactomWyomingEntity/private-pool/difficulty"
+	"github.com/FactomWyomingEntity/prosper-pool/difficulty"
 	"github.com/shopspring/decimal"
 )
 

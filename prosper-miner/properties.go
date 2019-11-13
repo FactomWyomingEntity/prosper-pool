@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/FactomWyomingEntity/private-pool/config"
+	"github.com/FactomWyomingEntity/prosper-pool/config"
 	"github.com/spf13/cobra"
 )
 

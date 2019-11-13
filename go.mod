@@ -1,4 +1,4 @@
-module github.com/FactomWyomingEntity/private-pool
+module github.com/FactomWyomingEntity/prosper-pool
 
 go 1.13
 

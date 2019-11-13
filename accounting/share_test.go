@@ -8,7 +8,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	. "github.com/FactomWyomingEntity/private-pool/accounting"
+	. "github.com/FactomWyomingEntity/prosper-pool/accounting"
 )
 
 func TestShareMap(t *testing.T) {

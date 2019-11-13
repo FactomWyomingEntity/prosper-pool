@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/FactomWyomingEntity/private-pool/minutekeeper"
+	"github.com/FactomWyomingEntity/prosper-pool/minutekeeper"
 
-	"github.com/FactomWyomingEntity/private-pool/stratum"
+	"github.com/FactomWyomingEntity/prosper-pool/stratum"
 
 	"github.com/jinzhu/gorm"
 
-	"github.com/FactomWyomingEntity/private-pool/authentication"
-	"github.com/FactomWyomingEntity/private-pool/config"
+	"github.com/FactomWyomingEntity/prosper-pool/authentication"
+	"github.com/FactomWyomingEntity/prosper-pool/config"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
