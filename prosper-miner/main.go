@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"os/user"
 	"path/filepath"
 	"regexp"
@@ -13,13 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/FactomWyomingEntity/prosper-pool/profile"
-
-	"github.com/FactomWyomingEntity/prosper-pool/loghelp"
-
 	"github.com/FactomWyomingEntity/prosper-pool/config"
-
 	"github.com/FactomWyomingEntity/prosper-pool/exit"
+	"github.com/FactomWyomingEntity/prosper-pool/loghelp"
+	"github.com/FactomWyomingEntity/prosper-pool/profile"
 	"github.com/FactomWyomingEntity/prosper-pool/stratum"
 	"github.com/pegnet/pegnet/modules/factoidaddress"
 	log "github.com/sirupsen/logrus"
@@ -186,6 +184,8 @@ var rootCmd = &cobra.Command{
 
 func OpenConfig(cmd *cobra.Command, args []string) error {
 	initLogger(cmd)
+	closeHandle()
+
 	configPath, _ := cmd.Flags().GetString("config")
 	configCustom := true
 	if configPath == "" {
@@ -256,6 +256,21 @@ func SetDefaults(cmd *cobra.Command) {
 // GenerateMinerID has to be random
 func GenerateMinerID() string {
 	return NewRandomName(time.Now().UnixNano()).Haikunate()
+}
+
+func closeHandle() {
+	// Catch ctl+c
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+	go func() {
+		<-signalChan
+		log.Info("Gracefully closing")
+		exit.GlobalExitHandler.Close()
+
+		log.Info("closing application")
+		// If something is hanging, we have to kill it
+		os.Exit(0)
+	}()
 }
 
 func initLogger(cmd *cobra.Command) {

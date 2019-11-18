@@ -283,9 +283,9 @@ func (c *Client) SuggestTarget(preferredTarget string) error {
 }
 
 func (c *Client) Close() error {
-	log.Infof("shutting down stratum client")
 	c.autoreconnect = false
 	if !reflect.ValueOf(c.conn).IsNil() {
+		log.Infof("shutting down stratum client")
 		return c.conn.Close()
 	}
 	return nil
@@ -297,6 +297,7 @@ func (c *Client) Listen(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			c.Close()
+			log.Infof("Graceful close of the miner connection")
 			return
 		}
 	}()
@@ -319,7 +320,7 @@ func (c *Client) Listen(ctx context.Context) {
 					if strings.Contains(reconnectError.Error(), "connection refused") {
 						continue
 					} else {
-						log.Error(reconnectError)
+						log.WithError(reconnectError).Error("miner reconnect failed")
 						return
 					}
 				} else {
@@ -327,6 +328,7 @@ func (c *Client) Listen(ctx context.Context) {
 					c.Listen(ctx)
 				}
 			} else {
+				log.WithError(err).Errorf("miner closed due to connection issue")
 				return
 			}
 		} else {
