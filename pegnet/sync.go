@@ -37,7 +37,7 @@ OuterSyncLoop:
 		// TODO: we might want to query against more than 1 factomd. If 1 node
 		// 	is synced higher than the other (such as following minutes better)
 		//	we will want to switch the client.
-		err := heights.Get(n.FactomClient)
+		err := heights.Get(nil, n.FactomClient)
 		if err != nil {
 			pegdLog.WithError(err).WithFields(log.Fields{}).Errorf("failed to fetch heights")
 			time.Sleep(retryPeriod)
@@ -178,8 +178,8 @@ func (n *Node) SyncBlock(ctx context.Context, tx *gorm.DB, height uint32) (grade
 	}
 
 	dblock := new(factom.DBlock)
-	dblock.Header.Height = height
-	if err := dblock.Get(n.FactomClient); err != nil {
+	dblock.Height = height
+	if err := dblock.Get(nil, n.FactomClient); err != nil {
 		return nil, err
 	}
 
@@ -236,7 +236,7 @@ func (n *Node) SyncBlock(ctx context.Context, tx *gorm.DB, height uint32) (grade
 }
 
 func multiFetch(eblock *factom.EBlock, c *factom.Client) error {
-	err := eblock.Get(c)
+	err := eblock.Get(nil, c)
 	if err != nil {
 		return err
 	}
@@ -255,7 +255,7 @@ func multiFetch(eblock *factom.EBlock, c *factom.Client) error {
 			}()
 
 			for j := range work {
-				errs <- eblock.Entries[j].Get(c)
+				errs <- eblock.Entries[j].Get(nil, c)
 			}
 		}()
 	}

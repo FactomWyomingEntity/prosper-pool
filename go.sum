@@ -11,6 +11,10 @@ github.com/AdamSLevy/jsonrpc2 v2.0.0+incompatible h1:ut4YIGFeO2Mzyj7pNEmcHBAm/88
 github.com/AdamSLevy/jsonrpc2 v2.0.0+incompatible/go.mod h1:6enYNa3tk//n6m8F7zXGhRbtTqpSeysaUcwZbLIHGYQ=
 github.com/AdamSLevy/jsonrpc2/v11 v11.3.2 h1:McSW/pP7K0/Ucjig6AJwW7Khph/XOMYhSB8v3YxMBl4=
 github.com/AdamSLevy/jsonrpc2/v11 v11.3.2/go.mod h1:7fNjH6BXM0KVswWqj+K/mnOS8wiSke0sE8X46hS+nsc=
+github.com/AdamSLevy/jsonrpc2/v12 v12.0.1 h1:cVyqoBa4Qgw8bQj3vCBnZHOX/E+uvPM8TbQPobGwY8Q=
+github.com/AdamSLevy/jsonrpc2/v12 v12.0.1/go.mod h1:UUmIu8A7Sjw+yI0tIc/iGQHoSu/7loifZ7E/AbjFFcI=
+github.com/AdamSLevy/jsonrpc2/v13 v13.0.1 h1:hQ5rfCFBQrXQNtvP+2mtH6EmsUAEN61ZF1n8UGVNis0=
+github.com/AdamSLevy/jsonrpc2/v13 v13.0.1/go.mod h1:8QsYqGKdPEim+n/j9KFTYB2tIj250f044Vxh2XRKhP4=
 github.com/AdamSLevy/sqlitechangeset v0.0.0-20190925183646-3ddb70fb709d/go.mod h1:kQNmmf+2gf3uGKHt0LS4guxdp4Ay44SXA4+Is8/Gxm8=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
@@ -18,6 +22,8 @@ github.com/Factom-Asset-Tokens/base58 v0.0.0-20181227014902-61655c4dd885 h1:rfy2
 github.com/Factom-Asset-Tokens/base58 v0.0.0-20181227014902-61655c4dd885/go.mod h1:RVXsRSp6VzXw5l1uiGazuf3qo23Qk0h1HzMcQk+X4LE=
 github.com/Factom-Asset-Tokens/factom v0.0.0-20190911201853-7b283996f02a h1:Yc1KR8xLaJGV+lnyVDnazIhjY+VpmqwJ/cOY4CcJEmw=
 github.com/Factom-Asset-Tokens/factom v0.0.0-20190911201853-7b283996f02a/go.mod h1:E1CRixabBfgR9Qb/ND2Q6Mqm9vCD3N9MH+sy60aj2x0=
+github.com/Factom-Asset-Tokens/factom v0.0.0-20191120022136-7bf60a31a324 h1:g0c2FPDPGrhFo1sKGLogPQaKQ6LNKkSu6wlXj2Na6l8=
+github.com/Factom-Asset-Tokens/factom v0.0.0-20191120022136-7bf60a31a324/go.mod h1:QwTTrmYvbvsDC7+ZzonzR0jmoT9BgPzaM0XsMJqCJFs=
 github.com/Factom-Asset-Tokens/fatd v0.6.1-0.20190927200133-81408234a2b5 h1:nJgckkWLVJxlZyfc5Wv8unMV9QmOQz6InW87MU8x0fg=
 github.com/Factom-Asset-Tokens/fatd v0.6.1-0.20190927200133-81408234a2b5/go.mod h1:BtAPS0V7pjfxo1rdQ+ZKiW8QYBxDcVskMxkY3JKQsqw=
 github.com/FactomProject/FactomCode v0.3.5/go.mod h1:7XksVta7THNbD031Ax0/dS5RKMS+ug+d7/Lmti8jAhE=

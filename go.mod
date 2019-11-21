@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/Factom-Asset-Tokens/base58 v0.0.0-20181227014902-61655c4dd885
-	github.com/Factom-Asset-Tokens/factom v0.0.0-20190911201853-7b283996f02a
+	github.com/Factom-Asset-Tokens/factom v0.0.0-20191120022136-7bf60a31a324
 	github.com/andybalholm/cascadia v1.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
 	github.com/aws/aws-sdk-go v1.25.12 // indirect
