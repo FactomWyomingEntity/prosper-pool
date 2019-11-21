@@ -71,7 +71,7 @@ func (k *MinuteKeeper) Run(ctx context.Context) {
 			return // Cancelled
 		}
 		var cr CurrentMinute
-		err := k.FactomClient.FactomdRequest("current-minute", nil, &cr)
+		err := k.FactomClient.FactomdRequest(nil, "current-minute", nil, &cr)
 		if err != nil {
 			// Any error? We use rolling submits, and just eat the 1min problem
 			k.setSubmit(true)

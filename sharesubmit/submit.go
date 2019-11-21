@@ -158,8 +158,9 @@ func (s *Submitter) Run(ctx context.Context) {
 			if share.Target > s.currentEMA.EMAValue {
 				buf := make([]byte, 8)
 				binary.BigEndian.PutUint64(buf, share.Target)
+				oChain := factom.Bytes32(config.OPRChain)
 				entry := factom.Entry{
-					ChainID: factom.NewBytes32(config.OPRChain[:]),
+					ChainID: &oChain,
 					ExtIDs: []factom.Bytes{
 						//	[0] the nonce for the entry
 						share.Nonce,
@@ -170,7 +171,7 @@ func (s *Submitter) Run(ctx context.Context) {
 					},
 					Content: s.oprCopyData,
 				}
-				txid, err := entry.ComposeCreate(s.FactomClient, s.configuration.ESAddress)
+				txid, err := entry.ComposeCreate(nil, s.FactomClient, s.configuration.ESAddress)
 				if err != nil {
 					sLog.WithError(err).WithField("job", share.JobID).Errorf("failed to submit opr")
 				} else {
