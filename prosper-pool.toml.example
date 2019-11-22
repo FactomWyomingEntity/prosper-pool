@@ -10,7 +10,7 @@
   username = "postgres"
 
 [factom]
-  factomdlocation = "http://localhost:8088"
+  factomdlocation = "http://localhost:8088/v2"
 
 # The oracle section is the same as Pegnet
 [oracle]
