@@ -65,7 +65,7 @@ To interact with a running pool as an admin, you can consult [this document](./A
 ## Docker instructions
 First, make sure that `factomd` is running locally (or get the address of a remotely running instance). Also, double-check the values in the `docker-compose.yml` file are appropriate for your setup:
 
-* Update the `"http://172.17.0.1:8088"` flag passed to `--fhost` to match the location of the `factomd` instance you are connecting to.
+* Update the `"http://172.17.0.1:8088/v2"` flag passed to `--fhost` to match the location of the `factomd` instance you are connecting to.
 * If you would like to change the `LXRBITSIZE` value to something lower (for quicker deployments during testing), you can do so in `docker-compose.yml`.
 
 Then you can start a postgres database and the prosper server binary with:
@@ -100,7 +100,7 @@ Available Commands:
 Flags:
       --act int         Enable a custom activation height for testing mode
       --config string   Location to config (default "$HOME/.prosper/prosper-pool.toml")
-      --fhost string    Factomd host url (default "http://localhost:8088")
+      --fhost string    Factomd host url (default "http://localhost:8088/v2")
   -h, --help            help for prosper-pool
       --log string      Change the logging level. Can choose from 'trace', 'debug', 'info', 'warn', 'error', or 'fatal' (default "info")
       --phost string    Postgres host url (default "192.168.32.2")

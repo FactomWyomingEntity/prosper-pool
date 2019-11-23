@@ -43,8 +43,9 @@ const (
 	ConfigPoolCoinbase  = "Pool.OPRCoinbase"
 	ConfigPoolESAddress = "Pool.ESAddress"
 
-	ConfigSubmitterCutoff = "Submit.SubmissionCutoff"
-	ConfigSubmitterEMAN   = "Submit.EMA-N"
+	ConfigSubmitterCutoff  = "Submit.SubmissionCutoff"
+	ConfigSubmitterEMAN    = "Submit.EMA-N"
+	ConfigSubmitterSoftMax = "Submit.SoftMax"
 
 	ConfigWebPort = "Web.Port"
 
@@ -62,7 +63,7 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigSQLUsername, "postgres")
 	conf.SetDefault(ConfigSQLPassword, "password")
 
-	conf.SetDefault(ConfigFactomdLocation, "http://localhost:8088")
+	conf.SetDefault(ConfigFactomdLocation, "http://localhost:8088/v2")
 
 	conf.SetDefault(ConfigPegnetPollingPeriod, time.Second*2)
 	conf.SetDefault(ConfigPegnetRetryPeriod, time.Second*5)
@@ -92,6 +93,7 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigSubmitterCutoff, 200)
 	// 6hrs
 	conf.SetDefault(ConfigSubmitterEMAN, 36)
+	conf.SetDefault(ConfigSubmitterSoftMax, 25)
 
 	conf.SetDefault(ConfigWebPort, 7070)
 
