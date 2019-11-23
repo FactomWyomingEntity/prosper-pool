@@ -22,6 +22,12 @@ The pool is currently not able to bootstrap the network. If running local develo
 
 The pegnet reference miner requires a node that syncs with minutes. If the minute syncing is lost, the miner is dead in the water. Prosper pool does not require syncing by minutes, and uses a rolling submission strategy. If your hashpower begins to dominate the network, tweaking might be necessary. A 36 block (6 hr) exponential moving average is kept of the network difficulty to determine whether or not to submit a share.
 
+#### SoftMaxLimit
+
+The issue with rolling submissions, is that is possible to submit over 50 records, which is a complete waste of ECs. If you dominate the network hashpower, or following a hashrate decrease (like a network pause), this is problematic. The pool implements what we are calling a "SoftMaxLimit". Instead of saying the pool can **only** submit 50 records, the pool says it has a soft limt of 25. 
+
+How it works is the pool saves the best 25 shares for any given job. If a new share is under the 25th share, it blocks it from being submitted. If it is above the 25th, it submits is and resorts the list. This helps when you start submitting over 200+ records. In a brief simulation, if you would submit 139 entries, this feature still lets through 105. If you submit 450, it let through 160. And at 1941, it let through 247. This feature helps fight any exponential hashpower difference. A tighter method is much more complicated to implement, so this should be superseded or supplemented by something else in the future.
+
 ### Payouts
 
 What we owe miners is recorded, but no payouts actually occur. This is to be implemented at a future date.
