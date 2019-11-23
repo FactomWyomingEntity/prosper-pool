@@ -150,10 +150,20 @@ func (s *HttpServices) PoolSubmissions(w http.ResponseWriter, r *http.Request) {
 
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("This page displays the %d entry submissions for the job '%s'\n", len(entries), jobid))
+	buf.WriteString(fmt.Sprintf("All 0 entryhashes means the submission was blocked by softmax.\n"))
+	blocked := 0
+	for _, entry := range entries {
+		if entry.EntryHash == "0000000000000000000000000000000000000000000000000000000000000000" {
+			blocked++
+		}
+	}
+	buf.WriteString(fmt.Sprintf("%d out of %d blocked by softmax (%.3f%% of submissions blocked)\n",
+		blocked, len(entries), 100*float64(blocked)/float64(len(entries))))
 	for i, entry := range entries {
 		buf.WriteString(fmt.Sprintf("\t%d -> EntryHash: %s, Target: %x, Time: %s\n",
 			i, entry.EntryHash, entry.Target, entry.CreatedAt.UTC()))
 	}
+
 	_, _ = w.Write(buf.Bytes())
 }
 

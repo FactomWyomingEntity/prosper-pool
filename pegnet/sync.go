@@ -39,7 +39,7 @@ OuterSyncLoop:
 		//	we will want to switch the client.
 		err := heights.Get(nil, n.FactomClient)
 		if err != nil {
-			pegdLog.WithError(err).WithFields(log.Fields{}).Errorf("failed to fetch heights")
+			pegdLog.WithError(err).WithFields(log.Fields{"fhost": n.FactomClient.FactomdServer}).Errorf("failed to fetch heights")
 			time.Sleep(retryPeriod)
 			continue // Loop will just keep retrying until factomd is reached
 		}
