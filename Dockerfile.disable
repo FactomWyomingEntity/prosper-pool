@@ -1,0 +1,3 @@
+# A dockerfile that does nothing
+FROM tianon/true
+ENTRYPOINT ["/true"]

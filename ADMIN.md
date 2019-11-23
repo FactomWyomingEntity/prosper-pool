@@ -7,9 +7,9 @@ The pool binary also has some admin level cli functions.
 The pool cli requires access to the pool binary. If you are running with the docker compose, you can do this:
 
 ```bash
-docker exec -it prosperpool_prosper-pool_1 /bin/bash
-echo "The --phost is the postgres host, which is 'db' from within the container"
-/go/bin/prosper-pool --phost db
+docker exec -it prosper-pool /bin/bash
+echo "The --phost is the postgres host, which is '$DB' from within the container"
+/go/bin/prosper-pool --phost $DB
 ```
 
 ### Make a user an Admin
