@@ -27,6 +27,11 @@ var (
 	sLog = log.WithFields(log.Fields{"mod": "submit"})
 )
 
+const (
+	// BlockReasons
+	SoftMaxBlock = -1
+)
+
 // Submitter handles submitting shares to factomd. If the share is too old,
 // or too low, it will not submit. If we are submitting too many, then it
 // will switch from rolling submissions to minute 9 submissions
@@ -43,12 +48,19 @@ type Submitter struct {
 	oprCopyData []byte
 	oprCopy     opr.V2Content // Our safe copy
 
+	// jobState is state a job can use in it's decision process
+	jobState struct {
+		// diffList is to enforce the softmax
+		diffList []uint64
+	}
+
 	currentEMA    EMA
 	configuration struct {
 		Cutoff       int
 		EMANumPoints int
 		// ESAddress pays for entries
-		ESAddress factom.EsAddress
+		ESAddress    factom.EsAddress
+		SoftMaxLimit int
 	}
 }
 
@@ -77,6 +89,8 @@ func NewSubmitter(conf *viper.Viper, db *gorm.DB) (*Submitter, error) {
 
 	s.configuration.Cutoff = conf.GetInt(config.ConfigSubmitterCutoff)
 	s.configuration.EMANumPoints = conf.GetInt(config.ConfigSubmitterEMAN)
+	s.configuration.SoftMaxLimit = conf.GetInt(config.ConfigSubmitterEMAN)
+	s.resetJobState()
 
 	if ec := conf.GetString(config.ConfigPoolESAddress); ec == "" {
 		return nil, fmt.Errorf("private entry credit address must be set")
@@ -91,12 +105,28 @@ func NewSubmitter(conf *viper.Viper, db *gorm.DB) (*Submitter, error) {
 	return s, nil
 }
 
+func (s *Submitter) resetJobState() {
+	s.jobState.diffList = make([]uint64, s.configuration.SoftMaxLimit)
+}
+
 func (s *Submitter) SetSubmissions(shares <-chan *stratum.ShareSubmission) {
 	s.shares = shares
 }
 
 func (s Submitter) GetBlocksChannel() chan<- SubmissionJob {
 	return s.blocks
+}
+
+// softMax enforces the softmax limit on shares. If the softMax() returns true
+// the share is accepted. If it returns false, the share is rejected.
+// If the limit is set to <= 0, the softMax limit is not applied.
+func (s *Submitter) softMax(diff uint64) bool {
+	if s.configuration.SoftMaxLimit <= 0 {
+		return true
+	}
+
+	idx := InsertTarget(diff, s.jobState.diffList)
+	return idx >= 0
 }
 
 func (s *Submitter) Run(ctx context.Context) {
@@ -107,6 +137,7 @@ func (s *Submitter) Run(ctx context.Context) {
 		case block := <-s.blocks:
 			// A new block indicates a new job
 			s.currentJob = block.Job
+			s.resetJobState()
 
 			set := block.Block.GradedBlock.Graded()
 			last, lastIndex := uint64(0), 0
@@ -156,6 +187,22 @@ func (s *Submitter) Run(ctx context.Context) {
 
 			// If the target is above the ema target
 			if share.Target > s.currentEMA.EMAValue {
+				if !s.softMax(share.Target) {
+					// Rejected, as we already submitted better shares this job.
+					_ = s.saveEntrySubmission(EntrySubmission{
+						ShareSubmission: *share,
+						EntryHash:       "0000000000000000000000000000000000000000000000000000000000000000",
+						CommitTxID:      "0000000000000000000000000000000000000000000000000000000000000000",
+						Blocked:         SoftMaxBlock,
+					})
+					sLog.WithFields(log.Fields{
+						"job":    share.JobID,
+						"target": fmt.Sprintf("%x", share.Target),
+						"nonce":  fmt.Sprintf("%x", share.Nonce),
+					}).Debug("share found to submit, but blocked by softmax (this is good)")
+					continue // blocked
+				}
+
 				buf := make([]byte, 8)
 				binary.BigEndian.PutUint64(buf, share.Target)
 				oChain := factom.Bytes32(config.OPRChain)
@@ -192,7 +239,6 @@ func (s *Submitter) Run(ctx context.Context) {
 					}
 				}
 			}
-
 		}
 	}
 }
@@ -213,6 +259,7 @@ type PublicEntrySubmission struct {
 	Target     uint64 `json:"target,omitempty"`  // Uint64 to ensure valid target
 	EntryHash  string `json:"entryhash"`
 	CommitTxID string `json:"committxid"`
+	Blocked    int    `json:"blocked"`
 }
 
 // EntrySubmission is a record that we submitted an entry
@@ -221,6 +268,8 @@ type EntrySubmission struct {
 	stratum.ShareSubmission
 	EntryHash  string `json:"entryhash"`
 	CommitTxID string `json:"committxid"`
+	// We might block some submissions for limiting reasons
+	Blocked int `json:"blocked"`
 }
 
 // BeforeCreate

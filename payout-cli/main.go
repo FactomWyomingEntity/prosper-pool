@@ -18,7 +18,7 @@ import (
 
 func init() {
 	// Defaults
-	rootCmd.PersistentFlags().StringP("factomdhost", "s", "http://localhost:8088", "factomd api url")
+	rootCmd.PersistentFlags().StringP("factomdhost", "s", "http://localhost:8088/v2", "factomd api url")
 	rootCmd.PersistentFlags().StringP("walletdhost", "w", "http://localhost:8089", "factom-walletd url")
 
 	rootCmd.AddCommand(pay)
