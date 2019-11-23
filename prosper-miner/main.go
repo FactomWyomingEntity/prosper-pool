@@ -131,10 +131,10 @@ var rootCmd = &cobra.Command{
 		client.InitMiners(miners)
 		fake, _ := cmd.Flags().GetInt("fake")
 		if fake > 0 {
+			log.Errorf("Fake hashing is disabled unless you modify he source")
+			os.Exit(1)
 			log.Warnf("!!FAKE MINING ENABLED!!")
 			log.Warnf("All hashes are invalid. Rate is set at %d/s per core", fake)
-			log.Errorf("Fake hashing is disabled")
-			os.Exit(1)
 			client.SetFakeHashRate(fake)
 		}
 		client.RunMiners(ctx)

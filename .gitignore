@@ -1,5 +1,8 @@
 vendor
 
+# Docker
+docker-compose.override.yaml
+
 # Binaries for programs and plugins
 *.exe
 *.exe~

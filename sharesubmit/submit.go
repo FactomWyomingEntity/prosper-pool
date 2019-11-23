@@ -195,6 +195,11 @@ func (s *Submitter) Run(ctx context.Context) {
 						CommitTxID:      "0000000000000000000000000000000000000000000000000000000000000000",
 						Blocked:         SoftMaxBlock,
 					})
+					sLog.WithFields(log.Fields{
+						"job":    share.JobID,
+						"target": fmt.Sprintf("%x", share.Target),
+						"nonce":  fmt.Sprintf("%x", share.Nonce),
+					}).Debug("share found to submit, but blocked by softmax (this is good)")
 					continue // blocked
 				}
 
