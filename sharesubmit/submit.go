@@ -269,7 +269,7 @@ type EntrySubmission struct {
 	EntryHash  string `json:"entryhash"`
 	CommitTxID string `json:"committxid"`
 	// We might block some submissions for limiting reasons
-	Blocked int `json:"blocked"`
+	Blocked int `json:"blocked",gorm:"default:0"`
 }
 
 // BeforeCreate
