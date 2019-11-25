@@ -56,6 +56,10 @@
   # Check miner submissions are correct, and not fake hashes.s
   validateallshares = true
 
+  stratumport = 1234
+  welcomemessage = "Welcome to Prosper pool! Please visit http://my.pool.url:port for more information."
+
+
 [submit]
   # An exponential moving average is used of the on chain targets to determine
   # our rolling submission minimum target. This is the same as the reference
@@ -67,10 +71,12 @@
   # EMA = [Latest Value  - Previous EMA Value] * (2 / N+1) + Previous EMA
   # N is the number of points in the Exponential Moving Average
   ema-n = 36
-  submissioncutoff = 200
 
-   stratumport = 1234
-   welcomemessage = "Welcome to Prosper pool! Please visit http://my.pool.url:port for more information."
+  # Read about this here: https://github.com/FactomWyomingEntity/prosper-pool/wiki/Pool-Terms#soft-max-limit
+  # Putting 0 will disable this feature. 25 is recommended, anything over 50 is useless.
+  softmax = 25
+
+  submissioncutoff = 200
 
 [web]
   # The web UI port.

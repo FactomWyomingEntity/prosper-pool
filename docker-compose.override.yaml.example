@@ -1,0 +1,55 @@
+version: "3"
+services:
+  my-prosper-pool:
+    build: .
+    container_name: "prosper-pool"
+    environment:
+      - LXRBITSIZE=30
+      - DB=my-db
+    # Flags:
+    # --config : Use the `prosper-pool.toml` in the src directory as the config.
+    # --pport  : uses 5432, as it connects to the container, not to the host. The host uses 5433
+    command: ["./wait-for-it.sh", "my-db:5432", "--", "prosper-pool", "--phost", "my-db", "--pport", "5432", "--fhost", "http://172.17.0.1:8088/v2", "--config", "prosper-pool.toml"]
+    volumes:
+      - .:/go/src/prosper-pool
+      - lxrhash:/root/.lxrhash
+    ports:
+      # Notice we move the ports from 1234->1235, and 7070->7071
+      # localhost:7071 is the ui on the host
+      # localhost:1235 is the mining port
+      - "1235:1234"
+      - "7071:7070"
+    depends_on:
+      - my-db
+    links:
+      - my-db
+  my-db:
+    image: "postgres:12"
+    container_name: "pool_postgres"
+    environment:
+      POSTGRES_PASSWORD: password
+    ports:
+      # Postgres port moved to 5433. Keep it off the original port.
+      - "5433:5432"
+    volumes:
+      - my_pool_db:/var/lib/postgresql/data
+
+  # Disable the original services
+  prosper-pool:
+    # Rename these so we can reuse the original names
+    container_name: "disabled-pool"
+    image: "disabled"
+    build:
+      context: .
+      dockerfile: Dockerfile.disable
+    ports: []
+  db:
+    # Rename these so we can reuse the original names
+    container_name: "disabled-db"
+    image: "disabled"
+    build:
+      context: .
+      dockerfile: Dockerfile.disable
+    ports: []
+volumes:
+  my_pool_db:
