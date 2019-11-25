@@ -13,6 +13,7 @@ services:
     build: .
     environment:
       - LXRBITSIZE=30
+      - DB=db
     command: ["./wait-for-it.sh", "db:5432", "--", "prosper-pool", "--phost", "db", "--fhost", "http://172.17.0.1:8088/v2"]
     volumes:
       - .:/go/src/prosper-pool

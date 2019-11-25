@@ -3,6 +3,9 @@ vendor
 # Docker
 docker-compose.override.yaml
 
+# Prosper
+prosper-pool.toml
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
