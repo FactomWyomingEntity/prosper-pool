@@ -22,7 +22,7 @@ var TransactionConversionActivation uint32 = 213237
 // Estimated to be Oct 14 2019, 15:00:00 UTC
 var PEGPricingActivation uint32 = 214287
 
-var FreeFloatingPEGPriceActivation uint32 = 0
+var FreeFloatingPEGPriceActivation uint32 = 999999
 
 func OPRVersion(height uint32) uint8 {
 	if height < FreeFloatingPEGPriceActivation {
