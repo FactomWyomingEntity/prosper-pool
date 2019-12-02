@@ -42,6 +42,9 @@ func (n *Node) Grade(ctx context.Context, block *factom.EBlock) (grader.GradedBl
 	if block.Height >= config.GradingV2Activation {
 		ver = 2
 	}
+	if block.Height >= config.FreeFloatingPEGPriceActivation {
+		ver = 3
+	}
 
 	var prevWinners []string
 	var prevGraded database.PegnetGrade

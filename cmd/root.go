@@ -177,8 +177,8 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 		act, _ := cmd.Flags().GetUint32("act")
 		config.GradingV2Activation = act
 		config.PegnetActivation = act
-		config.GradingV2Activation = act
 		config.TransactionConversionActivation = act
+		config.FreeFloatingPEGPriceActivation = act
 	}
 
 }
