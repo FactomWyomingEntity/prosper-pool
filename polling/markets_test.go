@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pegnet/pegnet/polling"
+	. "github.com/FactomWyomingEntity/prosper-pool/polling"
 )
 
 func TestIsMarketOpen_Forex(t *testing.T) {
@@ -64,7 +64,7 @@ func TestIsMarketOpen_Forex(t *testing.T) {
 	}
 
 	for _, vec := range vecs {
-		open := polling.IsMarketOpen("EUR", vec.Reference)
+		open := IsMarketOpen("EUR", vec.Reference)
 		if open != vec.Exp {
 			t.Errorf("%s: exp %t,found %t", vec.Reference, vec.Exp, open)
 		}
@@ -128,7 +128,7 @@ func TestIsMarketOpen_Commodity(t *testing.T) {
 	}
 
 	for _, vec := range vecs {
-		open := polling.IsMarketOpen("XAG", vec.Reference)
+		open := IsMarketOpen("XAG", vec.Reference)
 		if open != vec.Exp {
 			t.Errorf("%s: exp %t,found %t", vec.Reference, vec.Exp, open)
 		}
@@ -192,7 +192,7 @@ func TestIsMarketOpen_Crypto(t *testing.T) {
 	}
 
 	for _, vec := range vecs {
-		open := polling.IsMarketOpen("XBT", vec.Reference)
+		open := IsMarketOpen("XBT", vec.Reference)
 		if open != vec.Exp {
 			t.Errorf("%s: exp %t,found %t", vec.Reference, vec.Exp, open)
 		}
