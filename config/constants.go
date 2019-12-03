@@ -22,7 +22,15 @@ var TransactionConversionActivation uint32 = 213237
 // Estimated to be Oct 14 2019, 15:00:00 UTC
 var PEGPricingActivation uint32 = 214287
 
-const OPRVersion uint8 = 2
+// Estimated to be  Dec 9, 2019, 17:00 UTC
+var FreeFloatingPEGPriceActivation uint32 = 222270
+
+func OPRVersion(height uint32) uint8 {
+	if height < FreeFloatingPEGPriceActivation {
+		return 2
+	}
+	return 3
+}
 
 // Compiled in
 var CompiledInBuild string = "Unknown"

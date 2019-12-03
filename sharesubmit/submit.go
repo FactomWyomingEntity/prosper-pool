@@ -214,7 +214,7 @@ func (s *Submitter) Run(ctx context.Context) {
 						//	[1] Self reported difficulty
 						buf,
 						//  [2] Version number
-						[]byte{config.OPRVersion},
+						[]byte{config.OPRVersion(uint32(share.JobID))},
 					},
 					Content: s.oprCopyData,
 				}

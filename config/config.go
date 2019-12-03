@@ -28,6 +28,8 @@ const (
 	ConfigCoinMarketCapKey     = "Oracle.CoinMarketCapKey"
 	ConfigOpenExchangeRatesKey = "Oracle.OpenExchangeRatesKey"
 
+	ConfigPollingStaleDuration = "Polling.StaleDuration"
+
 	Config1ForgePriority            = "OracleDataSources.1Forge"
 	ConfigAPILayerPriority          = "OracleDataSources.APILayer"
 	ConfigCoinCapPriority           = "OracleDataSources.CoinCap"
@@ -72,6 +74,8 @@ func SetDefaults(conf *viper.Viper) {
 	conf.SetDefault(ConfigApiLayerKey, "CHANGEME")
 	conf.SetDefault(ConfigCoinMarketCapKey, "CHANGEME")
 	conf.SetDefault(ConfigOpenExchangeRatesKey, "CHANGEME")
+
+	conf.SetDefault(ConfigPollingStaleDuration, time.Minute*30)
 
 	conf.SetDefault(Config1ForgePriority, -1)
 	conf.SetDefault(ConfigAPILayerPriority, -1)
