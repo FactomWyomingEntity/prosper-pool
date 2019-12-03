@@ -2,12 +2,14 @@ package database
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
 	"github.com/FactomWyomingEntity/prosper-pool/config"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -18,15 +20,25 @@ type SqlDatabase struct {
 func New(conf *viper.Viper) (*SqlDatabase, error) {
 	s := new(SqlDatabase)
 
-	// TODO: Enable ssl
-	dbUri := fmt.Sprintf("host=%s user=%s dbname=%s password=%s port=%d sslmode=disable",
-		viper.GetString(config.ConfigSQLHost),
-		viper.GetString(config.ConfigSQLUsername),
-		viper.GetString(config.ConfigSQLDBName),
-		viper.GetString(config.ConfigSQLPassword),
-		viper.GetInt(config.ConfigSQLPort))
+	var dialect string
+	var dbURI string
+	// Use SQLLite
+	if slpath := conf.GetString(config.ConfigSQLLitePath); slpath != "" {
+		dialect = "sqlite3"
+		dbURI = os.ExpandEnv(slpath)
+		log.Infof("SQLite database started from %s", dbURI)
+	} else {
+		dialect = "postgres"
+		// TODO: Enable ssl
+		dbURI = fmt.Sprintf("host=%s user=%s dbname=%s password=%s port=%d sslmode=disable",
+			conf.GetString(config.ConfigSQLHost),
+			conf.GetString(config.ConfigSQLUsername),
+			conf.GetString(config.ConfigSQLDBName),
+			conf.GetString(config.ConfigSQLPassword),
+			conf.GetInt(config.ConfigSQLPort))
+	}
 
-	db, err := gorm.Open("postgres", dbUri)
+	db, err := gorm.Open(dialect, dbURI)
 	if err != nil {
 		return nil, err
 	}

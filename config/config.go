@@ -12,6 +12,7 @@ const (
 
 	ConfigPoolCut = "pool.PoolFeeRate"
 
+	ConfigSQLLitePath = "Database.sqlitepath"
 	ConfigSQLHost     = "Database.host"
 	ConfigSQLPort     = "Database.port"
 	ConfigSQLDBName   = "Database.dbname"
@@ -59,6 +60,7 @@ const (
 
 func SetDefaults(conf *viper.Viper) {
 	// All config defaults
+	conf.SetDefault(ConfigSQLLitePath, "")
 	conf.SetDefault(ConfigSQLHost, "localhost")
 	conf.SetDefault(ConfigSQLPort, 5432)
 	conf.SetDefault(ConfigSQLDBName, "postgres")

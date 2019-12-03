@@ -20,6 +20,7 @@ require (
 	github.com/jinzhu/gorm v1.9.11
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
+	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
 	github.com/pegnet/LXRHash v0.0.0-20191028162532-138fe8d191a2
 	github.com/pegnet/pegnet v0.1.0-rc4.0.20191203184854-e8d488e2aaf4
