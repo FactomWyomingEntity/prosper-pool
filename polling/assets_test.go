@@ -12,6 +12,16 @@ import (
 	"github.com/spf13/viper"
 )
 
+func TestCorrectCasing(t *testing.T) {
+	if CorrectCasing("pegnetmarketcap") != "PegnetMarketCap" {
+		t.Errorf("failed correct casing")
+	}
+
+	if CorrectCasing("factoshiio") != "Factoshiio" {
+		t.Errorf("failed correct casing")
+	}
+}
+
 // TestBasicPollingSources creates 8 polling sources. 5 have 1 asset, 3 have all.
 // We then check to make sure the 5 sources are higher priority then the second 3.
 // The second two have a priority order as well, and will be listed in the prioriy list

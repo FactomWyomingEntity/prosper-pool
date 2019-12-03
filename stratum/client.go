@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"reflect"
 	"strconv"
@@ -150,13 +149,33 @@ func (c *Client) Handshake() error {
 
 // InitConn will not start the handshake process. Good for unit tests
 func (c *Client) InitConn(conn net.Conn) {
+	c.Lock()
+	defer c.Unlock()
 	c.conn = conn
 	c.enc = json.NewEncoder(conn)
 	c.dec = bufio.NewReader(conn)
 }
 
+func (c *Client) BlockTillConnected(address, waittime string) error {
+	for c.autoreconnect {
+		if err := c.WaitThenConnect(address, waittime); err == nil {
+			return nil
+		} else {
+			log.WithError(err).Errorf("failed to reconnect, will try again in %ss", waittime)
+		}
+	}
+	return fmt.Errorf("miner no longer reconnecting")
+}
+
 // Wait waittime seconds, then proceed with Connect
-func (c *Client) WaitThenConnect(address, waittime string) error {
+func (c *Client) WaitThenConnect(address, waittime string) (err error) {
+	defer func() {
+		// This should never happen, but we don't a failed connect to kill us
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic in connection attempt:\n%v", r)
+		}
+	}()
+
 	i, err := strconv.ParseInt(waittime, 10, 64)
 	if err != nil {
 		return err
@@ -310,27 +329,19 @@ func (c *Client) Listen(ctx context.Context) {
 	for {
 		readBytes, _, err := r.ReadLine()
 		if err != nil {
-			if err == io.EOF || (strings.Contains(err.Error(), "use of closed network connection") && c.autoreconnect) {
-				log.Info("Server disconnect detected, attempting reconnect in 5s...")
-				if !reflect.ValueOf(c.conn).IsNil() {
-					c.conn.Close()
-				}
-				reconnectError := c.WaitThenConnect(originalServerAddress, "5")
-				if reconnectError != nil {
-					if strings.Contains(reconnectError.Error(), "connection refused") {
-						continue
-					} else {
-						log.WithError(reconnectError).Error("miner reconnect failed")
-						return
-					}
-				} else {
-					c.Handshake()
-					c.Listen(ctx)
-				}
-			} else {
-				log.WithError(err).Errorf("miner closed due to connection issue")
+			if !c.autoreconnect {
+				return // Stop trying to reconnect
+			}
+			_ = c.conn.Close()
+			log.WithError(err).Errorf("client lost connection to the server, reconnect attempt in 5s")
+			err := c.BlockTillConnected(originalServerAddress, "5")
+			if err != nil {
+				log.WithError(err).Error("miner reconnect failed")
 				return
 			}
+
+			_ = c.Handshake()
+			r = bufio.NewReader(c.conn)
 		} else {
 			c.HandleMessage(readBytes)
 		}

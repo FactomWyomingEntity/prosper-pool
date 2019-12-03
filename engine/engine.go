@@ -289,8 +289,13 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 		}
 	}
 
+	version := uint8(2)
+	if uint32(hook.Height) >= config.FreeFloatingPEGPriceActivation {
+		version = 3
+	}
+
 	// New block, let's construct the job
-	assets, err := e.Poller.PullAllPEGAssets(2)
+	assets, err := e.Poller.PullAllPEGAssets(version)
 	if err != nil {
 		hLog.WithError(err).Errorf("failed to poll asset pricing")
 		return nil
@@ -317,6 +322,10 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 	// Assets need to be set in a specific order
 	record.Assets = make([]uint64, len(opr.V2Assets))
 	for i, name := range opr.V2Assets {
+		if name == "PEG" && version == 2 {
+			record.Assets[i] = uint64(0) // PEG Price is 0 until activation
+			continue
+		}
 		asset := assets[name]
 		record.Assets[i] = uint64(math.Round(asset.Value * 1e8))
 	}
@@ -331,7 +340,12 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 	oprHashHex := fmt.Sprintf("%x", oprHash[:])
 	hLog.WithFields(log.Fields{"oprhash": oprHashHex, "top": hook.Top}).Debugf("new job")
 
-	err = ValidateV2Content(data)
+	switch version {
+	case 2:
+		err = ValidateV2Content(data)
+	case 3:
+		err = ValidateV3Content(data)
+	}
 	if err != nil {
 		hLog.WithError(err).Errorf("OPR Data is Invalid! All submitted records by the pool will be rejected by PegNet!")
 		hLog.Errorf("Please check your config is correct. Like the correct data sources")
@@ -344,6 +358,27 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 		OPRHash: oprHashHex,
 		OPR:     record,
 	}
+}
+
+func ValidateV3Content(content []byte) error {
+	err := ValidateV2Content(content)
+	if err != nil {
+		return err
+	}
+
+	o, err := opr.ParseV2Content(content)
+	if err != nil {
+		return grader.NewDecodeError(err.Error())
+	}
+
+	// Also check the peg price is non-zero
+	for i, val := range o.Assets {
+		if val == 0 {
+			return grader.NewValidateError(fmt.Sprintf("asset quote must be greater than 0, %s is 0", opr.V2Assets[i]))
+		}
+	}
+
+	return nil
 }
 
 // The module does not validate opr content, only the full entry...

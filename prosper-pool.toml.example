@@ -30,6 +30,10 @@
   freeforexapi = -1
   kitco = -1
   openexchangerates = -1
+  pegnetmarketcap = -1
+  factoshiio = -1
+  coingecko = -1
+
 
 [pegnet]
   pollingperiod = "2s"
