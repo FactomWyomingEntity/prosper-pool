@@ -288,8 +288,8 @@ github.com/pegnet/OracleRecord v0.0.2/go.mod h1:VrY7Shn4oSCli47CsUYBFjH68IenGYtn
 github.com/pegnet/pegnet v0.0.2/go.mod h1:FUyEs8fyLOzPXZgyqXcqiOhQi58loNtujykIbxxoKbQ=
 github.com/pegnet/pegnet v0.1.0-rc4.0.20191002204629-5a6fd621ca60 h1:LhihCN5xwqmWoZqt3Hd34njIbXe7d6jNP2K8MJinI+U=
 github.com/pegnet/pegnet v0.1.0-rc4.0.20191002204629-5a6fd621ca60/go.mod h1:sC7efuGlr6+ithvzL2v76u7AA/9JagWaweAv7UYu2dk=
-github.com/pegnet/pegnet v0.1.0-rc4.0.20191203184854-e8d488e2aaf4 h1:3VLsiG6ubCtK55SGCJn7k7RHj4VWWoAs6QtnPR3wBCA=
-github.com/pegnet/pegnet v0.1.0-rc4.0.20191203184854-e8d488e2aaf4/go.mod h1:Fy8Qohe9zIuqO9Q/ZOLUNpP2kuiFqxjevzaS3IL62+E=
+github.com/pegnet/pegnet v0.2.3-0.20191203221152-328fdbaacef3 h1:rvXhGAJ58ZCT2Yp+p7HbSUsWt8taxbiutRFV91JHWhM=
+github.com/pegnet/pegnet v0.2.3-0.20191203221152-328fdbaacef3/go.mod h1:Fy8Qohe9zIuqO9Q/ZOLUNpP2kuiFqxjevzaS3IL62+E=
 github.com/pegnet/pegnetd v0.1.2-0.20191011183044-5eca2d08a5e8 h1:V41j01pVUgCRG+LdrQJgJm0PVpnYEpfGK80LtQkou4g=
 github.com/pegnet/pegnetd v0.1.2-0.20191011183044-5eca2d08a5e8/go.mod h1:ArfRaVXzKqOyBQMm4onNh1g17LGN9IEhQs4JcpJH8YM=
 github.com/pelletier/go-toml v1.2.0 h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=
