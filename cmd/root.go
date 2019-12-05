@@ -426,9 +426,6 @@ var datasources = &cobra.Command{
 		fmt.Println()
 		fmt.Println("Assets and their data source order. The order left to right is the fallback order.")
 		for _, asset := range opr.V2Assets {
-			if asset == "PEG" {
-				continue
-			}
 			str := d.AssetPriorityString(asset)
 			fmt.Printf("\t%4s (%d) : %s\n", asset, len(d.AssetSources[asset]), str)
 		}
