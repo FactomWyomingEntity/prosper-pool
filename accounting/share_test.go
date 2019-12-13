@@ -168,7 +168,7 @@ func TestNewPayout(t *testing.T) {
 }
 
 func TestInsertTarget(t *testing.T) {
-	var a [20]uint64
+	var a [TargetsKept]uint64
 	for i := 0; i < 10000; i++ {
 		InsertTarget(rand.Uint64(), &a, i)
 	}
