@@ -59,5 +59,9 @@ func testDataSource(t *testing.T, s IDataSource) {
 		if err != nil {
 			t.Error(err)
 		}
+
+		if r.When.Year() < 2010 || r.When.Year() > 2050 {
+			t.Errorf("Year is incorrect: %d", r.When.Year())
+		}
 	}
 }
