@@ -11,7 +11,6 @@ require (
 	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/disintegration/imaging v1.6.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
-	github.com/fatih/color v1.7.0 // indirect
 	github.com/gorilla/rpc v1.2.0
 	github.com/gorilla/sessions v1.2.0 // indirect
 	github.com/gosimple/slug v1.8.0 // indirect
@@ -47,13 +46,16 @@ require (
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
-	github.com/spf13/viper v1.4.0
+	github.com/spf13/viper v1.5.0
 	github.com/stretchr/testify v1.4.0
 	github.com/theplant/cldr v0.0.0-20190423050709-9f76f7ce4ee8 // indirect
 	github.com/theplant/htmltestingutils v0.0.0-20190423050759-0e06de7b6967 // indirect
 	github.com/theplant/testingutils v0.0.0-20190603093022-26d8b4d95c61 // indirect
 	github.com/yosssi/gohtml v0.0.0-20190915184251-7ff6f235ecaf // indirect
+	gitlab.com/oraxpool/orax-cli v1.0.9
 	go.uber.org/atomic v1.4.0
 	go.uber.org/ratelimit v0.1.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 )
+
+replace github.com/pegnet/LXRHash => /home/steven/go/src/github.com/pegnet/LXRHash

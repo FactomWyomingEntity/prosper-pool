@@ -8,11 +8,14 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"gitlab.com/oraxpool/orax-cli/hash"
 
 	lxr "github.com/pegnet/LXRHash"
 	log "github.com/sirupsen/logrus"
@@ -87,9 +90,11 @@ type PegnetMiner struct {
 type oprMiningState struct {
 	// Used to compute new hashes
 	oprhash []byte
+	static  []byte
 
 	// Used to track noncing
 	*NonceIncrementer
+	start uint32 // For batch mining
 
 	stats *SingleMinerStats
 
@@ -117,6 +122,10 @@ func NewNonceIncrementer(id uint32, personalid uint32) *NonceIncrementer {
 	return n
 }
 
+func (i *NonceIncrementer) Prefix() []byte {
+	return i.Nonce[:i.lastPrefixByte]
+}
+
 // NextNonce is just counting to get the next nonce. We preserve
 // the first byte, as that is our ID and give us our nonce space
 //	So []byte(ID, 255) -> []byte(ID, 1, 0) -> []byte(ID, 1, 1)
@@ -135,11 +144,12 @@ func (i *NonceIncrementer) NextNonce() {
 			break
 		}
 	}
-
 }
 
 func (p *PegnetMiner) ResetNonce() {
 	p.MiningState.NonceIncrementer = NewNonceIncrementer(p.ID, p.PersonalID)
+	p.MiningState.start = 0
+	p.resetStatic()
 }
 
 func NewPegnetMiner(id uint32, commands chan *MinerCommand, successes chan *Winner) *PegnetMiner {
@@ -170,6 +180,93 @@ func (p *PegnetMiner) SetFakeHashRate(rate int) {
 
 func (p *PegnetMiner) IsPaused() bool {
 	return p.paused
+}
+
+func (p *PegnetMiner) resetStatic() {
+	p.MiningState.static = append(p.MiningState.oprhash, p.MiningState.Prefix()...)
+}
+
+func (p *PegnetMiner) MineBatch(ctx context.Context) {
+	batchsize := 256
+	limit := uint32(math.MaxUint32) - uint32(batchsize)
+	mineLog := log.WithFields(log.Fields{"pid": p.PersonalID})
+	select {
+	// Wait for the first command to start
+	// We start 'paused'. Any command will knock us out of this init phase
+	case c := <-p.commands:
+		p.HandleCommand(c)
+	case <-ctx.Done():
+		mineLog.Debugf("Mining init cancelled for miner %d\n", p.ID)
+		return // Cancelled
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			mineLog.Debugf("Mining cancelled for miner: %d\n", p.ID)
+			return // Mining cancelled
+		case c := <-p.commands:
+			p.HandleCommand(c)
+		default:
+		}
+
+		if len(p.MiningState.oprhash) == 0 {
+			p.paused = true
+		}
+
+		if p.paused {
+			// Waiting on a resume command
+			p.waitForResume(ctx)
+			continue
+		}
+
+		batch := make([][]byte, batchsize)
+
+		for i := range batch {
+			batch[i] = make([]byte, 4)
+			binary.BigEndian.PutUint32(batch[i], p.MiningState.start+uint32(i))
+		}
+		p.MiningState.start += uint32(batchsize)
+		if p.MiningState.start > limit {
+			mineLog.Warnf("repeating nonces, hit the cycle's limit")
+		}
+
+		results := hash.LX.HashWork(p.MiningState.static, batch)
+		for i := range results {
+			// do something with the result here
+			// nonce = batch[i]
+			// input = append(base, batch[i]...)
+			// hash = results[i]
+			h := results[i]
+
+			diff := ComputeHashDifficulty(h)
+			p.MiningState.stats.NewDifficulty(diff)
+			p.MiningState.stats.TotalHashes++
+
+			if diff > p.MiningState.minimumDifficulty {
+				success := &Winner{
+					OPRHash: hex.EncodeToString(p.MiningState.oprhash),
+					Nonce:   hex.EncodeToString(p.MiningState.Nonce),
+					Target:  fmt.Sprintf("%x", diff),
+				}
+				p.MiningState.stats.TotalSubmissions++
+				select {
+				case p.successes <- success:
+				default:
+					mineLog.WithField("channel", fmt.Sprintf("%p", p.successes)).Errorf("failed to submit, %d/%d", len(p.successes), cap(p.successes))
+				}
+			}
+		}
+	}
+}
+
+func ComputeHashDifficulty(b []byte) (difficulty uint64) {
+	// The high eight bytes of the hash(hash(entry.Content) + nonce) is the difficulty.
+	// Because we don't have a difficulty bar, we can define difficulty as the greatest
+	// value, rather than the minimum value.  Our bar is the greatest difficulty found
+	// within a 10 minute period.  We compute difficulty as Big Endian.
+	return uint64(b[7]) | uint64(b[6])<<8 | uint64(b[5])<<16 | uint64(b[4])<<24 |
+		uint64(b[3])<<32 | uint64(b[2])<<40 | uint64(b[1])<<48 | uint64(b[0])<<56
 }
 
 func (p *PegnetMiner) Mine(ctx context.Context) {
@@ -223,7 +320,6 @@ func (p *PegnetMiner) Mine(ctx context.Context) {
 			}
 		}
 	}
-
 }
 
 func (p *PegnetMiner) FakeComputeDifficulty(_, _ []byte) uint64 {
@@ -247,6 +343,7 @@ func (p *PegnetMiner) HandleCommand(c *MinerCommand) {
 		p.ResetNonce()
 	case NewOPRHash:
 		p.MiningState.oprhash = c.Data.([]byte)
+		p.resetStatic()
 	case ResetRecords:
 		p.ResetNonce()
 		p.MiningState.stats = NewSingleMinerStats(p.PersonalID)
