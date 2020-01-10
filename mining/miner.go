@@ -15,8 +15,6 @@ import (
 	"sync"
 	"time"
 
-	"gitlab.com/oraxpool/orax-cli/hash"
-
 	lxr "github.com/pegnet/LXRHash"
 	log "github.com/sirupsen/logrus"
 	"go.uber.org/ratelimit"
@@ -100,6 +98,8 @@ type oprMiningState struct {
 
 	// Used to return hashes
 	minimumDifficulty uint64
+	abortByte         int
+	abortVal          uint8
 }
 
 // NonceIncrementer is just simple to increment nonces
@@ -186,8 +186,7 @@ func (p *PegnetMiner) resetStatic() {
 	p.MiningState.static = append(p.MiningState.oprhash, p.MiningState.Prefix()...)
 }
 
-func (p *PegnetMiner) MineBatch(ctx context.Context) {
-	batchsize := 256
+func (p *PegnetMiner) MineBatch(ctx context.Context, batchsize int, abort bool) {
 	limit := uint32(math.MaxUint32) - uint32(batchsize)
 	mineLog := log.WithFields(log.Fields{"pid": p.PersonalID})
 	select {
@@ -231,7 +230,12 @@ func (p *PegnetMiner) MineBatch(ctx context.Context) {
 			mineLog.Warnf("repeating nonces, hit the cycle's limit")
 		}
 
-		results := hash.LX.HashWork(p.MiningState.static, batch)
+		var results [][]byte
+		if abort {
+			results = LX.HashWorkAbort(p.MiningState.static, batch, p.MiningState.abortByte, p.MiningState.abortVal)
+		} else {
+			results = LX.HashWork(p.MiningState.static, batch)
+		}
 		for i := range results {
 			// do something with the result here
 			// nonce = batch[i]
@@ -246,7 +250,7 @@ func (p *PegnetMiner) MineBatch(ctx context.Context) {
 			if diff > p.MiningState.minimumDifficulty {
 				success := &Winner{
 					OPRHash: hex.EncodeToString(p.MiningState.oprhash),
-					Nonce:   hex.EncodeToString(p.MiningState.Nonce),
+					Nonce:   hex.EncodeToString(batch[i]),
 					Target:  fmt.Sprintf("%x", diff),
 				}
 				p.MiningState.stats.TotalSubmissions++
@@ -357,6 +361,7 @@ func (p *PegnetMiner) HandleCommand(c *MinerCommand) {
 		}
 	case MinimumAccept:
 		p.MiningState.minimumDifficulty = c.Data.(uint64)
+		p.MiningState.abortByte, p.MiningState.abortVal = lxr.AbortSettings(p.MiningState.minimumDifficulty)
 	case PauseMining:
 		p.paused = true
 	case ResumeMining:
