@@ -250,7 +250,7 @@ func (p *PegnetMiner) MineBatch(ctx context.Context, batchsize int, abort bool) 
 			if diff > p.MiningState.minimumDifficulty {
 				success := &Winner{
 					OPRHash: hex.EncodeToString(p.MiningState.oprhash),
-					Nonce:   hex.EncodeToString(batch[i]),
+					Nonce:   hex.EncodeToString(append(p.MiningState.static[32:], batch[i]...)),
 					Target:  fmt.Sprintf("%x", diff),
 				}
 				p.MiningState.stats.TotalSubmissions++
