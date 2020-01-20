@@ -34,11 +34,11 @@ func (d *CoinCapDataSource) Url() string {
 }
 
 func (d *CoinCapDataSource) SupportedPegs() []string {
-	return CryptoAssets
+	return MergeLists(CryptoAssets, V4CryptoAdditions)
 }
 
 func (d *CoinCapDataSource) FetchPegPrices() (peg PegAssets, err error) {
-	resp, err := CallCoinCap()
+	resp, err := d.CallCoinCap()
 	if err != nil {
 		return nil, err
 	}
@@ -49,6 +49,13 @@ func (d *CoinCapDataSource) FetchPegPrices() (peg PegAssets, err error) {
 	timestamp := time.Unix(resp.Timestamp/1000, 0)
 
 	for _, currency := range resp.Data {
+		id, ok := CoinCapIOCryptoAssetNames[currency.Symbol]
+		if ok {
+			if currency.ID != id {
+				continue // This is a duplicate ticker with a bad id
+			}
+		}
+
 		switch currency.Symbol {
 		case "BTC", "XBT":
 			value, err := strconv.ParseFloat(currency.PriceUSD, 64)
@@ -70,7 +77,7 @@ func (d *CoinCapDataSource) FetchPegPrices() (peg PegAssets, err error) {
 			}
 		default:
 			// See if the ticker is in our crypto currency list
-			if AssetListContains(CryptoAssets, currency.Symbol) {
+			if AssetListContains(d.SupportedPegs(), currency.Symbol) {
 				value, err := strconv.ParseFloat(currency.PriceUSD, 64)
 				peg[currency.Symbol] = PegItem{Value: value, WhenUnix: UnixTimestamp, When: timestamp}
 				if err != nil {
@@ -123,14 +130,20 @@ var CoinCapIOCryptoAssetNames = map[string]string{
 	"DASH": "dash",
 	"ZEC":  "zcash",
 	"DCR":  "decred",
+	// V4 Adds
+	"EOS":  "eos",
+	"LINK": "chainlink",
+	"ATOM": "cosmos",
+	"BAT":  "basic-attention-token",
+	"XTZ":  "tezos",
 }
 
-func CallCoinCap() (CoinCapResponse, error) {
+func (d CoinCapDataSource) CallCoinCap() (CoinCapResponse, error) {
 	var CoinCapResponse CoinCapResponse
 
 	var ids []string
 	// Need to append all the ids we care about for the call
-	for _, a := range CryptoAssets {
+	for _, a := range d.SupportedPegs() {
 		ids = append(ids, CoinCapIOCryptoAssetNames[a])
 	}
 
