@@ -297,6 +297,8 @@ github.com/pegnet/OracleRecord v0.0.2/go.mod h1:VrY7Shn4oSCli47CsUYBFjH68IenGYtn
 github.com/pegnet/pegnet v0.0.2/go.mod h1:FUyEs8fyLOzPXZgyqXcqiOhQi58loNtujykIbxxoKbQ=
 github.com/pegnet/pegnet v0.1.0-rc4.0.20191002204629-5a6fd621ca60 h1:LhihCN5xwqmWoZqt3Hd34njIbXe7d6jNP2K8MJinI+U=
 github.com/pegnet/pegnet v0.1.0-rc4.0.20191002204629-5a6fd621ca60/go.mod h1:sC7efuGlr6+ithvzL2v76u7AA/9JagWaweAv7UYu2dk=
+github.com/pegnet/pegnet v0.1.0-rc4.0.20200115171857-15e58ebbc7ca h1:qPwOjkCJnuAYhJc9egJzydEBACjVIn7UXIpK9Jx3WGA=
+github.com/pegnet/pegnet v0.1.0-rc4.0.20200115171857-15e58ebbc7ca/go.mod h1:Fy8Qohe9zIuqO9Q/ZOLUNpP2kuiFqxjevzaS3IL62+E=
 github.com/pegnet/pegnet v0.2.3-0.20191203221152-328fdbaacef3 h1:rvXhGAJ58ZCT2Yp+p7HbSUsWt8taxbiutRFV91JHWhM=
 github.com/pegnet/pegnet v0.2.3-0.20191203221152-328fdbaacef3/go.mod h1:Fy8Qohe9zIuqO9Q/ZOLUNpP2kuiFqxjevzaS3IL62+E=
 github.com/pegnet/pegnetd v0.1.2-0.20191011183044-5eca2d08a5e8 h1:V41j01pVUgCRG+LdrQJgJm0PVpnYEpfGK80LtQkou4g=

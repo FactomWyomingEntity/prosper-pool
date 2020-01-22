@@ -253,7 +253,11 @@ func (c *Client) Submit(username, jobID, nonce, oprHash, target string) error {
 	c.requestsMade[req.ID] = func(resp Response) {
 		var result bool
 		if err := resp.FitResult(&result); err == nil {
-			log.Tracef("Submission result: %t\n", result)
+			log.WithFields(log.Fields{
+				"nonce":   nonce,
+				"oprhash": oprHash,
+				"target":  target,
+			}).Tracef("Submission result: %t\n", result)
 		}
 	}
 	c.Unlock()

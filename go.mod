@@ -11,16 +11,18 @@ require (
 	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/disintegration/imaging v1.6.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
-	github.com/fatih/color v1.9.0 // indirect
+	github.com/fatih/color v1.7.0 // indirect
 	github.com/gorilla/rpc v1.2.0
 	github.com/gorilla/sessions v1.2.0 // indirect
 	github.com/gosimple/slug v1.8.0 // indirect
 	github.com/jinzhu/configor v1.1.1 // indirect
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a // indirect
 	github.com/jinzhu/gorm v1.9.11
+	github.com/mattn/go-colorable v0.1.4 // indirect
+	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
-	github.com/pegnet/LXRHash v0.0.0-20200205233914-cceb516c4b7f
-	github.com/pegnet/pegnet v0.2.3-0.20191203221152-328fdbaacef3
+	github.com/pegnet/LXRHash v0.0.0-20191028162532-138fe8d191a2
+	github.com/pegnet/pegnet v0.1.0-rc4.0.20200115171857-15e58ebbc7ca
 	github.com/pegnet/pegnetd v0.1.2-0.20191011183044-5eca2d08a5e8
 	github.com/prometheus/client_golang v1.0.0
 	github.com/qor/admin v0.0.0-20190906081516-5593fc33b920 // indirect
@@ -45,7 +47,7 @@ require (
 	github.com/shopspring/decimal v0.0.0-20180709203117-cd690d0c9e24
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
-	github.com/spf13/viper v1.5.0
+	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.4.0
 	github.com/theplant/cldr v0.0.0-20190423050709-9f76f7ce4ee8 // indirect
 	github.com/theplant/htmltestingutils v0.0.0-20190423050759-0e06de7b6967 // indirect
