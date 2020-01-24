@@ -11,15 +11,13 @@ require (
 	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/disintegration/imaging v1.6.1 // indirect
 	github.com/dustin/go-humanize v1.0.0
-	github.com/fatih/color v1.7.0 // indirect
+	github.com/fatih/color v1.9.0 // indirect
 	github.com/gorilla/rpc v1.2.0
 	github.com/gorilla/sessions v1.2.0 // indirect
 	github.com/gosimple/slug v1.8.0 // indirect
 	github.com/jinzhu/configor v1.1.1 // indirect
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a // indirect
 	github.com/jinzhu/gorm v1.9.11
-	github.com/mattn/go-colorable v0.1.4 // indirect
-	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
 	github.com/pegnet/LXRHash v0.0.0-20200110181620-43fadce8a901
 	github.com/pegnet/pegnet v0.2.3-0.20191203221152-328fdbaacef3
