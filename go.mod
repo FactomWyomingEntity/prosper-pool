@@ -20,7 +20,7 @@ require (
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
-	github.com/pegnet/LXRHash v0.0.0-20191028162532-138fe8d191a2
+	github.com/pegnet/LXRHash v0.0.0-20200110181620-43fadce8a901
 	github.com/pegnet/pegnet v0.2.3-0.20191203221152-328fdbaacef3
 	github.com/pegnet/pegnetd v0.1.2-0.20191011183044-5eca2d08a5e8
 	github.com/prometheus/client_golang v1.0.0
@@ -57,5 +57,3 @@ require (
 	go.uber.org/ratelimit v0.1.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 )
-
-replace github.com/pegnet/LXRHash => /home/steven/go/src/github.com/pegnet/LXRHash
