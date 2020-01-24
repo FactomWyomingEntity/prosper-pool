@@ -325,6 +325,30 @@ func (d *DataSources) PullAllPEGAssets(oprversion uint8) (pa PegAssets, err erro
 	return pa, nil
 }
 
+type DataSourcePull struct {
+	Name   string
+	Error  error
+	Prices map[string]float64
+}
+
+func (d *DataSources) PullAllSources() []DataSourcePull {
+	sources := make([]DataSourcePull, len(d.DataSources))
+	i := 0
+	for source, ds := range d.DataSources {
+		prices, err := ds.FetchPegPrices()
+		if err != nil {
+			sources[i] = DataSourcePull{Name: source, Error: err}
+		}
+		sources[i] = DataSourcePull{Name: source}
+		sources[i].Prices = make(map[string]float64)
+		for a, p := range prices {
+			sources[i].Prices[a] = p.Value
+		}
+		i++
+	}
+	return sources
+}
+
 // PullBestPrice pulls the best asset price we can find for a given asset.
 // Params:
 //		asset		Asset to pull pricing data

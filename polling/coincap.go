@@ -46,7 +46,7 @@ func (d *CoinCapDataSource) FetchPegPrices() (peg PegAssets, err error) {
 	peg = make(map[string]PegItem)
 
 	var UnixTimestamp = resp.Timestamp
-	timestamp := time.Unix(resp.Timestamp, 0)
+	timestamp := time.Unix(resp.Timestamp/1000, 0)
 
 	for _, currency := range resp.Data {
 		switch currency.Symbol {

@@ -3,6 +3,7 @@ package cmd
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -38,6 +39,7 @@ func init() {
 	rootCmd.AddCommand(testStratum)
 	rootCmd.AddCommand(getConfig)
 	rootCmd.AddCommand(datasources)
+	rootCmd.AddCommand(datasourcesPull)
 
 	rootCmd.PersistentFlags().Bool("profile", false, "Turn on profiling")
 	rootCmd.PersistentFlags().String("config", "$HOME/.prosper/prosper-pool.toml", "Location to config")
@@ -366,6 +368,24 @@ var testAuth = &cobra.Command{
 	},
 }
 
+var datasourcesPull = &cobra.Command{
+	Use:    "pullsources",
+	Short:  "Runs through all configured datasources",
+	PreRun: SoftReadConfig,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		// Default to printing everything
+		d := polling.NewDataSources(viper.GetViper(), false)
+		all := d.PullAllSources()
+		j, err := json.Marshal(all)
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(j))
+
+		return nil
+	},
+}
+
 // Direct copy from Pegnet
 var datasources = &cobra.Command{
 	Use:   "datasources [assets or datasource]",
@@ -426,9 +446,6 @@ var datasources = &cobra.Command{
 		fmt.Println()
 		fmt.Println("Assets and their data source order. The order left to right is the fallback order.")
 		for _, asset := range opr.V2Assets {
-			if asset == "PEG" {
-				continue
-			}
 			str := d.AssetPriorityString(asset)
 			fmt.Printf("\t%4s (%d) : %s\n", asset, len(d.AssetSources[asset]), str)
 		}

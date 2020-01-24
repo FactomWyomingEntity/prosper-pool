@@ -44,15 +44,8 @@ func (p *OwedPayouts) Payouts(work ShareMap, remaining int64) {
 		prop := decimal.NewFromFloat(work.TotalDifficulty).Div(decimal.NewFromFloat(p.PoolDifficuty))
 		prop = prop.Truncate(AccountingPrecision)
 
-		// Estimate user hashrate
-		last := 20
-		if work.TotalShares < 20 {
-			last = work.TotalShares
-		}
-
-		target := work.Targets[last-1]
-		hashrate := difficulty.EffectiveHashRate(target, last, work.LastShare.Sub(work.FirstShare).Seconds())
-
+		// Last hashrate is the best guess
+		hashrate := work.LastHashrate()
 		if work.TotalShares < 5 {
 			// If there is too few shares, don't bother trying to calc a hashrate
 			hashrate = 0
@@ -160,6 +153,10 @@ func (m *ShareMap) AddShare(key string, s Share) {
 	m.Sums[key].AddShare(s)
 }
 
+const (
+	TargetsKept = 30
+)
+
 // ShareSum is the sum of shares for a given job
 type ShareSum struct {
 	TotalDifficulty float64
@@ -167,7 +164,7 @@ type ShareSum struct {
 
 	FirstShare time.Time
 	LastShare  time.Time
-	Targets    [20]uint64
+	Targets    [TargetsKept]uint64
 }
 
 func (sum *ShareSum) AddShare(s Share) {
@@ -181,12 +178,53 @@ func (sum *ShareSum) AddShare(s Share) {
 	InsertTarget(s.Target, &sum.Targets, sum.TotalShares)
 }
 
-func InsertTarget(t uint64, a *[20]uint64, total int) {
-	if total > 20 {
-		total = 20
+func (sum ShareSum) LastHashrate() float64 {
+	// Estimate user hashrate
+	last := TargetsKept
+	if sum.TotalShares < TargetsKept {
+		last = sum.TotalShares
+	}
+
+	target := sum.Targets[last-1]
+	hashrate := difficulty.EffectiveHashRate(target, last, sum.LastShare.Sub(sum.FirstShare).Seconds())
+	return hashrate
+}
+
+// WeightedAverageHashrate weighs hashes according to their place
+func (sum ShareSum) WeightedAverageHashrate() float64 {
+	last := TargetsKept
+	if sum.TotalShares < TargetsKept {
+		last = sum.TotalShares
+	}
+
+	hashrate := float64(0)
+	totalFactor := float64(0)
+	for j := 0; j < last; j++ {
+		totalFactor += float64(j) + 1
+		hashrate += (float64(j) + 1) * difficulty.EffectiveHashRate(sum.Targets[j], j+1, sum.LastShare.Sub(sum.FirstShare).Seconds())
+	}
+	return hashrate / float64(totalFactor)
+}
+
+func (sum ShareSum) AverageHashrate() float64 {
+	last := TargetsKept
+	if sum.TotalShares < TargetsKept {
+		last = sum.TotalShares
+	}
+
+	hashrate := float64(0)
+	for j := 0; j < last; j++ {
+		hashrate += difficulty.EffectiveHashRate(sum.Targets[j], j+1, sum.LastShare.Sub(sum.FirstShare).Seconds())
+	}
+	return hashrate / float64(last)
+}
+
+func InsertTarget(t uint64, a *[TargetsKept]uint64, total int) {
+	if total > TargetsKept {
+		total = TargetsKept
 	}
 	index := sort.Search(total, func(i int) bool { return a[i] < t })
-	if index == 20 {
+	if index == TargetsKept {
 		return
 	}
 	// Move things down

@@ -44,6 +44,10 @@ func init() {
 	rootCmd.Flags().Int("fake", -1, "Set a fake hash-rate")
 	rootCmd.Flags().MarkHidden("fake")
 
+	rootCmd.Flags().Bool("seq", false, "Use sequential vs batch hashing")
+	rootCmd.Flags().Int("bs", 256, "Batch size for parallel hashing")
+	rootCmd.Flags().Bool("abort", true, "Abort hashes early if possible")
+
 	// Should be set by the user
 	rootCmd.Flags().StringP("user", "u", "", "Username to log into the mining pool")
 	rootCmd.Flags().StringP("minerid", "m", GenerateMinerID(), "Minerid should be unique per mining machine")
@@ -137,7 +141,22 @@ var rootCmd = &cobra.Command{
 			log.Warnf("All hashes are invalid. Rate is set at %d/s per core", fake)
 			client.SetFakeHashRate(fake)
 		}
-		client.RunMiners(ctx)
+
+		if seq, _ := cmd.Flags().GetBool("seq"); seq {
+			log.Infof("Using sequential hashing method")
+			client.RunMiners(ctx)
+		} else {
+			batchsize, err := cmd.Flags().GetInt("bs")
+			if err != nil {
+				panic(err)
+			}
+			abort, err := cmd.Flags().GetBool("abort")
+			if err != nil {
+				panic(err)
+			}
+			log.WithFields(log.Fields{"batchsize": batchsize, "abort":abort}).Infof("Using parallel hashing method")
+			client.RunMinersBatch(ctx, batchsize, abort)
+		}
 
 		// TODO: Add version number
 		log.Infof("Initiated Prosper Miner")
