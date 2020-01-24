@@ -68,6 +68,13 @@ func TestNonceIncrementer(t *testing.T) {
 	}
 }
 
+func TestNonceIncrementer_Prefix(t *testing.T) {
+	n := NewNonceIncrementer(100, 10)
+	if !bytes.Equal(n.Prefix(), []byte{0, 0, 0, 100, 10}) {
+		t.Error("Not the right prefix")
+	}
+}
+
 //
 //func TestLXR(t *testing.T) {
 //	InitLX()
