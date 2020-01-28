@@ -114,7 +114,7 @@ func (c *Client) RunMiners(ctx context.Context) {
 	}
 }
 
-func (c *Client) RunMinersBatch(ctx context.Context, batchsize int, abort bool) {
+func (c *Client) RunMinersBatch(ctx context.Context, batchsize int) {
 	for i := range c.miners {
 		go c.miners[i].Miner.MineBatch(ctx, batchsize)
 	}
