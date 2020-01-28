@@ -150,12 +150,8 @@ var rootCmd = &cobra.Command{
 			if err != nil {
 				panic(err)
 			}
-			abort, err := cmd.Flags().GetBool("abort")
-			if err != nil {
-				panic(err)
-			}
-			log.WithFields(log.Fields{"batchsize": batchsize, "abort":abort}).Infof("Using parallel hashing method")
-			client.RunMinersBatch(ctx, batchsize, abort)
+			log.WithFields(log.Fields{"batchsize": batchsize}).Infof("Using parallel hashing method")
+			client.RunMinersBatch(ctx, batchsize)
 		}
 
 		// TODO: Add version number

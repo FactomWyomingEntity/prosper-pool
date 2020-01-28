@@ -184,7 +184,7 @@ func (p *PegnetMiner) resetStatic() {
 	p.MiningState.static = append(p.MiningState.oprhash, p.MiningState.Prefix()...)
 }
 
-func (p *PegnetMiner) MineBatch(ctx context.Context, batchsize int, abort bool) {
+func (p *PegnetMiner) MineBatch(ctx context.Context, batchsize int) {
 	limit := uint32(math.MaxUint32) - uint32(batchsize)
 	mineLog := log.WithFields(log.Fields{"pid": p.PersonalID})
 	select {
