@@ -19,7 +19,7 @@ require (
 	github.com/jinzhu/copier v0.0.0-20190924061706-b57f9002281a // indirect
 	github.com/jinzhu/gorm v1.9.11
 	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
-	github.com/pegnet/LXRHash v0.0.0-20200110181620-43fadce8a901
+	github.com/pegnet/LXRHash v0.0.0-20200205233914-cceb516c4b7f
 	github.com/pegnet/pegnet v0.2.3-0.20191203221152-328fdbaacef3
 	github.com/pegnet/pegnetd v0.1.2-0.20191011183044-5eca2d08a5e8
 	github.com/prometheus/client_golang v1.0.0

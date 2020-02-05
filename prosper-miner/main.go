@@ -46,7 +46,6 @@ func init() {
 
 	rootCmd.Flags().Bool("seq", false, "Use sequential vs batch hashing")
 	rootCmd.Flags().Int("bs", 256, "Batch size for parallel hashing")
-	rootCmd.Flags().Bool("abort", true, "Abort hashes early if possible")
 
 	// Should be set by the user
 	rootCmd.Flags().StringP("user", "u", "", "Username to log into the mining pool")
@@ -150,12 +149,8 @@ var rootCmd = &cobra.Command{
 			if err != nil {
 				panic(err)
 			}
-			abort, err := cmd.Flags().GetBool("abort")
-			if err != nil {
-				panic(err)
-			}
-			log.WithFields(log.Fields{"batchsize": batchsize, "abort":abort}).Infof("Using parallel hashing method")
-			client.RunMinersBatch(ctx, batchsize, abort)
+			log.WithFields(log.Fields{"batchsize": batchsize}).Infof("Using parallel hashing method")
+			client.RunMinersBatch(ctx, batchsize)
 		}
 
 		// TODO: Add version number

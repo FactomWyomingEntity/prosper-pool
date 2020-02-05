@@ -98,8 +98,6 @@ type oprMiningState struct {
 
 	// Used to return hashes
 	minimumDifficulty uint64
-	abortByte         int
-	abortVal          uint8
 }
 
 // NonceIncrementer is just simple to increment nonces
@@ -186,7 +184,7 @@ func (p *PegnetMiner) resetStatic() {
 	p.MiningState.static = append(p.MiningState.oprhash, p.MiningState.Prefix()...)
 }
 
-func (p *PegnetMiner) MineBatch(ctx context.Context, batchsize int, abort bool) {
+func (p *PegnetMiner) MineBatch(ctx context.Context, batchsize int) {
 	limit := uint32(math.MaxUint32) - uint32(batchsize)
 	mineLog := log.WithFields(log.Fields{"pid": p.PersonalID})
 	select {
@@ -231,11 +229,7 @@ func (p *PegnetMiner) MineBatch(ctx context.Context, batchsize int, abort bool) 
 		}
 
 		var results [][]byte
-		if abort {
-			results = LX.HashWorkAbort(p.MiningState.static, batch, p.MiningState.abortByte, p.MiningState.abortVal)
-		} else {
-			results = LX.HashWork(p.MiningState.static, batch)
-		}
+		results = LX.HashParallel(p.MiningState.static, batch)
 		for i := range results {
 			// do something with the result here
 			// nonce = batch[i]
@@ -361,7 +355,6 @@ func (p *PegnetMiner) HandleCommand(c *MinerCommand) {
 		}
 	case MinimumAccept:
 		p.MiningState.minimumDifficulty = c.Data.(uint64)
-		p.MiningState.abortByte, p.MiningState.abortVal = lxr.AbortSettings(p.MiningState.minimumDifficulty)
 	case PauseMining:
 		p.paused = true
 	case ResumeMining:
