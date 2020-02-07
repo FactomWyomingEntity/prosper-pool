@@ -25,7 +25,9 @@ var PEGPricingActivation uint32 = 214287
 // Estimated to be  Dec 9, 2019, 17:00 UTC
 var FreeFloatingPEGPriceActivation uint32 = 222270
 
-var V4OPRActivation uint32 = 999999
+// V4OPRUpdate indicates the activation of additional currencies and ecdsa keys.
+// Estimated to be  Feb 12, 2020, 18:00 UTC
+var V4OPRActivation uint32 = 231620
 
 func OPRVersion(height uint32) uint8 {
 	if height < FreeFloatingPEGPriceActivation {
