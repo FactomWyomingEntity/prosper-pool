@@ -35,7 +35,7 @@ func (d *PegnetMarketCapDataSource) ApiUrl() string {
 
 func (d *PegnetMarketCapDataSource) SupportedPegs() []string {
 	// Does not have all the currencies, commodities, or crypto
-	return MergeLists(PEGAsset, V4ReferenceAdditions)
+	return MergeLists(PEGAsset)
 }
 
 func (d *PegnetMarketCapDataSource) FetchPegPrices() (peg PegAssets, err error) {
@@ -48,7 +48,7 @@ func (d *PegnetMarketCapDataSource) FetchPegPrices() (peg PegAssets, err error) 
 	peg = make(map[string]PegItem)
 	for _, price := range resp {
 		switch price.TickerSymbol {
-		case "PEG", "pUSD":
+		case "PEG":
 			timestamp := time.Unix(price.ExchangePriceDateline, 0)
 			rate, err := strconv.ParseFloat(price.ExchangePrice, 64)
 			if err != nil {
