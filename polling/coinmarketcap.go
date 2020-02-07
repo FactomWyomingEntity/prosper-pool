@@ -46,7 +46,7 @@ func (d *CoinMarketCapDataSource) ApiUrl() string {
 }
 
 func (d *CoinMarketCapDataSource) SupportedPegs() []string {
-	return CryptoAssets
+	return MergeLists(CryptoAssets, V4CryptoAdditions, PEGAsset)
 }
 
 func (d *CoinMarketCapDataSource) FetchPegPrices() (peg PegAssets, err error) {
@@ -64,6 +64,9 @@ func (d *CoinMarketCapDataSource) FetchPegPrices() (peg PegAssets, err error) {
 		index := fmt.Sprintf("%d", id)
 		currency, ok := resp.Data[index]
 		if !ok {
+			continue
+		}
+		if currency.Symbol != asset && !(asset == "XBT" || asset == "XBC") {
 			continue
 		}
 
@@ -111,6 +114,13 @@ func (d *CoinMarketCapDataSource) CurrencyIDMapping() map[string]int {
 		"DASH": 131,
 		"ZEC":  1437,
 		"DCR":  1168,
+
+		"PEG":  4979,
+		"EOS":  1765,
+		"LINK": 1975,
+		"XTZ":  2011,
+		"BAT":  1697,
+		"ATOM": 3794,
 	}
 }
 

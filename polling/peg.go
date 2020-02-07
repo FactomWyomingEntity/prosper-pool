@@ -14,7 +14,7 @@ type PegAssets map[string]PegItem
 
 func (p PegAssets) Clone(randomize float64) PegAssets {
 	np := make(PegAssets)
-	for _, asset := range AllAssets {
+	for asset := range p {
 		np[asset] = p[asset].Clone(randomize)
 	}
 

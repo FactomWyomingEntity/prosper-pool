@@ -44,9 +44,14 @@ type Submitter struct {
 
 	FactomClient *factom.Client
 
-	currentJob  *stratum.Job
+	currentJob *stratum.Job
+
+	// V3s should be deprecated once v4 is live
 	oprCopyData []byte
 	oprCopy     opr.V2Content // Our safe copy
+
+	oprCopyDataV4 []byte
+	oprCopyV4     opr.V4Content // Our safe copy
 
 	// jobState is state a job can use in it's decision process
 	jobState struct {
@@ -174,6 +179,13 @@ func (s *Submitter) Run(ctx context.Context) {
 				if err != nil {
 					sLog.WithError(err).WithField("height", block.Block.Height).Errorf("failed to marshal opr")
 				}
+
+				s.oprCopyV4 = block.Job.OPRv4
+				s.oprCopyDataV4, err = s.oprCopyV4.Marshal()
+				if err != nil {
+					sLog.WithError(err).WithField("height", block.Block.Height).Errorf("failed to marshal oprv4")
+				}
+
 				sLog.WithFields(log.Fields{
 					"job": block.Job.JobID,
 					"ema": fmt.Sprintf("%x", ema.EMAValue),
@@ -206,6 +218,11 @@ func (s *Submitter) Run(ctx context.Context) {
 				buf := make([]byte, 8)
 				binary.BigEndian.PutUint64(buf, share.Target)
 				oChain := factom.Bytes32(config.OPRChain)
+				v := config.OPRVersion(uint32(share.JobID))
+				content := s.oprCopyData
+				if v == 4 {
+					content = s.oprCopyDataV4
+				}
 				entry := factom.Entry{
 					ChainID: &oChain,
 					ExtIDs: []factom.Bytes{
@@ -214,10 +231,11 @@ func (s *Submitter) Run(ctx context.Context) {
 						//	[1] Self reported difficulty
 						buf,
 						//  [2] Version number
-						[]byte{config.OPRVersion(uint32(share.JobID))},
+						[]byte{v},
 					},
-					Content: s.oprCopyData,
+					Content: content,
 				}
+
 				txid, err := entry.ComposeCreate(nil, s.FactomClient, s.configuration.ESAddress)
 				if err != nil {
 					sLog.WithError(err).WithField("job", share.JobID).Errorf("failed to submit opr")

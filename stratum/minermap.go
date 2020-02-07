@@ -48,6 +48,7 @@ func (m *MinerMap) Notify(msg json.RawMessage) []NotifyError {
 	var errs []NotifyError
 	m.RLock()
 	for session, m := range m.miners {
+		m.ResetNonceHistory()
 		err := m.Broadcast(msg)
 		if err != nil {
 			errs = append(errs, NotifyError{
