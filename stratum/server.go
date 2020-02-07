@@ -55,9 +55,10 @@ type ShareSubmission struct {
 }
 
 type Job struct {
-	JobID   int32  `json:"jobid"`
-	OPRHash string `json:"oprhash"`
-	OPR     opr.V2Content
+	JobID   int32         `json:"jobid"`
+	OPRHash string        `json:"oprhash"`
+	OPR     opr.V2Content // This will be deprecated
+	OPRv4   opr.V4Content
 }
 
 func (j Job) JobIDString() string {
@@ -183,6 +184,11 @@ type Miner struct {
 	authorized bool
 
 	joined time.Time
+
+	// nonceHistory is used to prevent miners from submitting the same
+	// nonce for the same job.
+	nonceHistory map[string]struct{}
+	nonceLock    sync.RWMutex
 }
 
 // InitMiner starts a new miner with the needed encoders and channels set up
@@ -195,8 +201,25 @@ func InitMiner(conn net.Conn) *Miner {
 	// To push the encoding time to the individual threads, rather than
 	// the looping over all miners
 	m.broadcast = make(chan interface{}, 2)
+	m.nonceHistory = make(map[string]struct{})
 
 	return m
+}
+
+func (m *Miner) NewNonce(nonce string) bool {
+	m.nonceLock.Lock()
+	_, ok := m.nonceHistory[nonce]
+	if !ok {
+		m.nonceHistory[nonce] = struct{}{}
+	}
+	m.nonceLock.Unlock()
+	return ok
+}
+
+func (m *Miner) ResetNonceHistory() {
+	m.nonceLock.Lock()
+	m.nonceHistory = make(map[string]struct{})
+	m.nonceLock.Unlock()
 }
 
 // Close shuts down miner's broadcast channel
@@ -452,6 +475,11 @@ func (s *Server) ProcessSubmission(miner *Miner, jobID, nonce, oprHash, target s
 	}
 
 	if tU < miner.preferredTarget {
+		return false
+	}
+
+	// Check if this is a duplicate nonce
+	if miner.NewNonce(nonce) {
 		return false
 	}
 

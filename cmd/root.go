@@ -48,6 +48,8 @@ func init() {
 	rootCmd.PersistentFlags().Int("pport", 5432, "Postgres host port")
 	rootCmd.PersistentFlags().String("fhost", "http://localhost:8088/v2", "Factomd host url")
 	rootCmd.PersistentFlags().Bool("testing", false, "Enable testing mode")
+	rootCmd.PersistentFlags().Int("testingact", 0, "Set activation height for latest activation testing")
+	rootCmd.PersistentFlags().MarkHidden("testingact")
 	rootCmd.PersistentFlags().Int("act", 0, "Enable a custom activation height for testing mode")
 	rootCmd.PersistentFlags().Bool("rauth", true, "Enable miners to use actual registered usernames")
 	rootCmd.PersistentFlags().Int("sport", 1234, "Stratum server host port")
@@ -179,8 +181,14 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 		act, _ := cmd.Flags().GetUint32("act")
 		config.GradingV2Activation = act
 		config.PegnetActivation = act
+		config.PEGPricingActivation = act
 		config.TransactionConversionActivation = act
 		config.FreeFloatingPEGPriceActivation = act
+		config.V4OPRActivation = act
+	}
+
+	if v, _ := cmd.Flags().GetInt("testingact"); v != 0 {
+		config.V4OPRActivation = uint32(v)
 	}
 
 }

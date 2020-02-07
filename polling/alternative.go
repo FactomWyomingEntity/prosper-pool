@@ -36,7 +36,7 @@ func (d *AlternativeMeDataSource) ApiUrl() string {
 
 func (d *AlternativeMeDataSource) SupportedPegs() []string {
 	// Does not have all the currencies, commodities, or crypto
-	return MergeLists(CryptoAssets)
+	return MergeLists(CryptoAssets, []string{"EOS", "LINK", "BAT"})
 }
 
 // AssetMapping changes some asset symbols to others to match 1forge
@@ -55,6 +55,13 @@ func (d *AlternativeMeDataSource) AssetMapping() map[string]int {
 		"DASH": 131,
 		"ZEC":  1437,
 		"DCR":  1168,
+
+		//"PEG": NO PEG,
+		"EOS":  1765,
+		"LINK": 1975,
+		"XTZ":  2011,
+		"BAT":  1697,
+		//"ATOM": NO ATOM,
 	}
 }
 

@@ -33,8 +33,8 @@ var AllDataSources = map[string]IDataSource{
 	"1Forge":            new(OneForgeDataSource),
 	"AlternativeMe":     new(AlternativeMeDataSource),
 	"PegnetMarketCap":   new(PegnetMarketCapDataSource),
-	"Factoshiio":        new(FactoshiioDataSource),
 	"CoinGecko":         new(CoinGeckoDataSource),
+	//"Factoshiio":        new(FactoshiioDataSource), // This will be deprecated
 }
 
 func AllDataSourcesList() []string {
@@ -278,7 +278,10 @@ func (ds *DataSources) AssetPriorityString(asset string) string {
 //		first need a price from that source. These calls should be quick,
 //		but it might be faster to eager eval all the data sources concurrently.
 func (d *DataSources) PullAllPEGAssets(oprversion uint8) (pa PegAssets, err error) {
-	assets := AllAssets // All the assets we are tracking.
+	assets := AssetsV2 // All the assets we are tracking.
+	if oprversion == 4 {
+		assets = AssetsV4
+	}
 	start := time.Now()
 
 	// Wrap all the data sources with a quick caching layer for
