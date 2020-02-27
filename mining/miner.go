@@ -121,7 +121,7 @@ func NewNonceIncrementer(id uint32, personalid uint32) *NonceIncrementer {
 }
 
 func (i *NonceIncrementer) Prefix() []byte {
-	return i.Nonce[:i.lastPrefixByte]
+	return i.Nonce[:i.lastPrefixByte+1]
 }
 
 // NextNonce is just counting to get the next nonce. We preserve
@@ -181,7 +181,9 @@ func (p *PegnetMiner) IsPaused() bool {
 }
 
 func (p *PegnetMiner) resetStatic() {
-	p.MiningState.static = append(p.MiningState.oprhash, p.MiningState.Prefix()...)
+	p.MiningState.static = make([]byte, len(p.MiningState.oprhash)+len(p.MiningState.Prefix()))
+	i := copy(p.MiningState.static, p.MiningState.oprhash)
+	copy(p.MiningState.static[i:], p.MiningState.Prefix())
 }
 
 func (p *PegnetMiner) MineBatch(ctx context.Context, batchsize int) {
@@ -250,6 +252,12 @@ func (p *PegnetMiner) MineBatch(ctx context.Context, batchsize int) {
 				p.MiningState.stats.TotalSubmissions++
 				select {
 				case p.successes <- success:
+					mineLog.WithFields(log.Fields{
+						"nonce":        batch[i],
+						"id":           p.ID,
+						"staticPrefix": p.MiningState.static[32:],
+						"target":       success.Target,
+					}).Trace("Submitted share")
 				default:
 					mineLog.WithField("channel", fmt.Sprintf("%p", p.successes)).Errorf("failed to submit, %d/%d", len(p.successes), cap(p.successes))
 				}

@@ -16,10 +16,6 @@ func TestCorrectCasing(t *testing.T) {
 	if CorrectCasing("pegnetmarketcap") != "PegnetMarketCap" {
 		t.Errorf("failed correct casing")
 	}
-
-	if CorrectCasing("factoshiio") != "Factoshiio" {
-		t.Errorf("failed correct casing")
-	}
 }
 
 // TestBasicPollingSources creates 8 polling sources. 5 have 1 asset, 3 have all.
