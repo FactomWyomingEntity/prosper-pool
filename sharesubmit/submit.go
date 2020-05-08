@@ -53,6 +53,9 @@ type Submitter struct {
 	oprCopyDataV4 []byte
 	oprCopyV4     opr.V4Content // Our safe copy
 
+	oprCopyDataV5 []byte
+	oprCopyV5     opr.V5Content // Our safe copy
+
 	// jobState is state a job can use in it's decision process
 	jobState struct {
 		// diffList is to enforce the softmax
@@ -186,6 +189,12 @@ func (s *Submitter) Run(ctx context.Context) {
 					sLog.WithError(err).WithField("height", block.Block.Height).Errorf("failed to marshal oprv4")
 				}
 
+				s.oprCopyV5 = block.Job.OPRv5
+				s.oprCopyDataV5, err = s.oprCopyV5.Marshal()
+				if err != nil {
+					sLog.WithError(err).WithField("height", block.Block.Height).Errorf("failed to marshal oprv5")
+				}
+
 				sLog.WithFields(log.Fields{
 					"job": block.Job.JobID,
 					"ema": fmt.Sprintf("%x", ema.EMAValue),
@@ -222,6 +231,9 @@ func (s *Submitter) Run(ctx context.Context) {
 				content := s.oprCopyData
 				if v == 4 {
 					content = s.oprCopyDataV4
+				}
+				if v == 5 {
+					content = s.oprCopyDataV5
 				}
 				entry := factom.Entry{
 					ChainID: &oChain,

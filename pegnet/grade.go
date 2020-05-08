@@ -48,6 +48,9 @@ func (n *Node) Grade(ctx context.Context, block *factom.EBlock) (grader.GradedBl
 	if block.Height >= config.V4OPRActivation {
 		ver = 4
 	}
+	if block.Height >= config.V5OPRActivation {
+		ver = 5
+	}
 
 	var prevWinners []string
 	var prevGraded database.PegnetGrade
