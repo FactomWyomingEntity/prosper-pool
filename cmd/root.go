@@ -189,7 +189,6 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 	}
 
 	if v, _ := cmd.Flags().GetInt("testingact"); v != 0 {
-		config.V4OPRActivation = uint32(v)
 		config.V5OPRActivation = uint32(v)
 	}
 
