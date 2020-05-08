@@ -29,7 +29,7 @@ var FreeFloatingPEGPriceActivation uint32 = 222270
 // Estimated to be  Feb 12, 2020, 18:00 UTC
 var V4OPRActivation uint32 = 231620
 
-// V4OPRUpdate indicates the activation of additional currencies and ecdsa keys.
+// V5OPRUpdate indicates the activation of additional currencies and ecdsa keys.
 // Estimated to be  May 11, 2020, 18:00 UTC
 var V5OPRActivation uint32 = 244970
 
