@@ -36,7 +36,7 @@ func (d *CoinGeckoDataSource) ApiUrl() string {
 }
 
 func (d *CoinGeckoDataSource) SupportedPegs() []string {
-	return MergeLists(PEGAsset, CryptoAssets, V4CryptoAdditions)
+	return MergeLists(PEGAsset, CryptoAssets, V4CryptoAdditions, V5CryptoAdditions)
 }
 
 func (d *CoinGeckoDataSource) FetchPegPrices() (peg PegAssets, err error) {
@@ -143,6 +143,15 @@ func (d *CoinGeckoDataSource) CurrencyIDMapping() map[string]string {
 		"ATOM": "cosmos",
 		"BAT":  "basic-attention-token",
 		"XTZ":  "tezos",
+		// V5 Adds
+		"HBAR": "hedera-hashgraph",
+		"NEO": 	"neo",
+		"CRO": 	"crypto-com-chain",
+		"ETC": 	"ethereum-classic",
+		"ONT": 	"ontology",
+		"DOGE": "dogecoin",
+		"VET": 	"vechain",
+		"HT": 	"huobi-token",
 	}
 }
 

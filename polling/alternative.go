@@ -62,6 +62,16 @@ func (d *AlternativeMeDataSource) AssetMapping() map[string]int {
 		"XTZ":  2011,
 		"BAT":  1697,
 		//"ATOM": NO ATOM,
+
+		"NEO": 	1376,
+		"ETC": 	1321,
+		"ONT": 	2566,
+		"DOGE": 74,
+		"HT": 	2502,
+		//"HBAR": NO HBAR,
+		//"AED":  NO AED,
+		//"CRO":  NO CRO,
+		//"VET":  NO VET,
 	}
 }
 
