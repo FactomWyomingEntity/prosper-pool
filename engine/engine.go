@@ -287,7 +287,7 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 			OPRHash: hex.EncodeToString(make([]byte, 32)),
 			OPR:     opr.V2Content{},
 			OPRv4:   opr.V4Content{},
-			OPRv4:   opr.V5Content{},
+			OPRv5:   opr.V5Content{},
 		}
 	}
 
