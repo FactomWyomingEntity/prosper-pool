@@ -46,8 +46,7 @@ func (d *CoinMarketCapDataSource) ApiUrl() string {
 }
 
 func (d *CoinMarketCapDataSource) SupportedPegs() []string {
-	V5CryptoAdds := []string{ "HBAR", "NEO", "CRO", "ETC", "ONT", "DOGE", "VET", "HT" }
-	return MergeLists(CryptoAssets, V4CryptoAdditions, PEGAsset, V5CryptoAdds)
+	return MergeLists(CryptoAssets, V4CryptoAdditions, PEGAsset, V5CryptoAdditions)
 }
 
 func (d *CoinMarketCapDataSource) FetchPegPrices() (peg PegAssets, err error) {
