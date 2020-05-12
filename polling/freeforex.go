@@ -37,7 +37,7 @@ func (d *FreeForexAPIDataSource) ApiUrl() string {
 
 func (d *FreeForexAPIDataSource) SupportedPegs() []string {
 	// Does not have all the commodities
-	return MergeLists(CurrencyAssets, []string{"XAU", "XAG"}, V4CurrencyAdditions)
+	return MergeLists(CurrencyAssets, []string{"XAU", "XAG"}, V4CurrencyAdditions, V5CurrencyAdditions)
 }
 
 func (d *FreeForexAPIDataSource) FetchPegPrices() (peg PegAssets, err error) {
