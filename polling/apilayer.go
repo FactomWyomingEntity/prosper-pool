@@ -39,7 +39,7 @@ func (d *APILayerDataSource) Url() string {
 }
 
 func (d *APILayerDataSource) SupportedPegs() []string {
-	return MergeLists(CurrencyAssets, V4CurrencyAdditions)
+	return MergeLists(CurrencyAssets, V4CurrencyAdditions, V5CurrencyAdditions)
 }
 
 func (d *APILayerDataSource) FetchPegPrices() (peg PegAssets, err error) {

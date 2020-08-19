@@ -59,6 +59,7 @@ type Job struct {
 	OPRHash string        `json:"oprhash"`
 	OPR     opr.V2Content // This will be deprecated
 	OPRv4   opr.V4Content
+	OPRv5   opr.V5Content
 }
 
 func (j Job) JobIDString() string {

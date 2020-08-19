@@ -185,10 +185,11 @@ func rootPreRunSetup(cmd *cobra.Command, args []string) {
 		config.TransactionConversionActivation = act
 		config.FreeFloatingPEGPriceActivation = act
 		config.V4OPRActivation = act
+		config.V20HeightActivation = act
 	}
 
 	if v, _ := cmd.Flags().GetInt("testingact"); v != 0 {
-		config.V4OPRActivation = uint32(v)
+		config.V20HeightActivation = uint32(v)
 	}
 
 }

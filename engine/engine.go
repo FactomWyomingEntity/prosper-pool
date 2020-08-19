@@ -287,6 +287,7 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 			OPRHash: hex.EncodeToString(make([]byte, 32)),
 			OPR:     opr.V2Content{},
 			OPRv4:   opr.V4Content{},
+			OPRv5:   opr.V5Content{},
 		}
 	}
 
@@ -298,6 +299,10 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 	if uint32(hook.Height+1) >= config.V4OPRActivation {
 		version = 4
 		assetList = opr.V4Assets
+	}
+	if uint32(hook.Height+1) >= config.V20HeightActivation {
+		version = 5
+		assetList = opr.V5Assets
 	}
 
 	// New block, let's construct the job
@@ -344,6 +349,12 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 		data, err = v4Record.Marshal()
 	}
 
+	if version == 5 {
+		// V5 is just a wrapper for v4 with more assets
+		v5Record := opr.V5Content{record}
+		data, err = v5Record.Marshal()
+	}
+
 	if err != nil {
 		hLog.WithError(err).Errorf("failed to get oprhash")
 		return nil
@@ -359,6 +370,8 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 		err = ValidateV3Content(data)
 	case 4:
 		err = ValidateV4Content(data)
+	case 5:
+		err = ValidateV5Content(data)
 	}
 	if err != nil {
 		hLog.WithError(err).Errorf("OPR Data is Invalid! All submitted records by the pool will be rejected by PegNet!")
@@ -372,6 +385,7 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 		OPRHash: oprHashHex,
 		OPR:     record,
 		OPRv4:   opr.V4Content{record},
+		OPRv5:   opr.V5Content{record},
 	}
 }
 
@@ -441,6 +455,40 @@ func ValidateV4Content(content []byte) error {
 
 	// verify assets
 	if len(o.Assets) != len(opr.V4Assets) {
+		return grader.NewValidateError("invalid assets")
+	}
+	for i, val := range o.Assets {
+		if val == 0 {
+			return grader.NewValidateError(fmt.Sprintf("asset quote must be greater than 0, %s is 0", opr.V2Assets[i]))
+		}
+	}
+
+	if len(o.Winners) != 25 {
+		return grader.NewValidateError("must have exactly 10 or 25 previous winning shorthashes")
+	}
+
+	if err := factoidaddress.Valid(o.Address); err != nil {
+		return grader.NewValidateError(fmt.Sprintf("factoidaddress is invalid : %s", err.Error()))
+	}
+
+	if valid, _ := regexp.MatchString("^[a-zA-Z0-9,]+$", o.ID); !valid {
+		return grader.NewValidateError("only alphanumeric characters and commas are allowed in the identity")
+	}
+
+	return nil
+}
+
+// The module does not validate opr content, only the full entry...
+// We need to fix that there.
+// TODO: Move this into pegnet modules
+func ValidateV5Content(content []byte) error {
+	o, err := opr.ParseV2Content(content)
+	if err != nil {
+		return grader.NewDecodeError(err.Error())
+	}
+
+	// verify assets
+	if len(o.Assets) != len(opr.V5Assets) {
 		return grader.NewValidateError("invalid assets")
 	}
 	for i, val := range o.Assets {

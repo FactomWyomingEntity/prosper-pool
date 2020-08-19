@@ -40,7 +40,7 @@ func (d *OpenExchangeRatesDataSource) Url() string {
 }
 
 func (d *OpenExchangeRatesDataSource) SupportedPegs() []string {
-	return MergeLists(CurrencyAssets, CommodityAssets, []string{"XBT"}, V4CurrencyAdditions)
+	return MergeLists(CurrencyAssets, CommodityAssets, []string{"XBT"}, V4CurrencyAdditions, V5CurrencyAdditions)
 }
 
 func (d *OpenExchangeRatesDataSource) FetchPegPrices() (peg PegAssets, err error) {
