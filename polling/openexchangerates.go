@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/FactomWyomingEntity/prosper-pool/config"
-	"github.com/cenkalti/backoff"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -88,30 +87,27 @@ type OpenExchangeRatesResponse struct {
 }
 
 func (d *OpenExchangeRatesDataSource) CallOpenExchangeRates() (response OpenExchangeRatesResponse, err error) {
-	var OpenExchangeRatesResponse OpenExchangeRatesResponse
+	var openExchangeRatesResponse OpenExchangeRatesResponse
+	var emptyResponse OpenExchangeRatesResponse
 
-	operation := func() error {
-		resp, err := http.Get("https://openexchangerates.org/api/latest.json?app_id=" + d.apikey)
-		if err != nil {
-			log.WithError(err).Warning("Failed to get response from OpenExchangeRates")
-			return err
-		}
-
-		defer resp.Body.Close()
-		if body, err := ioutil.ReadAll(resp.Body); err != nil {
-			return err
-		} else if err = json.Unmarshal(body, &OpenExchangeRatesResponse); err != nil {
-			return err
-		}
-		return nil
+	resp, err := http.Get("https://openexchangerates.org/api/latest.json?app_id=" + d.apikey)
+	if err != nil {
+		log.WithError(err).Warning("Failed to get response from OpenExchangeRates")
+		return emptyResponse, err
 	}
 
-	err = backoff.Retry(operation, PollingExponentialBackOff())
+	defer resp.Body.Close()
+	if body, err := ioutil.ReadAll(resp.Body); err != nil {
+		return emptyResponse, err
+	} else if err = json.Unmarshal(body, &openExchangeRatesResponse); err != nil {
+		return emptyResponse, err
+	}
+
 	// Price is inverted
 	if err == nil {
-		for k, v := range OpenExchangeRatesResponse.Rates {
-			OpenExchangeRatesResponse.Rates[k] = v
+		for k, v := range openExchangeRatesResponse.Rates {
+			openExchangeRatesResponse.Rates[k] = v
 		}
 	}
-	return OpenExchangeRatesResponse, err
+	return openExchangeRatesResponse, err
 }

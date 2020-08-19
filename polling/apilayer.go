@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/FactomWyomingEntity/prosper-pool/config"
-	"github.com/cenkalti/backoff"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -90,23 +89,20 @@ func check(e error) {
 }
 
 func (d *APILayerDataSource) CallAPILayer() (response APILayerResponse, err error) {
-	var APILayerResponse APILayerResponse
+	var apiLayerResponse APILayerResponse
+	var emptyResponse APILayerResponse
 
-	operation := func() error {
-		resp, err := http.Get("http://www.apilayer.net/api/live?access_key=" + d.apikey)
-		if err != nil {
-			log.WithError(err).Warning("Failed to get response from API Layer")
-		}
-
-		defer resp.Body.Close()
-		if body, err := ioutil.ReadAll(resp.Body); err != nil {
-			return err
-		} else if err = json.Unmarshal(body, &APILayerResponse); err != nil {
-			return err
-		}
-		return err
+	resp, err := http.Get("http://www.apilayer.net/api/live?access_key=" + d.apikey)
+	if err != nil {
+		log.WithError(err).Warning("Failed to get response from API Layer")
 	}
 
-	err = backoff.Retry(operation, PollingExponentialBackOff())
-	return APILayerResponse, err
+	defer resp.Body.Close()
+	if body, err := ioutil.ReadAll(resp.Body); err != nil {
+		return emptyResponse, err
+	} else if err = json.Unmarshal(body, &apiLayerResponse); err != nil {
+		return emptyResponse, err
+	}
+
+	return apiLayerResponse, err
 }

@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/cenkalti/backoff"
 	"github.com/spf13/viper"
 )
 
@@ -63,11 +62,11 @@ func (d *AlternativeMeDataSource) AssetMapping() map[string]int {
 		"BAT":  1697,
 		//"ATOM": NO ATOM,
 
-		"NEO": 	1376,
-		"ETC": 	1321,
-		"ONT": 	2566,
+		"NEO":  1376,
+		"ETC":  1321,
+		"ONT":  2566,
 		"DOGE": 74,
-		"HT": 	2502,
+		"HT":   2502,
 	}
 }
 
@@ -109,20 +108,16 @@ func (d *AlternativeMeDataSource) FetchPegPrice(peg string) (i PegItem, err erro
 func (d *AlternativeMeDataSource) CallAlternativeMe() (*AlternativeMeDataSourceResponse, error) {
 	var resp *AlternativeMeDataSourceResponse
 
-	operation := func() error {
-		data, err := d.FetchPeggedPrices()
-		if err != nil {
-			return err
-		}
-
-		resp, err = d.ParseFetchedPrices(data)
-		if err != nil {
-			return err
-		}
-		return nil
+	data, err := d.FetchPeggedPrices()
+	if err != nil {
+		return nil, err
 	}
 
-	err := backoff.Retry(operation, PollingExponentialBackOff())
+	resp, err = d.ParseFetchedPrices(data)
+	if err != nil {
+		return nil, err
+	}
+
 	return resp, err
 }
 
