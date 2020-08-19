@@ -48,7 +48,7 @@ func (n *Node) Grade(ctx context.Context, block *factom.EBlock) (grader.GradedBl
 	if block.Height >= config.V4OPRActivation {
 		ver = 4
 	}
-	if block.Height >= config.V5OPRActivation {
+	if block.Height >= config.V20HeightActivation {
 		ver = 5
 	}
 

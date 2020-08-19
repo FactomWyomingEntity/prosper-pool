@@ -29,9 +29,9 @@ var FreeFloatingPEGPriceActivation uint32 = 222270
 // Estimated to be  Feb 12, 2020, 18:00 UTC
 var V4OPRActivation uint32 = 231620
 
-// V5OPRUpdate indicates the activation of additional currencies and ecdsa keys.
-// Estimated to be  May 11, 2020, 18:00 UTC
-var V5OPRActivation uint32 = 244970
+// V20HeightActivation indicates the activation of PegNet 2.0.
+// Estimated to be  Aug 19th 2020 14:00 UTC
+var V20HeightActivation uint32 = 258796
 
 func OPRVersion(height uint32) uint8 {
 	if height < FreeFloatingPEGPriceActivation {
@@ -40,7 +40,7 @@ func OPRVersion(height uint32) uint8 {
 	if height < V4OPRActivation {
 		return 3
 	}
-	if height < V5OPRActivation {
+	if height < V20HeightActivation {
 		return 4
 	}
 	return 5

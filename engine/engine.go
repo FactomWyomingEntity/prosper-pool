@@ -300,7 +300,7 @@ func (e *PoolEngine) createJob(hook pegnet.PegnetdHook) *stratum.Job {
 		version = 4
 		assetList = opr.V4Assets
 	}
-	if uint32(hook.Height+1) >= config.V5OPRActivation {
+	if uint32(hook.Height+1) >= config.V20HeightActivation {
 		version = 5
 		assetList = opr.V5Assets
 	}
