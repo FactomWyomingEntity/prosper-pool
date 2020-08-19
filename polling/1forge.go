@@ -84,7 +84,7 @@ func (d *OneForgeDataSource) FetchPegPrices() (peg PegAssets, err error) {
 			assetSym = v
 		}
 
-		index := fmt.Sprintf("%sUSD", assetSym)
+		index := fmt.Sprintf("%s/USD", assetSym)
 		currency, ok := respRates[index]
 		if !ok {
 			continue

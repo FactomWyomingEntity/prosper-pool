@@ -145,14 +145,15 @@ func (d *CoinGeckoDataSource) CurrencyIDMapping() map[string]string {
 		"XTZ":  "tezos",
 		// V5 Adds
 		"HBAR": "hedera-hashgraph",
-		"NEO": 	"neo",
-		"CRO": 	"crypto-com-chain",
-		"ETC": 	"ethereum-classic",
-		"ONT": 	"ontology",
+		"NEO":  "neo",
+		"CRO":  "crypto-com-chain",
+		"ETC":  "ethereum-classic",
+		"ONT":  "ontology",
 		"DOGE": "dogecoin",
-		"VET": 	"vechain",
-		"HT": 	"huobi-token",
-		"ALGO":	"algorand",
+		"VET":  "vechain",
+		"HT":   "huobi-token",
+		"ALGO": "algorand",
+		"DGB":  "digibyte",
 	}
 }
 
