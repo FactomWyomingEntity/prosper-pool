@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/FactomWyomingEntity/prosper-pool/config"
-	"github.com/cenkalti/backoff"
 	"github.com/spf13/viper"
 )
 
@@ -104,21 +103,17 @@ func (d *OneForgeDataSource) FetchPegPrice(peg string) (i PegItem, err error) {
 func (d *OneForgeDataSource) Call1Forge() ([]OneForgeDataSourceRate, error) {
 	var resp []OneForgeDataSourceRate
 
-	operation := func() error {
-		data, err := d.FetchPeggedPrices()
-		if err != nil {
-			return err
-		}
-
-		resp, err = d.ParseFetchedPrices(data)
-		if err != nil {
-			// Try the other variation
-			return err
-		}
-		return nil
+	data, err := d.FetchPeggedPrices()
+	if err != nil {
+		return nil, err
 	}
 
-	err := backoff.Retry(operation, PollingExponentialBackOff())
+	resp, err = d.ParseFetchedPrices(data)
+	if err != nil {
+		// Try the other variation
+		return nil, err
+	}
+
 	return resp, err
 }
 

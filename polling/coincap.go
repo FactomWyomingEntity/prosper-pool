@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cenkalti/backoff"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -148,7 +147,8 @@ var CoinCapIOCryptoAssetNames = map[string]string{
 }
 
 func (d CoinCapDataSource) CallCoinCap() (CoinCapResponse, error) {
-	var CoinCapResponse CoinCapResponse
+	var coinCapResponse CoinCapResponse
+	var emptyResponse CoinCapResponse
 
 	var ids []string
 	// Need to append all the ids we care about for the call
@@ -156,23 +156,19 @@ func (d CoinCapDataSource) CallCoinCap() (CoinCapResponse, error) {
 		ids = append(ids, CoinCapIOCryptoAssetNames[a])
 	}
 
-	operation := func() error {
-		url := "http://api.coincap.io/v2/assets?ids=" + strings.Join(ids, ",")
-		resp, err := http.Get(url)
-		if err != nil {
-			log.WithError(err).Warning("Failed to get response from CoinCap")
-			return err
-		}
-
-		defer resp.Body.Close()
-		if body, err := ioutil.ReadAll(resp.Body); err != nil {
-			return err
-		} else if err = json.Unmarshal(body, &CoinCapResponse); err != nil {
-			return err
-		}
-		return nil
+	url := "http://api.coincap.io/v2/assets?ids=" + strings.Join(ids, ",")
+	resp, err := http.Get(url)
+	if err != nil {
+		log.WithError(err).Warning("Failed to get response from CoinCap")
+		return emptyResponse, err
 	}
 
-	err := backoff.Retry(operation, PollingExponentialBackOff())
-	return CoinCapResponse, err
+	defer resp.Body.Close()
+	if body, err := ioutil.ReadAll(resp.Body); err != nil {
+		return emptyResponse, err
+	} else if err = json.Unmarshal(body, &coinCapResponse); err != nil {
+		return emptyResponse, err
+	}
+
+	return coinCapResponse, err
 }

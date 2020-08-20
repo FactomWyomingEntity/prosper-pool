@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/FactomWyomingEntity/prosper-pool/config"
-	"github.com/cenkalti/backoff"
 	"github.com/spf13/viper"
 )
 
@@ -123,13 +122,13 @@ func (d *CoinMarketCapDataSource) CurrencyIDMapping() map[string]int {
 		"ATOM": 3794,
 
 		"HBAR": 4642,
-		"NEO": 	1376,
-		"CRO": 	3635,
-		"ETC": 	1321,
-		"ONT": 	2566,
+		"NEO":  1376,
+		"CRO":  3635,
+		"ETC":  1321,
+		"ONT":  2566,
 		"DOGE": 74,
-		"VET": 	3077,
-		"HT": 	2502,
+		"VET":  3077,
+		"HT":   2502,
 		"ALGO": 4030,
 	}
 }
@@ -137,20 +136,16 @@ func (d *CoinMarketCapDataSource) CurrencyIDMapping() map[string]int {
 func (d *CoinMarketCapDataSource) CallCoinMarketCap() (*CoinMarketCapResponse, error) {
 	var resp *CoinMarketCapResponse
 
-	operation := func() error {
-		data, err := d.FetchPeggedPrices()
-		if err != nil {
-			return err
-		}
-
-		resp, err = d.ParseFetchedPrices(data)
-		if err != nil {
-			return err
-		}
-		return nil
+	data, err := d.FetchPeggedPrices()
+	if err != nil {
+		return nil, err
 	}
 
-	err := backoff.Retry(operation, PollingExponentialBackOff())
+	resp, err = d.ParseFetchedPrices(data)
+	if err != nil {
+		return nil, err
+	}
+
 	return resp, err
 }
 

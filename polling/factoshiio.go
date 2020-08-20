@@ -5,8 +5,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
-
-	"github.com/cenkalti/backoff"
 )
 
 // FactoshiioDataSource is the datasource at https://pegapi.factoshi.io/
@@ -58,20 +56,16 @@ func (d *FactoshiioDataSource) FetchPegPrice(peg string) (i PegItem, err error) 
 func (d *FactoshiioDataSource) CallFactoshiio() (*FactoshiioDataResponse, error) {
 	var resp *FactoshiioDataResponse
 
-	operation := func() error {
-		data, err := d.FetchPeggedPrices()
-		if err != nil {
-			return err
-		}
-
-		resp, err = d.ParseFetchedPrices(data)
-		if err != nil {
-			return err
-		}
-		return nil
+	data, err := d.FetchPeggedPrices()
+	if err != nil {
+		return nil, err
 	}
 
-	err := backoff.Retry(operation, PollingExponentialBackOff())
+	resp, err = d.ParseFetchedPrices(data)
+	if err != nil {
+		return nil, err
+	}
+
 	return resp, err
 }
 

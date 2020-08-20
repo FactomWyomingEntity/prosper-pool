@@ -7,8 +7,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	"github.com/cenkalti/backoff"
 )
 
 // https://api.coingecko.com/api/v3/simple/price?ids=pegnet&vs_currencies=usd
@@ -65,20 +63,16 @@ func (d *CoinGeckoDataSource) FetchPegPrice(peg string) (i PegItem, err error) {
 func (d *CoinGeckoDataSource) CallCoinGecko() (map[string]CoinGeckoDataSourceResponse, error) {
 	resp := make(map[string]CoinGeckoDataSourceResponse)
 
-	operation := func() error {
-		data, err := d.FetchPeggedPrices()
-		if err != nil {
-			return err
-		}
-
-		resp, err = d.ParseFetchedPrices(data)
-		if err != nil {
-			return err
-		}
-		return nil
+	data, err := d.FetchPeggedPrices()
+	if err != nil {
+		return nil, err
 	}
 
-	err := backoff.Retry(operation, PollingExponentialBackOff())
+	resp, err = d.ParseFetchedPrices(data)
+	if err != nil {
+		return nil, err
+	}
+
 	return resp, err
 }
 
