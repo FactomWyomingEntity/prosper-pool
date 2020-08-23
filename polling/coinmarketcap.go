@@ -130,6 +130,7 @@ func (d *CoinMarketCapDataSource) CurrencyIDMapping() map[string]int {
 		"VET":  3077,
 		"HT":   2502,
 		"ALGO": 4030,
+		"DGB":  109,
 	}
 }
 
