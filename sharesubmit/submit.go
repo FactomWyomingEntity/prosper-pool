@@ -227,7 +227,7 @@ func (s *Submitter) Run(ctx context.Context) {
 				buf := make([]byte, 8)
 				binary.BigEndian.PutUint64(buf, share.Target)
 				oChain := factom.Bytes32(config.OPRChain)
-				v := config.OPRVersion(uint32(share.JobID))
+				v := config.OPRVersion(uint32(share.JobID), true) // Todo: set isTestNet as false for mainNet
 				content := s.oprCopyData
 				if v == 4 {
 					content = s.oprCopyDataV4

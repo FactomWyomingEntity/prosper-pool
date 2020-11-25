@@ -33,7 +33,10 @@ var V4OPRActivation uint32 = 231620
 // Estimated to be  Aug 19th 2020 14:00 UTC
 var V20HeightActivation uint32 = 258796
 
-func OPRVersion(height uint32) uint8 {
+func OPRVersion(height uint32, isTestNet bool) uint8 {
+	if isTestNet {
+		return 5
+	}
 	if height < FreeFloatingPEGPriceActivation {
 		return 2
 	}
