@@ -3,6 +3,8 @@ module github.com/FactomWyomingEntity/prosper-pool
 go 1.13
 
 require (
+	github.com/AdamSLevy/jsonrpc2 v2.0.0+incompatible // indirect
+	github.com/AdamSLevy/jsonrpc2/v11 v11.3.2 // indirect
 	github.com/Factom-Asset-Tokens/base58 v0.0.0-20181227014902-61655c4dd885
 	github.com/Factom-Asset-Tokens/factom v0.0.0-20191120022136-7bf60a31a324
 	github.com/andybalholm/cascadia v1.1.0 // indirect
@@ -22,8 +24,8 @@ require (
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.2 // indirect
 	github.com/pegnet/LXRHash v0.0.0-20200205233914-cceb516c4b7f
-	github.com/pegnet/pegnet v0.5.1-0.20200828161600-edf138a7971f
-	github.com/pegnet/pegnetd v0.1.2-0.20191011183044-5eca2d08a5e8
+	github.com/pegnet/pegnet v0.5.1-0.20201119175358-0112a2ffea41
+	github.com/pegnet/pegnetd v0.5.3-0.20201120194116-7696394bc0b9
 	github.com/prometheus/client_golang v1.0.0
 	github.com/qor/admin v0.0.0-20190906081516-5593fc33b920 // indirect
 	github.com/qor/assetfs v0.0.0-20170713023933-ff57fdc13a14 // indirect
@@ -56,4 +58,5 @@ require (
 	go.uber.org/atomic v1.4.0
 	go.uber.org/ratelimit v0.1.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )

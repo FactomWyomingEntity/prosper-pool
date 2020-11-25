@@ -13,6 +13,8 @@ github.com/AdamSLevy/jsonrpc2/v11 v11.3.2 h1:McSW/pP7K0/Ucjig6AJwW7Khph/XOMYhSB8
 github.com/AdamSLevy/jsonrpc2/v11 v11.3.2/go.mod h1:7fNjH6BXM0KVswWqj+K/mnOS8wiSke0sE8X46hS+nsc=
 github.com/AdamSLevy/jsonrpc2/v12 v12.0.1 h1:cVyqoBa4Qgw8bQj3vCBnZHOX/E+uvPM8TbQPobGwY8Q=
 github.com/AdamSLevy/jsonrpc2/v12 v12.0.1/go.mod h1:UUmIu8A7Sjw+yI0tIc/iGQHoSu/7loifZ7E/AbjFFcI=
+github.com/AdamSLevy/jsonrpc2/v12 v12.0.2-0.20191005213732-3b0dfc9c5f77/go.mod h1:UUmIu8A7Sjw+yI0tIc/iGQHoSu/7loifZ7E/AbjFFcI=
+github.com/AdamSLevy/jsonrpc2/v12 v12.0.2-0.20191015223217-9181d6ac9347/go.mod h1:UUmIu8A7Sjw+yI0tIc/iGQHoSu/7loifZ7E/AbjFFcI=
 github.com/AdamSLevy/jsonrpc2/v13 v13.0.1 h1:hQ5rfCFBQrXQNtvP+2mtH6EmsUAEN61ZF1n8UGVNis0=
 github.com/AdamSLevy/jsonrpc2/v13 v13.0.1/go.mod h1:8QsYqGKdPEim+n/j9KFTYB2tIj250f044Vxh2XRKhP4=
 github.com/AdamSLevy/sqlitechangeset v0.0.0-20190925183646-3ddb70fb709d/go.mod h1:kQNmmf+2gf3uGKHt0LS4guxdp4Ay44SXA4+Is8/Gxm8=
@@ -22,10 +24,13 @@ github.com/Factom-Asset-Tokens/base58 v0.0.0-20181227014902-61655c4dd885 h1:rfy2
 github.com/Factom-Asset-Tokens/base58 v0.0.0-20181227014902-61655c4dd885/go.mod h1:RVXsRSp6VzXw5l1uiGazuf3qo23Qk0h1HzMcQk+X4LE=
 github.com/Factom-Asset-Tokens/factom v0.0.0-20190911201853-7b283996f02a h1:Yc1KR8xLaJGV+lnyVDnazIhjY+VpmqwJ/cOY4CcJEmw=
 github.com/Factom-Asset-Tokens/factom v0.0.0-20190911201853-7b283996f02a/go.mod h1:E1CRixabBfgR9Qb/ND2Q6Mqm9vCD3N9MH+sy60aj2x0=
+github.com/Factom-Asset-Tokens/factom v0.0.0-20191025014600-db7c22b6c31a/go.mod h1:HfWlWphJ30PlWXD9FTiAboLc58dQU/2A9HxBGnKyDpg=
+github.com/Factom-Asset-Tokens/factom v0.0.0-20191114224337-71de98ff5b3e/go.mod h1:qxDIu3JOgNGtCcmXxxZNunRf/jnv2ZNNmFedKshQJnI=
 github.com/Factom-Asset-Tokens/factom v0.0.0-20191120022136-7bf60a31a324 h1:g0c2FPDPGrhFo1sKGLogPQaKQ6LNKkSu6wlXj2Na6l8=
 github.com/Factom-Asset-Tokens/factom v0.0.0-20191120022136-7bf60a31a324/go.mod h1:QwTTrmYvbvsDC7+ZzonzR0jmoT9BgPzaM0XsMJqCJFs=
 github.com/Factom-Asset-Tokens/fatd v0.6.1-0.20190927200133-81408234a2b5 h1:nJgckkWLVJxlZyfc5Wv8unMV9QmOQz6InW87MU8x0fg=
 github.com/Factom-Asset-Tokens/fatd v0.6.1-0.20190927200133-81408234a2b5/go.mod h1:BtAPS0V7pjfxo1rdQ+ZKiW8QYBxDcVskMxkY3JKQsqw=
+github.com/Factom-Asset-Tokens/fatd v1.0.0/go.mod h1:AFNSSid4TqEvsZs2G2xPwPRuMdTaHl0SmcH8ORBK6ZM=
 github.com/FactomProject/FactomCode v0.3.5 h1:WKa5H9cg7V/zrteqBiEOdnpIxzRggOZMLlS3XLeBW2w=
 github.com/FactomProject/FactomCode v0.3.5/go.mod h1:7XksVta7THNbD031Ax0/dS5RKMS+ug+d7/Lmti8jAhE=
 github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e h1:ahyvB3q25YnZWly5Gq1ekg6jcmWaGj/vG/MhF4aisoc=
@@ -69,6 +74,7 @@ github.com/FactomProject/gocoding v0.0.0-20150814232539-59666ce39524 h1:394GwlJF
 github.com/FactomProject/gocoding v0.0.0-20150814232539-59666ce39524/go.mod h1:AtAVT8Uf+wlS9h/RK79oum1xym2r9UR5nb67zVEkq6Y=
 github.com/FactomProject/goleveldb v0.2.1 h1:aKHpwSwVKEm/JQ97aLN+O7/xjSXjzof71gpPCukM+Ac=
 github.com/FactomProject/goleveldb v0.2.1/go.mod h1:35UcJZvsGJAgxqegkfDb5S78gTlx/Pypzy4rZfM1pQA=
+github.com/FactomProject/goleveldb v0.2.2-0.20170418171130-e7800c6976c5 h1:GIdre1zKgtyuc3VqjfyHZQNBj3yMO6HgWAvpO190LKg=
 github.com/FactomProject/goleveldb v0.2.2-0.20170418171130-e7800c6976c5/go.mod h1:35UcJZvsGJAgxqegkfDb5S78gTlx/Pypzy4rZfM1pQA=
 github.com/FactomProject/logrustash v0.0.0-20171005151533-9c7278ede46e h1:D/yNSYLSqUwukUw3115uW4RR+r0ftMUJFlcTC2e79pI=
 github.com/FactomProject/logrustash v0.0.0-20171005151533-9c7278ede46e/go.mod h1:ah6QOMU70BGkGZRLG1Irc7f+j6eDU11tzHCI+rdLcoA=
@@ -309,8 +315,12 @@ github.com/pegnet/pegnet v0.5.1-0.20200827205036-100de49eec4c h1:h23Cy3bYjLS6lIf
 github.com/pegnet/pegnet v0.5.1-0.20200827205036-100de49eec4c/go.mod h1:NxKKJ9wnx/EvzfHk0p6XPlQqXIJg0iA4po0vzsdNx0o=
 github.com/pegnet/pegnet v0.5.1-0.20200828161600-edf138a7971f h1:yukWrl9DXaByX4//6hBKXwiU6udeN5xq6eJL4RcTD48=
 github.com/pegnet/pegnet v0.5.1-0.20200828161600-edf138a7971f/go.mod h1:NxKKJ9wnx/EvzfHk0p6XPlQqXIJg0iA4po0vzsdNx0o=
+github.com/pegnet/pegnet v0.5.1-0.20201119175358-0112a2ffea41 h1:ze3qZ1/AEbYdhpGmfJqFI/TmO6MMFeEAHNNknyvUzS0=
+github.com/pegnet/pegnet v0.5.1-0.20201119175358-0112a2ffea41/go.mod h1:NxKKJ9wnx/EvzfHk0p6XPlQqXIJg0iA4po0vzsdNx0o=
 github.com/pegnet/pegnetd v0.1.2-0.20191011183044-5eca2d08a5e8 h1:V41j01pVUgCRG+LdrQJgJm0PVpnYEpfGK80LtQkou4g=
 github.com/pegnet/pegnetd v0.1.2-0.20191011183044-5eca2d08a5e8/go.mod h1:ArfRaVXzKqOyBQMm4onNh1g17LGN9IEhQs4JcpJH8YM=
+github.com/pegnet/pegnetd v0.5.3-0.20201120194116-7696394bc0b9 h1:IwDiSkz2bX0syCGORenYnBIHF5kFnKtFCYN3tBNXtBw=
+github.com/pegnet/pegnetd v0.5.3-0.20201120194116-7696394bc0b9/go.mod h1:6WOodu2sUawcR1pVXJZI4+f4dppaxVcNQTvK6pv9MD0=
 github.com/pelletier/go-toml v1.2.0 h1:T5zMGML61Wp+FlcbWjRDT7yAxhJNAiPPLOFECq181zc=
 github.com/pelletier/go-toml v1.2.0/go.mod h1:5z9KED0ma1S8pY6P1sdut58dfprrGBbd/94hg7ilaic=
 github.com/pierrec/lz4 v2.0.5+incompatible/go.mod h1:pdkljMzZIN41W+lC3N2tnIh5sFi+IEE17M5jbnwPHcY=
